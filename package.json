@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && node scripts/check-tbd.mjs dist",
     "build:dev": "astro build",
     "test": "vitest run",
     "preview": "astro preview"

@@ -1,0 +1,23 @@
+---
+interface Props {
+  item: string
+  owner?: string
+}
+const { item, owner = 'DirectHired' } = Astro.props
+---
+
+<span class="tbd" data-tbd={item} data-tbd-owner={owner}>
+  TBD — {item}
+</span>
+
+<style>
+  .tbd {
+    display: inline-block;
+    padding: 0.125em 0.5em;
+    border: 1px dashed currentColor;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 0.85em;
+    opacity: 0.75;
+  }
+</style>
