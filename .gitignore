@@ -3,6 +3,14 @@
 .mcp.json
 claude-session.txt
 
+# Installed skills — reproducible from skills-lock.json via `npx skills install`.
+# Not committed: .claude/skills holds absolute-path symlinks that break on clone.
+.agents/
+.claude/skills/
+
+# SDD scratch workspace
+.superpowers/
+
 # Secrets
 .env
 .env.*
@@ -16,6 +24,7 @@ dist/
 build/
 .next/
 out/
+.astro/
 
 # OS / editor
 Thumbs.db
