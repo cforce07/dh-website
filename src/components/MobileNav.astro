@@ -16,6 +16,12 @@
  * breakpoint Header.astro and MobileCtaBar.astro switch on. Must stay
  * in sync with both (CSS custom properties don't resolve inside @media
  * conditions, so each file repeats the literal value in a comment).
+ *
+ * While open, the script adds `mobile-nav-open` to `<body>`, which locks
+ * body scroll (see the `:global(body.mobile-nav-open)` rule below). This
+ * matters most on iOS: rubber-band overscroll can reveal page content
+ * behind even a `position: fixed; inset: 0` panel without an explicit
+ * scroll lock.
  */
 import Button from './Button.astro'
 import { navItems } from '../lib/nav'
@@ -36,7 +42,7 @@ const whatsappHref = defaultWhatsappUrl()
     <span class="toggle-bar" aria-hidden="true"></span>
     <span class="toggle-bar" aria-hidden="true"></span>
     <span class="toggle-bar" aria-hidden="true"></span>
-    <span class="sr-only">Open menu</span>
+    <span class="sr-only">Menu</span>
   </button>
 
   <div id="mobile-nav-panel" class="mobile-nav-panel" data-mobile-nav-panel hidden>
@@ -213,6 +219,17 @@ const whatsappHref = defaultWhatsappUrl()
    */
   .mobile-nav-panel:not([hidden]) {
     display: flex;
+  }
+
+  /*
+   * Scroll lock while the panel is open. Simple `overflow: hidden` on
+   * body — proportionate for a marketing site's mobile nav, not an app
+   * shell. Without this, iOS Safari's rubber-band overscroll can reveal
+   * page content behind the fixed-position panel even though the panel
+   * itself covers the full viewport.
+   */
+  :global(body.mobile-nav-open) {
+    overflow: hidden;
   }
 
   .panel-header {
