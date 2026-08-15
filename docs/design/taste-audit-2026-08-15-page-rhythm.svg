@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="t d">
+  <title id="t">Page rhythm: current versus proposed</title>
+  <desc id="d">Hand-drawn schematic mapping background register and card usage across the twelve homepage blocks, current and proposed.</desc>
+
+  <style>
+    .h    { font-family: Georgia, serif; font-size: 20px; fill: #2A2724; }
+    .s    { font-family: system-ui, sans-serif; font-size: 12px; fill: #4d4d4d; }
+    .n    { font-family: system-ui, sans-serif; font-size: 12px; fill: #2A2724; }
+    .nd   { font-family: system-ui, sans-serif; font-size: 12px; fill: #FAF8F5; }
+    .k    { font-family: system-ui, sans-serif; font-size: 11px; fill: #4d4d4d; }
+    .warn { font-family: system-ui, sans-serif; font-size: 11px; fill: #9B3B2E; font-weight: 600; }
+    .ok   { font-family: system-ui, sans-serif; font-size: 11px; fill: #046A6C; font-weight: 600; }
+  </style>
+
+  <rect width="1440" height="900" fill="#EFEDE9"/>
+
+  <!-- ================= CURRENT ================= -->
+  <text class="h" x="48" y="42">Current</text>
+  <text class="s" x="48" y="62">Rendered background of each &lt;section&gt;, measured via getComputedStyle at 1920px</text>
+
+  <!-- 01 hero -->
+  <rect x="48" y="80" width="560" height="44" fill="#FAF8F5" stroke="#DDD8D1"/><text class="n" x="60" y="107">01  Hero — cream</text>
+  <!-- 02 trust -->
+  <rect x="48" y="124" width="560" height="26" fill="#FFFFFF" stroke="#DDD8D1"/><text class="n" x="60" y="142">02  Trust bar — white band</text>
+  <!-- 03 problem -->
+  <rect x="48" y="150" width="560" height="44" fill="#FAF8F5" stroke="#DDD8D1"/><text class="n" x="60" y="177">03  Problem — cream</text>
+  <rect x="470" y="160" width="126" height="24" rx="3" fill="#FFFFFF" stroke="#DDD8D1"/><text class="k" x="486" y="176">3 cards</text>
+  <!-- 04 difference -->
+  <rect x="48" y="194" width="560" height="44" fill="#FFFFFF" stroke="#DDD8D1"/><text class="n" x="60" y="221">04  Difference — white</text>
+  <text class="ok" x="470" y="221">divided row</text>
+  <!-- 05 process -->
+  <rect x="48" y="238" width="560" height="44" fill="#FAF8F5" stroke="#DDD8D1"/><text class="n" x="60" y="265">05  Process — cream</text>
+  <text class="ok" x="470" y="265">rail</text>
+  <!-- 06 pricing -->
+  <rect x="48" y="282" width="560" height="44" fill="#FAF8F5" stroke="#DDD8D1"/><text class="n" x="60" y="309">06  Pricing — cream</text>
+  <rect x="470" y="292" width="126" height="24" rx="3" fill="#FFFFFF" stroke="#DDD8D1"/><text class="k" x="486" y="308">2 cards</text>
+  <text class="warn" x="616" y="309">↑ same field as 05 — no seam</text>
+  <!-- 07 deep -->
+  <rect x="48" y="326" width="560" height="44" fill="#0E3A3B"/><text class="nd" x="60" y="353">07  Two-sided match — deep</text>
+  <text class="ok" x="616" y="353">the one register shift. Correct.</text>
+  <!-- 08 sources -->
+  <rect x="48" y="370" width="560" height="44" fill="#FAF8F5" stroke="#DDD8D1"/><text class="n" x="60" y="397">08  Helper sources — cream</text>
+  <rect x="470" y="380" width="126" height="24" rx="3" fill="#FFFFFF" stroke="#DDD8D1"/><text class="k" x="486" y="396">3 cards</text>
+  <!-- 09 services -->
+  <rect x="48" y="414" width="560" height="44" fill="#FAF8F5" stroke="#DDD8D1"/><text class="n" x="60" y="441">09  Services — cream</text>
+  <rect x="470" y="424" width="126" height="24" rx="3" fill="#FFFFFF" stroke="#DDD8D1"/><text class="k" x="486" y="440">6 cards</text>
+  <!-- 10a -->
+  <rect x="48" y="458" width="560" height="40" fill="#FAF8F5" stroke="#C9C3BA" stroke-dasharray="5 4"/><text class="n" x="60" y="483">10a Meet our helpers — cream (absent today)</text>
+  <rect x="470" y="466" width="126" height="24" rx="3" fill="#FFFFFF" stroke="#DDD8D1" stroke-dasharray="4 3"/><text class="k" x="486" y="482">N cards</text>
+  <!-- 10b -->
+  <rect x="48" y="498" width="560" height="40" fill="#FAF8F5" stroke="#C9C3BA" stroke-dasharray="5 4"/><text class="n" x="60" y="523">10b Google reviews — cream (absent today)</text>
+  <rect x="470" y="506" width="126" height="24" rx="3" fill="#FFFFFF" stroke="#DDD8D1" stroke-dasharray="4 3"/><text class="k" x="486" y="522">N cards</text>
+  <!-- 11 faq -->
+  <rect x="48" y="538" width="560" height="44" fill="#FAF8F5" stroke="#DDD8D1"/><text class="n" x="60" y="565">11  FAQ — cream</text>
+  <text class="ok" x="470" y="565">hairline list</text>
+  <!-- 12 -->
+  <rect x="48" y="582" width="560" height="44" fill="#FFFFFF" stroke="#DDD8D1"/><text class="n" x="60" y="609">12  Final CTA — white</text>
+
+  <!-- the long cream run bracket -->
+  <path d="M626 370 h14 v212 h-14" fill="none" stroke="#9B3B2E" stroke-width="2"/>
+  <text class="warn" x="648" y="452">Blocks 08–11 are one</text>
+  <text class="warn" x="648" y="468">unbroken cream field —</text>
+  <text class="warn" x="648" y="484">four card grids inside it</text>
+  <text class="warn" x="648" y="500">once 10a/10b populate.</text>
+
+  <path d="M626 238 h10 v88 h-10" fill="none" stroke="#9B3B2E" stroke-width="2"/>
+
+  <text class="s" x="48" y="656">Alternation holds for blocks 01–05, then stops. Every section is padded 128px top and 128px bottom, so where two same-coloured</text>
+  <text class="s" x="48" y="674">blocks abut there is 256px of undifferentiated cream and no seam to tell the reader a new subject began.</text>
+
+  <!-- ================= PROPOSED ================= -->
+  <text class="h" x="800" y="42">Proposed</text>
+  <text class="s" x="800" y="62">Strict alternation restored; card grids cut from four to two</text>
+
+  <rect x="800" y="80" width="560" height="44" fill="#FAF8F5" stroke="#DDD8D1"/><text class="n" x="812" y="107">01  Hero — cream</text>
+  <rect x="800" y="124" width="560" height="26" fill="#FFFFFF" stroke="#DDD8D1"/><text class="n" x="812" y="142">02  Trust bar — white, given real weight</text>
+  <rect x="800" y="150" width="560" height="44" fill="#FAF8F5" stroke="#DDD8D1"/><text class="n" x="812" y="177">03  Problem — cream</text>
+  <rect x="1222" y="160" width="126" height="24" rx="3" fill="#FFFFFF" stroke="#DDD8D1"/><text class="k" x="1238" y="176">3 cards</text>
+  <rect x="800" y="194" width="560" height="44" fill="#FFFFFF" stroke="#DDD8D1"/><text class="n" x="812" y="221">04  Difference — white</text>
+  <rect x="800" y="238" width="560" height="44" fill="#FAF8F5" stroke="#DDD8D1"/><text class="n" x="812" y="265">05  Process — cream</text>
+  <rect x="800" y="282" width="560" height="44" fill="#FFFFFF" stroke="#DDD8D1"/><text class="n" x="812" y="309">06  Pricing — white</text>
+  <text class="ok" x="1222" y="309">cards recessed</text>
+  <rect x="800" y="326" width="560" height="44" fill="#0E3A3B"/><text class="nd" x="812" y="353">07  Two-sided match — deep</text>
+  <rect x="800" y="370" width="560" height="44" fill="#FFFFFF" stroke="#DDD8D1"/><text class="n" x="812" y="397">08  Helper sources — white</text>
+  <text class="ok" x="1200" y="397">divided row, no cards</text>
+  <rect x="800" y="414" width="560" height="44" fill="#FAF8F5" stroke="#DDD8D1"/><text class="n" x="812" y="441">09  Services — cream</text>
+  <rect x="1222" y="424" width="126" height="24" rx="3" fill="#FFFFFF" stroke="#DDD8D1"/><text class="k" x="1230" y="440">6 cards, 3×2</text>
+  <rect x="800" y="458" width="560" height="40" fill="#FFFFFF" stroke="#DDD8D1"/><text class="n" x="812" y="483">10a Meet our helpers — white</text>
+  <rect x="1222" y="466" width="126" height="24" rx="3" fill="#EAF4F3" stroke="#DDD8D1"/><text class="k" x="1230" y="482">portraits</text>
+  <rect x="800" y="498" width="560" height="40" fill="#FAF8F5" stroke="#DDD8D1"/><text class="n" x="812" y="523">10b Google reviews — cream</text>
+  <text class="ok" x="1198" y="523">quote wall, no boxes</text>
+  <rect x="800" y="538" width="560" height="44" fill="#FFFFFF" stroke="#DDD8D1"/><text class="n" x="812" y="565">11  FAQ — white</text>
+  <rect x="800" y="582" width="560" height="44" fill="#FAF8F5" stroke="#DDD8D1"/><text class="n" x="812" y="609">12  Final CTA — cream, into the deep footer</text>
+
+  <text class="ok" x="800" y="656">Every neighbour differs. The reader is told where each block begins by the ground itself, not by counting 256px of empty space.</text>
+  <text class="s" x="800" y="674">Only two card grids survive, and they are separated by an image-led block. 08 and 10b become unboxed — the two blocks whose</text>
+  <text class="s" x="800" y="692">content is prose and quotation, neither of which needs a container to be legible.</text>
+
+  <!-- enabling change -->
+  <rect x="48" y="716" width="1312" height="70" fill="#FFFFFF" stroke="#DDD8D1"/>
+  <text class="n" x="66" y="738">Enabling change — this is the knot to untie first:</text>
+  <text class="s" x="66" y="758">Card.astro is --color-surface-raised (pure white), so any section hosting Card is forced onto cream to stay visible. Four such sections in a row is what</text>
+  <text class="s" x="66" y="776">collapsed the alternation. Either cut card-hosting sections to two (drawn above), or invert Card to sit recessed on white. Do one; do not do both.</text>
+
+  <text class="k" x="48" y="822">Schematic hand-authored as SVG — no image-generation tool was available in this session. Block heights are indicative, not to scale.</text>
+  <text class="k" x="48" y="840">Colours are the real tokens: --color-surface #FAF8F5, --color-surface-raised #FFFFFF, --color-deep #0E3A3B.</text>
+</svg>

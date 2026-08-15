@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="700" viewBox="0 0 1440 700" role="img" aria-labelledby="t d">
+  <title id="t">Hero composition: current versus proposed</title>
+  <desc id="d">Hand-drawn schematic comparing the current split-diptych hero with a proposed single-frame bleed hero.</desc>
+
+  <style>
+    .lbl   { font-family: Georgia, serif; font-size: 20px; fill: #2A2724; }
+    .sub   { font-family: system-ui, sans-serif; font-size: 13px; fill: #4d4d4d; }
+    .tiny  { font-family: system-ui, sans-serif; font-size: 11px; fill: #4d4d4d; }
+    .note  { font-family: system-ui, sans-serif; font-size: 12px; fill: #046A6C; font-weight: 600; }
+    .bad   { font-family: system-ui, sans-serif; font-size: 12px; fill: #9B3B2E; font-weight: 600; }
+    .rule  { stroke: #DDD8D1; stroke-width: 1; }
+    .guide { stroke: #00a4a6; stroke-width: 1; stroke-dasharray: 4 4; opacity: .6; }
+  </style>
+
+  <rect width="1440" height="700" fill="#FAF8F5"/>
+
+  <!-- ============ LEFT: CURRENT ============ -->
+  <text class="lbl" x="48" y="44">Current</text>
+  <text class="sub" x="48" y="66">Hero.astro lines 38–59 · two 4:5 panels, 2px --color-brand-teal seam</text>
+
+  <!-- viewport frame -->
+  <rect x="48" y="88" width="620" height="470" fill="#FFFFFF" stroke="#DDD8D1"/>
+  <!-- container guides -->
+  <line class="guide" x1="96" y1="88" x2="96" y2="558"/>
+  <line class="guide" x1="620" y1="88" x2="620" y2="558"/>
+  <text class="tiny" x="100" y="104">container 1152 max</text>
+
+  <!-- header row -->
+  <rect x="48" y="88" width="620" height="34" fill="#FAF8F5"/>
+  <line class="rule" x1="48" y1="122" x2="668" y2="122"/>
+  <rect x="96" y="99" width="70" height="12" rx="2" fill="#2A2724"/>
+  <g fill="#4d4d4d">
+    <rect x="180" y="102" width="46" height="7" rx="2"/><rect x="234" y="102" width="34" height="7" rx="2"/>
+    <rect x="276" y="102" width="30" height="7" rx="2"/><rect x="314" y="102" width="44" height="7" rx="2"/>
+    <rect x="366" y="102" width="48" height="7" rx="2"/><rect x="422" y="102" width="34" height="7" rx="2"/>
+    <rect x="464" y="102" width="20" height="7" rx="2"/>
+  </g>
+  <rect x="494" y="96" width="92" height="19" rx="3" fill="#046A6C"/>
+  <rect x="592" y="96" width="62" height="19" rx="3" fill="none" stroke="#4d4d4d"/>
+  <!-- overflow callout -->
+  <line x1="620" y1="132" x2="656" y2="132" stroke="#9B3B2E" stroke-width="2"/>
+  <text class="bad" x="470" y="148">CTAs overrun the content column by 164px</text>
+
+  <!-- text column -->
+  <g fill="#2A2724">
+    <rect x="96" y="180" width="230" height="22" rx="3"/>
+    <rect x="96" y="212" width="180" height="22" rx="3"/>
+    <rect x="96" y="244" width="205" height="22" rx="3"/>
+  </g>
+  <g fill="#4d4d4d" opacity=".55">
+    <rect x="96" y="292" width="215" height="9" rx="2"/>
+    <rect x="96" y="308" width="170" height="9" rx="2"/>
+  </g>
+  <rect x="96" y="340" width="128" height="26" rx="4" fill="#046A6C"/>
+  <rect x="232" y="340" width="86" height="26" rx="4" fill="none" stroke="#4d4d4d"/>
+
+  <!-- diptych -->
+  <rect x="368" y="180" width="252" height="200" rx="6" fill="#FFFFFF" stroke="#DDD8D1"/>
+  <rect x="368" y="180" width="124" height="200" fill="#F6FBFB"/>
+  <rect x="496" y="180" width="124" height="200" fill="#F6FBFB"/>
+  <rect x="492" y="180" width="4" height="200" fill="#00a4a6"/>
+  <!-- family blobs -->
+  <circle cx="412" cy="290" r="13" fill="#2A2724"/><path d="M394 340 q0-32 8-32 h20 q8 0 8 32 z" fill="#2A2724"/>
+  <circle cx="446" cy="288" r="12" fill="#2A2724"/><path d="M430 338 q0-30 7-30 h18 q7 0 7 30 z" fill="#2A2724"/>
+  <circle cx="430" cy="322" r="8" fill="#046A6C"/><path d="M418 350 q0-18 5-18 h14 q5 0 5 18 z" fill="#046A6C"/>
+  <!-- helper blob -->
+  <circle cx="558" cy="290" r="13" fill="#2A2724"/><path d="M540 340 q0-32 8-32 h20 q8 0 8 32 z" fill="#2A2724"/>
+
+  <text class="bad" x="368" y="404">The seam is a wall. The logo's H is a bridge.</text>
+  <text class="tiny" x="368" y="422">Two 4:5 portraits collapse to thumbnails below 768px.</text>
+
+  <!-- ============ RIGHT: PROPOSED ============ -->
+  <text class="lbl" x="772" y="44">Proposed</text>
+  <text class="sub" x="772" y="66">One frame, two people · image bleeds to the viewport edge ≥1280px</text>
+
+  <rect x="772" y="88" width="620" height="470" fill="#FFFFFF" stroke="#DDD8D1"/>
+  <line class="guide" x1="820" y1="88" x2="820" y2="558"/>
+  <line class="guide" x1="1344" y1="88" x2="1344" y2="558"/>
+
+  <!-- header: trimmed, fits the column -->
+  <rect x="772" y="88" width="620" height="34" fill="#FAF8F5"/>
+  <line class="rule" x1="772" y1="122" x2="1392" y2="122"/>
+  <rect x="820" y="99" width="70" height="12" rx="2" fill="#2A2724"/>
+  <g fill="#4d4d4d">
+    <rect x="912" y="102" width="46" height="7" rx="2"/><rect x="966" y="102" width="34" height="7" rx="2"/>
+    <rect x="1008" y="102" width="30" height="7" rx="2"/><rect x="1046" y="102" width="44" height="7" rx="2"/>
+    <rect x="1098" y="102" width="30" height="7" rx="2"/><rect x="1136" y="102" width="34" height="7" rx="2"/>
+    <rect x="1178" y="102" width="20" height="7" rx="2"/>
+  </g>
+  <rect x="1236" y="96" width="108" height="19" rx="3" fill="#046A6C"/>
+  <text class="note" x="1092" y="148">986px natural width — fits 1088px column, 102px slack</text>
+
+  <!-- eyebrow: licence first -->
+  <rect x="820" y="186" width="22" height="2" fill="#00a4a6"/>
+  <rect x="850" y="182" width="150" height="8" rx="2" fill="#046A6C" opacity=".85"/>
+  <text class="tiny" x="820" y="208">eyebrow carries MOM licence 23C1443 — trust before the ask</text>
+
+  <!-- headline -->
+  <g fill="#2A2724">
+    <rect x="820" y="228" width="250" height="26" rx="3"/>
+    <rect x="820" y="264" width="196" height="26" rx="3"/>
+  </g>
+  <g fill="#4d4d4d" opacity=".55">
+    <rect x="820" y="312" width="215" height="9" rx="2"/>
+    <rect x="820" y="328" width="150" height="9" rx="2"/>
+  </g>
+  <rect x="820" y="360" width="128" height="26" rx="4" fill="#046A6C"/>
+  <text class="tiny" x="960" y="378">one CTA here — WhatsApp lives in the bar + footer</text>
+
+  <!-- single photo, bleeding right -->
+  <rect x="1080" y="176" width="312" height="264" rx="6" fill="#EAF4F3"/>
+  <rect x="1344" y="176" width="48" height="264" fill="#EAF4F3"/>
+  <!-- two figures, one room, sharing a task -->
+  <rect x="1080" y="380" width="312" height="60" fill="#DCEBE9"/>
+  <circle cx="1180" cy="286" r="17" fill="#2A2724"/><path d="M1156 380 q0-56 12-56 h24 q12 0 12 56 z" fill="#2A2724"/>
+  <circle cx="1246" cy="290" r="16" fill="#3d5f5e"/><path d="M1224 380 q0-52 11-52 h22 q11 0 11 52 z" fill="#3d5f5e"/>
+  <rect x="1194" y="330" width="42" height="14" rx="3" fill="#046A6C"/>
+  <text class="tiny" x="1198" y="358">shared task</text>
+  <line x1="1130" y1="200" x2="1130" y2="380" stroke="#FFFFFF" stroke-width="6" opacity=".7"/>
+  <text class="tiny" x="1086" y="196">window light</text>
+
+  <text class="note" x="1080" y="466">Two people, one frame, one room — the H's crossbar.</text>
+  <text class="tiny" x="1080" y="484">5:4 landscape desktop, 4:3 mobile. Never splits.</text>
+  <text class="tiny" x="1080" y="500">The bleed gives the page its one asymmetric axis.</text>
+
+  <!-- footer note -->
+  <line class="rule" x1="48" y1="600" x2="1392" y2="600"/>
+  <text class="tiny" x="48" y="626">Schematic hand-authored as SVG — no image-generation tool was available in this session. Proportions are indicative, not pixel-accurate.</text>
+  <text class="tiny" x="48" y="646">Dashed teal lines mark the 72rem (1152px) container edges. Solid brand teal marks graphic-only use of #00a4a6.</text>
+</svg>
