@@ -28,6 +28,7 @@ out/
 
 # Local Lighthouse CI artifacts
 .tmp-lh-profile/
+.lighthouseci/
 
 # OS / editor
 Thumbs.db

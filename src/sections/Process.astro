@@ -6,6 +6,12 @@
  * free) with a connecting rule drawn by this section around ProcessStep's
  * typographic index markers — vertical rail on narrow viewports,
  * horizontal rule above the row from --bp-desktop up.
+ *
+ * Two wording constraints: brief §23 notes the process may still be
+ * refined, so the lede says "typically" rather than asserting that EVERY
+ * placement runs this way; and §78 forbids inventing staff details, so
+ * step 4 says "our team", not "your consultant" — DirectHired has not
+ * confirmed that one named person carries a placement end to end.
  */
 import Container from '../components/Container.astro'
 import SectionHeader from '../components/SectionHeader.astro'
@@ -26,7 +32,7 @@ const steps = [
   },
   {
     label: 'Interview & decide',
-    description: 'You interview each candidate directly and decide who joins your household, with your consultant on hand to answer questions.',
+    description: 'You interview each candidate directly and decide who joins your household, with our team on hand to answer questions.',
   },
   {
     label: 'Support the placement',
@@ -39,7 +45,7 @@ const steps = [
   <Container>
     <SectionHeader
       title="A better match starts with understanding."
-      lede="Every placement follows the same five-step conversation, built around your family rather than a shortlist."
+      lede="A placement typically follows five steps, built around your family rather than a shortlist."
     />
 
     <ol class="process-rail">

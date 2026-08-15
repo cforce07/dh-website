@@ -5,7 +5,7 @@ summary: Support for employers hiring a transfer helper — someone already work
 order: 2
 ---
 
-A transfer helper is a domestic helper currently employed in Singapore who is changing employers. We help you find a suitable transfer helper and manage the process of bringing her into your household.
+A transfer helper is a domestic helper currently employed in Singapore who is changing employers. We help you find a suitable transfer helper and manage the process of bringing them into your household.
 
 - Matching based on your family's needs
 - Guidance through the transfer process

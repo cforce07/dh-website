@@ -15,12 +15,31 @@ const pillars = [
     body: 'We ask about your household, routines, and expectations first, and only then recommend helpers whose experience actually fits.',
   },
   {
+    /*
+     * Wording is constrained by brief §19: additional helper
+     * placement-related fees may apply, so the package total is not
+     * necessarily the complete final employer cost. Any "no added fees" /
+     * "nothing gets added later" phrasing is therefore false on this site's
+     * own terms, and is contradicted by the qualifier PricingSection
+     * renders on the same page. The defensible claim — the one the brief
+     * actually supports at line 795, "clear package pricing without
+     * unnecessary uncertainty" — is that the package is itemised and the
+     * qualifier is stated upfront. Do not restore a completeness promise.
+     */
     title: 'Transparent Pricing',
-    body: 'Every fee is explained upfront. Nothing gets added on after you have already committed.',
+    body: 'Clear package pricing, itemised line by line. Where additional placement-related fees can apply, we say so upfront.',
   },
   {
+    /*
+     * Brief §1 / line 797 supports "human guidance throughout the
+     * process" and nothing more specific. Who staffs a placement, and
+     * whether one person carries it end to end, is unconfirmed — §78
+     * forbids inventing staff details — so this pillar describes the
+     * guidance, not the staffing arrangement, and makes no comparison to
+     * how other agencies are staffed.
+     */
     title: 'Personalised Service',
-    body: 'You work with the same consultant from your first conversation through to placement, not a rotating queue of staff.',
+    body: 'Human guidance throughout the process, from your first questions through to the placement itself.',
   },
 ]
 ---

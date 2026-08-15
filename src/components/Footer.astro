@@ -9,6 +9,14 @@
  * signal — the one intentional whole-section theme shift on the page,
  * not a mid-scroll flip.
  *
+ * Every softer step of that register is a token too — `-soft`, `-muted`,
+ * `--color-border-on-deep`, `--color-border-on-deep-muted`,
+ * `--color-rule-on-deep`. This file previously wrote them inline as
+ * `rgba(250, 248, 245, α)`, which is `--color-on-deep` retyped as raw RGB
+ * eight times over and exactly the hardcoded colour spec §12 forbids. The
+ * tokens are pre-flattened over `--color-deep`, so they are valid ONLY on
+ * this surface; see tokens.css for the measured contrast of each.
+ *
  * Conversion hierarchy: primary "Submit Your Requirements" precedes
  * secondary "WhatsApp Us" here too, matching header/mobile nav/mobile bar.
  */
@@ -106,7 +114,7 @@ const addressLine = `${company.address.street}, ${company.address.locality} ${co
     gap: var(--space-12);
     grid-template-columns: 1fr;
     padding-bottom: var(--space-12);
-    border-bottom: 1px solid rgba(250, 248, 245, 0.15);
+    border-bottom: 1px solid var(--color-rule-on-deep);
   }
 
   .footer-brand {
@@ -121,7 +129,7 @@ const addressLine = `${company.address.street}, ${company.address.locality} ${co
 
   .footer-blurb {
     font-family: var(--font-text);
-    color: rgba(250, 248, 245, 0.75);
+    color: var(--color-on-deep-soft);
     line-height: 1.6;
     margin-bottom: var(--space-6);
   }
@@ -138,7 +146,7 @@ const addressLine = `${company.address.street}, ${company.address.locality} ${co
      touching Button.astro's shared styles. */
   .footer-ctas :global(.secondary) {
     color: var(--color-on-deep);
-    border-color: rgba(250, 248, 245, 0.5);
+    border-color: var(--color-border-on-deep);
   }
 
   .footer-ctas :global(.secondary:hover) {
@@ -152,7 +160,7 @@ const addressLine = `${company.address.street}, ${company.address.locality} ${co
     font-weight: var(--font-weight-semibold);
     letter-spacing: var(--tracking-wide);
     text-transform: uppercase;
-    color: rgba(250, 248, 245, 0.6);
+    color: var(--color-on-deep-muted);
     margin-bottom: var(--space-4);
   }
 
@@ -175,7 +183,7 @@ const addressLine = `${company.address.street}, ${company.address.locality} ${co
   }
 
   .footer-contact li {
-    color: rgba(250, 248, 245, 0.85);
+    color: var(--color-on-deep-soft);
   }
 
   .footer-social {
@@ -190,7 +198,7 @@ const addressLine = `${company.address.street}, ${company.address.locality} ${co
     justify-content: center;
     width: 2.25rem;
     height: 2.25rem;
-    border: 1px solid rgba(250, 248, 245, 0.3);
+    border: 1px solid var(--color-border-on-deep-muted);
     border-radius: var(--radius-md);
     color: var(--color-on-deep);
     transition: border-color var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease);
@@ -212,7 +220,7 @@ const addressLine = `${company.address.street}, ${company.address.locality} ${co
 
   .copyright {
     font-size: var(--size-small);
-    color: rgba(250, 248, 245, 0.6);
+    color: var(--color-on-deep-muted);
   }
 
   .legal-list {
@@ -223,7 +231,7 @@ const addressLine = `${company.address.street}, ${company.address.locality} ${co
 
   .legal-list a {
     font-size: var(--size-small);
-    color: rgba(250, 248, 245, 0.6);
+    color: var(--color-on-deep-muted);
     text-decoration: none;
   }
 

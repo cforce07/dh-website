@@ -1,7 +1,7 @@
 ---
 title: Direct-Hire Processing
 slug: direct-hire-processing
-summary: Already found a helper yourself? We handle the processing needed to bring her on as your domestic helper.
+summary: Already found a helper yourself? We handle the processing needed to bring them on as your domestic helper.
 order: 3
 ---
 

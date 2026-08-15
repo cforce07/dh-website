@@ -17,6 +17,23 @@
  *   (quoted `data-tbd="..."` and the bare form Astro emits for an empty
  *   string value) and the same recursive directory walk.
  *
+ *   Category C — declared inputs, not derivable from the codebase.
+ *   Information DirectHired still owes that leaves NO trace to detect:
+ *   the code's honest response to not having it was to render nothing at
+ *   all (PricingCard omits the without-replacement itemisation entirely;
+ *   BaseLayout ships a "summary" card rather than an empty large-image
+ *   one; no page writes replacement terms beyond the one confirmed line).
+ *   Absence of an artefact is exactly what makes these undetectable —
+ *   deriving them would require adding cosmetic <Tbd>s to pages purely so
+ *   this script could find them, which would trade a correct page for a
+ *   broken one. So they are declared in DECLARED_INPUTS below, and the
+ *   generated document labels them as declared rather than derived.
+ *
+ *   Without this category the checklist under-reported: design spec §5
+ *   names three Category A items (MOM licence number, detailed
+ *   replacement terms, without-replacement inclusion list) and only the
+ *   first has a live <Tbd>.
+ *
  *   Category B — whole-block omissions, gated by an empty collection.
  *   An entire section has no data, so the section is entirely absent from
  *   the page (no shell, no placeholder). Does NOT fail the build — saying
@@ -47,6 +64,56 @@ const OUTPUT_PATH = 'docs/INFORMATION-REQUIRED-BEFORE-PRODUCTION.md'
 // this script and the build gate must agree on what counts as a gap).
 const QUOTED_PATTERN = /data-tbd="([^"]*)"/g
 const BARE_PATTERN = /data-tbd(?![-="])/g
+
+/**
+ * Category C. The ONLY hand-maintained data in this script — everything
+ * else is derived. Add an entry here only when the input genuinely leaves
+ * no detectable trace in the codebase; if a <Tbd> or an empty collection
+ * can represent it, use those instead so it stays derived.
+ *
+ * `blocks` states what the missing information actually prevents, and
+ * `handledBy` states what the site does in the meantime — so a reader can
+ * confirm the gap is being handled honestly rather than silently ignored.
+ */
+const DECLARED_INPUTS = [
+  {
+    item: 'Detailed replacement terms and conditions',
+    source: 'Brief §18 / §79 Reminder 04; design spec §5 Category A',
+    blocks:
+      'publishing any replacement language beyond the single confirmed line ' +
+      '"1 replacement within 6 months". A replacement policy page, and any ' +
+      'FAQ answer about what a replacement covers, cannot be written without it.',
+    handledBy:
+      'the confirmed line is the only replacement text on the site (`replacementTerm` ' +
+      'in `src/data/pricing.ts`, rendered by `src/components/PricingCard.astro`); ' +
+      'no conditions are stated.',
+  },
+  {
+    item: 'Without-replacement package inclusion list',
+    source: 'Brief §17; design spec §5 Category A',
+    blocks:
+      'itemising the Fly-In Without Replacement package. The brief publishes its ' +
+      'total ($1,252.10) but not its breakdown, so the card can show what the ' +
+      'package costs but not what it contains.',
+    handledBy:
+      '`TotalOnlyPackage` in `src/data/pricing.ts` has no `lineItems` property at ' +
+      'all, which makes an invented itemisation a type error rather than an ' +
+      'oversight. `src/components/PricingCard.astro` renders the total alone — no ' +
+      'inclusion list, no placeholder rows.',
+  },
+  {
+    item: 'Approved social share image (Open Graph)',
+    source: 'Brief §79 Reminders 01/02; §55',
+    blocks:
+      '`og:image` / `twitter:image`, and with them the image in link previews — ' +
+      'including WhatsApp, a secondary conversion channel for this business.',
+    handledBy:
+      '`src/layouts/BaseLayout.astro` declares `twitter:card="summary"` rather than ' +
+      '`summary_large_image`, so the preview is correct and complete without an ' +
+      'image instead of reserving a hero slot it cannot fill. No placeholder ' +
+      'imagery of people is used (§55).',
+  },
+]
 
 function htmlFiles(dir) {
   return readdirSync(dir).flatMap((entry) => {
@@ -136,7 +203,7 @@ function findCategoryB() {
   return empty.sort((a, b) => a.collection.localeCompare(b.collection))
 }
 
-function renderMarkdown(categoryA, categoryB) {
+function renderMarkdown(categoryA, categoryB, categoryC) {
   const lines = []
 
   lines.push('# DirectHired — Information Required Before Production')
@@ -151,7 +218,12 @@ function renderMarkdown(categoryA, categoryB) {
   lines.push('> ```')
   lines.push('')
   lines.push(
-    'Two categories, which behave differently and are tracked separately (master brief §79):',
+    'Three categories, which behave differently and are tracked separately (master brief §79):',
+  )
+  lines.push('')
+  lines.push(
+    'Categories A and B are **derived** from the codebase and cannot fall out of sync with it. ' +
+      'Category C is **declared** — see that section for why those items cannot be derived.',
   )
   lines.push('')
 
@@ -200,15 +272,55 @@ function renderMarkdown(categoryA, categoryB) {
   }
   lines.push('')
 
+  lines.push('## Category C — Declared inputs (not derivable from the codebase)')
+  lines.push('')
+  lines.push(
+    'Information DirectHired still owes that leaves **no detectable trace** in the code. ' +
+      'Categories A and B are found by scanning: A looks for `<Tbd>` markers in the built ' +
+      'HTML, B looks for gated sections whose collection is empty. These items have neither, ' +
+      'because the honest response to not having the information was to render *nothing* — ' +
+      'an omitted itemisation, an unwritten paragraph, a `summary` card instead of an empty ' +
+      'large-image one. There is no artefact left to detect.',
+  )
+  lines.push('')
+  lines.push(
+    'They are therefore **declared** in `DECLARED_INPUTS` in ' +
+      '`scripts/generate-info-required.mjs` — the only hand-maintained list in this document. ' +
+      'The alternative would be sprinkling cosmetic `<Tbd>` markers onto pages purely so this ' +
+      'script could find them, which would trade a correct page for a broken one. ' +
+      '`npm run build` **succeeds** with these outstanding; nothing false is published.',
+  )
+  lines.push('')
+  lines.push(
+    'Design spec §5 names three Category A items — the MOM licence number, detailed ' +
+      'replacement terms, and the without-replacement inclusion list. Only the first has a ' +
+      'live `<Tbd>`; the other two appear here.',
+  )
+  lines.push('')
+
+  if (categoryC.length === 0) {
+    lines.push('_None declared._')
+  } else {
+    for (const { item, source, blocks, handledBy } of categoryC) {
+      lines.push(`- **${item}**`)
+      lines.push(`  - Source: ${source}`)
+      lines.push(`  - Blocks: ${blocks}`)
+      lines.push(`  - Handled meanwhile by: ${handledBy}`)
+    }
+  }
+  lines.push('')
+
   return lines.join('\n')
 }
 
 const categoryA = findCategoryA()
 const categoryB = findCategoryB()
-const markdown = renderMarkdown(categoryA, categoryB)
+const categoryC = DECLARED_INPUTS
+const markdown = renderMarkdown(categoryA, categoryB, categoryC)
 
 writeFileSync(OUTPUT_PATH, markdown)
 
 console.log(`Wrote ${OUTPUT_PATH}`)
 console.log(`  Category A (inline gaps, block the build): ${categoryA.length}`)
 console.log(`  Category B (whole-block omissions, do not block the build): ${categoryB.length}`)
+console.log(`  Category C (declared, not derivable): ${categoryC.length}`)

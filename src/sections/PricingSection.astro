@@ -21,6 +21,15 @@
  * company.ts / lib/whatsapp.ts, never hardcoded. "View Pricing" stays as
  * a small tertiary text link below the pair — the escape hatch for the
  * minority who want the itemised detail before doing anything else.
+ *
+ * The lede must stay consistent with `.pricing-qualifier` below it. Brief
+ * §19 states additional helper placement-related fees may apply, and
+ * forbids representing the package total as necessarily the complete
+ * final employer cost — so "explained in full", "everything you pay", or
+ * any equivalent completeness promise is contradicted by the qualifier
+ * this very section renders. The lede instead surfaces the qualifier's
+ * existence upfront, which is the honest and defensible version of the
+ * claim.
  */
 import Container from '../components/Container.astro'
 import SectionHeader from '../components/SectionHeader.astro'
@@ -37,7 +46,7 @@ const whatsappHref = defaultWhatsappUrl()
   <Container>
     <SectionHeader
       title="Transparent Pricing. No Guesswork."
-      lede="Two ways to bring a helper into your home, both explained in full before you commit to either."
+      lede="Two ways to bring a helper into your home, with package costs set out upfront — including where further placement-related fees can apply."
     />
 
     <div class="pricing-grid">

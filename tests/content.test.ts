@@ -45,30 +45,59 @@ describe('content never hardcodes a conversion CTA', () => {
 })
 
 describe('faq pricing figures stay in sync with pricing.ts', () => {
-  // Any "$N,NNN.NN" figure (comma thousands separator + cents) written into FAQ
-  // markdown must be one of the real package totals. Markdown can't import
-  // pricing.ts, so the literal strings are unavoidable duplication — this test
-  // is the guard: a price change in pricing.ts that isn't mirrored in the FAQ
-  // copy fails here instead of silently disagreeing with what's published.
-  const validAmounts = new Set(packages.map((pkg) => formatSgd(packageTotalCents(pkg))))
-  const thousandsPattern = /\$\d{1,3}(?:,\d{3})+\.\d{2}/g
+  // EVERY dollar figure written into FAQ markdown must be a real amount from
+  // pricing.ts — a package total OR an individual line item. Markdown can't
+  // import pricing.ts, so the literal strings are unavoidable duplication and
+  // this test is the only guard: a price change in pricing.ts that isn't
+  // mirrored in the FAQ copy must fail here rather than silently disagreeing
+  // with what is published.
+  //
+  // The pattern was originally /\$\d{1,3}(?:,\d{3})+\.\d{2}/ — comma-thousands
+  // WITH cents — which validated the two four-figure totals and silently
+  // ignored all six line items in fly-in-package.md ($888, $70, $425.10, $77,
+  // $60, $120), i.e. most of the published figures were unguarded. The pattern
+  // below matches any dollar amount, with or without thousands separators and
+  // with or without a cents part.
+  const amountsCents = packages.flatMap((pkg) => [
+    packageTotalCents(pkg),
+    ...(pkg.kind === 'itemised' ? pkg.lineItems.map((item) => item.amountCents) : []),
+  ])
 
-  it('has at least one package total to check against (sanity check)', () => {
-    expect(validAmounts.size).toBeGreaterThan(0)
+  // Both renderings are accepted for the same amount: formatSgd always emits
+  // cents ("$888.00"), while FAQ prose writes whole dollars as "$888". Only
+  // the trailing ".00" may be dropped — "$425.10" has no whole-dollar form.
+  const validAmounts = new Set<string>()
+  for (const cents of amountsCents) {
+    const formatted = formatSgd(cents)
+    validAmounts.add(formatted)
+    if (formatted.endsWith('.00')) validAmounts.add(formatted.slice(0, -3))
+  }
+
+  const dollarPattern = /\$\d{1,3}(?:,\d{3})*(?:\.\d{2})?/g
+
+  it('has package totals and line items to check against (sanity check)', () => {
+    // 2 totals + 6 line items = 8 amounts; whole-dollar ones add a second
+    // accepted rendering, so the set is larger than the amount count.
+    expect(amountsCents.length).toBe(8)
+    expect(validAmounts.size).toBeGreaterThanOrEqual(8)
   })
 
-  it('every comma-thousands dollar figure in FAQ content matches a real package total', () => {
+  it('every dollar figure in FAQ content matches a real package total or line item', () => {
     const files = readdirSync('src/content/faq')
     let matchCount = 0
     for (const file of files) {
       const content = readFileSync(`src/content/faq/${file}`, 'utf8')
-      const matches = content.match(thousandsPattern) ?? []
+      const matches = content.match(dollarPattern) ?? []
       for (const amount of matches) {
         matchCount += 1
-        expect(validAmounts.has(amount)).toBe(true)
+        expect(validAmounts.has(amount), `${file}: ${amount} is not a figure in pricing.ts`).toBe(
+          true,
+        )
       }
     }
     // Guards against the pattern silently matching nothing (a vacuous pass).
-    expect(matchCount).toBeGreaterThan(0)
+    // 2 totals in cost.md + 1 total + 6 line items + 1 total in
+    // fly-in-package.md = 10 figures currently published.
+    expect(matchCount).toBe(10)
   })
 })

@@ -56,6 +56,42 @@
   --color-accent-on-deep: #3FC9CB;
 
   /*
+   * The rest of the deep-surface register. --color-on-deep alone is a
+   * single brightness, so components on --color-deep (Footer, and any
+   * future deep-surface block) previously reached for raw
+   * `rgba(250, 248, 245, α)` — which is --color-on-deep retyped as
+   * literal RGB, exactly the hardcoded colour spec §12 forbids. These
+   * five tokens are those alpha steps pre-flattened over --color-deep,
+   * so a component never types a colour value again.
+   *
+   * Flattened to hex on purpose, not stored as rgba():
+   *   - the composite is what the eye actually receives, so the token's
+   *     value IS its rendered colour — no mental compositing at the call
+   *     site;
+   *   - tests/tokens.test.ts can then parse and assert their contrast
+   *     directly, which an alpha channel would defeat.
+   *
+   * Because they are pre-flattened, they are ONLY valid on
+   * --color-deep. On any other background they are a wrong colour, not a
+   * translucent one. Measured against --color-deep:
+   *
+   *   --color-on-deep-soft         8.10:1  body copy
+   *   --color-on-deep-muted        5.28:1  small labels, legal, copyright
+   *   --color-border-on-deep       4.14:1  control outlines that must read
+   *   --color-border-on-deep-muted 2.42:1  icon-button outlines
+   *   --color-rule-on-deep         1.56:1  structural hairlines
+   *
+   * The first three carry text or a control boundary and are asserted in
+   * tests/tokens.test.ts. The last two are decorative lines, held to the
+   * same reasoning as --color-border above.
+   */
+  --color-on-deep-soft: #CBD2D0;
+  --color-on-deep-muted: #9CACAB;
+  --color-border-on-deep: #849998;
+  --color-border-on-deep-muted: #557373;
+  --color-rule-on-deep: #315757;
+
+  /*
    * --color-border is a decorative hairline (~1.3:1 against surface) and
    * is not a contrast-bearing element, so the 3:1 non-text threshold
    * does not apply to it. Where a border is the ONLY thing distinguishing

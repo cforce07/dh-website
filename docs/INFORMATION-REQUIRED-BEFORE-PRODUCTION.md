@@ -6,7 +6,9 @@
 > npm run build:dev && node scripts/generate-info-required.mjs
 > ```
 
-Two categories, which behave differently and are tracked separately (master brief §79):
+Three categories, which behave differently and are tracked separately (master brief §79):
+
+Categories A and B are **derived** from the codebase and cannot fall out of sync with it. Category C is **declared** — see that section for why those items cannot be derived.
 
 ## Category A — Inline gaps (block the production build)
 
@@ -26,3 +28,24 @@ An entire section has no backing data, so the section is absent from the page �
 - **What families are saying** (`reviews` collection)
   - Blocks: nothing at build time — `npm run build` succeeds
   - Blocks: the "What families are saying" section from appearing on the homepage until `src/content/reviews/` has at least one entry (rendered by `src/sections/Reviews.astro`)
+
+## Category C — Declared inputs (not derivable from the codebase)
+
+Information DirectHired still owes that leaves **no detectable trace** in the code. Categories A and B are found by scanning: A looks for `<Tbd>` markers in the built HTML, B looks for gated sections whose collection is empty. These items have neither, because the honest response to not having the information was to render *nothing* — an omitted itemisation, an unwritten paragraph, a `summary` card instead of an empty large-image one. There is no artefact left to detect.
+
+They are therefore **declared** in `DECLARED_INPUTS` in `scripts/generate-info-required.mjs` — the only hand-maintained list in this document. The alternative would be sprinkling cosmetic `<Tbd>` markers onto pages purely so this script could find them, which would trade a correct page for a broken one. `npm run build` **succeeds** with these outstanding; nothing false is published.
+
+Design spec §5 names three Category A items — the MOM licence number, detailed replacement terms, and the without-replacement inclusion list. Only the first has a live `<Tbd>`; the other two appear here.
+
+- **Detailed replacement terms and conditions**
+  - Source: Brief §18 / §79 Reminder 04; design spec §5 Category A
+  - Blocks: publishing any replacement language beyond the single confirmed line "1 replacement within 6 months". A replacement policy page, and any FAQ answer about what a replacement covers, cannot be written without it.
+  - Handled meanwhile by: the confirmed line is the only replacement text on the site (`replacementTerm` in `src/data/pricing.ts`, rendered by `src/components/PricingCard.astro`); no conditions are stated.
+- **Without-replacement package inclusion list**
+  - Source: Brief §17; design spec §5 Category A
+  - Blocks: itemising the Fly-In Without Replacement package. The brief publishes its total ($1,252.10) but not its breakdown, so the card can show what the package costs but not what it contains.
+  - Handled meanwhile by: `TotalOnlyPackage` in `src/data/pricing.ts` has no `lineItems` property at all, which makes an invented itemisation a type error rather than an oversight. `src/components/PricingCard.astro` renders the total alone — no inclusion list, no placeholder rows.
+- **Approved social share image (Open Graph)**
+  - Source: Brief §79 Reminders 01/02; §55
+  - Blocks: `og:image` / `twitter:image`, and with them the image in link previews — including WhatsApp, a secondary conversion channel for this business.
+  - Handled meanwhile by: `src/layouts/BaseLayout.astro` declares `twitter:card="summary"` rather than `summary_large_image`, so the preview is correct and complete without an image instead of reserving a hero slot it cannot fill. No placeholder imagery of people is used (§55).

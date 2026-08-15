@@ -1,4 +1,22 @@
 ---
+/**
+ * Homepage. Two constraints bind the <title> and description below:
+ *
+ * 1. "Direct-hire" is NOT the business model. In Singapore, "direct hire"
+ *    specifically means hiring WITHOUT an agency, which contradicts the
+ *    $888 agent fee this same page publishes. Brief §14 lists Direct-Hire
+ *    Processing as one of six services, not as what DirectHired is. The
+ *    title must say what the business is — a maid agency — and brief §49's
+ *    primary search themes lead with "maid agency Singapore" and
+ *    "domestic helper agency Singapore". Search intent, not stuffing: each
+ *    phrase appears once, inside a sentence a person would actually read.
+ *
+ * 2. The description is also og:description and the string Google shows in
+ *    results. It must not carry a claim this page contradicts: brief §19
+ *    permits additional helper placement-related fees, so no completeness
+ *    promise ("no hidden markups", "no added fees") belongs here — and an
+ *    unevidenced accusation against other agencies least of all.
+ */
 import BaseLayout from '../layouts/BaseLayout.astro'
 import { employmentAgencySchema } from '../lib/structured-data'
 import Hero from '../sections/Hero.astro'
@@ -17,8 +35,8 @@ import FinalCta from '../sections/FinalCta.astro'
 ---
 
 <BaseLayout
-  title="DirectHired — Direct-hire domestic helpers in Singapore"
-  description="DirectHired matches Singapore families with domestic helpers directly, with transparent pricing and no hidden agency markups."
+  title="DirectHired — Singapore Maid Agency & Domestic Helper Placement"
+  description="DirectHired is a Singapore maid agency that understands your household first, then recommends domestic helpers who fit. Clear, itemised package pricing."
 >
   <script type="application/ld+json" set:html={JSON.stringify(employmentAgencySchema())} slot="head" />
   <Hero />

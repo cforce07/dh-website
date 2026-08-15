@@ -20,6 +20,13 @@
  * short structured fact sheet (name, placement type, nationality,
  * experience, skills) plus whatever narrative the markdown body adds, so
  * two consecutive grids don't repeat the same shape.
+ *
+ * The lede describes what the section SHOWS and asserts nothing about
+ * availability. Helper availability is one of the categories §78
+ * explicitly forbids inventing, and unlike the profile data itself it is
+ * not protected by the empty-collection gate — a static lede saying
+ * helpers are "currently available for placement" would go live unverified
+ * the moment the first profile file lands. Keep it descriptive.
  */
 import { getCollection } from 'astro:content'
 import Container from '../components/Container.astro'
@@ -42,7 +49,7 @@ const rendered = await Promise.all(
       <Container>
         <SectionHeader
           title="Meet our helpers"
-          lede="A selection of helpers currently available for placement, each matched on skills and experience rather than availability alone."
+          lede="Profiles showing the experience and skills we match against each family's needs."
         />
 
         <div class="helpers-grid">

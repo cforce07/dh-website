@@ -10,6 +10,7 @@
     "build": "astro build && node scripts/check-tbd.mjs dist",
     "build:dev": "astro build",
     "test": "vitest run",
+    "axe": "node scripts/run-axe.mjs",
     "preview": "astro preview"
   },
   "dependencies": {

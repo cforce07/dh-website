@@ -40,7 +40,29 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonical} />
-    <meta name="twitter:card" content="summary_large_image" />
+    {/*
+      "summary", not "summary_large_image".
+
+      A large-image card with no og:image renders WORSE than declaring
+      nothing: the consumer reserves a hero slot and then fills it with a
+      blank or a cropped favicon. WhatsApp — this agency's own secondary
+      conversion channel, and the single most likely place a link to this
+      site gets pasted — reads og:image directly, so a missing image is
+      visible to exactly the audience that matters most.
+
+      No image is shipped because there is no honest one to ship yet.
+      Brief §79 Reminders 01/02 leave the official brand assets and
+      photography outstanding, §55 forbids presenting placeholder people
+      as DirectHired staff or helpers, and no image tooling is available
+      here without adding a dependency. A "summary" card is correct and
+      complete with title + description alone, which this page has.
+
+      When DirectHired supplies the approved asset, this becomes a
+      three-line change: restore summary_large_image, add og:image /
+      og:image:width / og:image:height / twitter:image. It is tracked as a
+      declared item in docs/INFORMATION-REQUIRED-BEFORE-PRODUCTION.md.
+    */}
+    <meta name="twitter:card" content="summary" />
     <slot name="head" />
   </head>
   <body>
