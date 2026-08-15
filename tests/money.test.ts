@@ -27,4 +27,24 @@ describe('formatSgd', () => {
   it('pads a trailing zero in the cents', () => {
     expect(formatSgd(88800)).toBe('$888.00')
   })
+
+  it('rejects non-integer input', () => {
+    expect(() => formatSgd(164010.5)).toThrow(/integer cents/)
+  })
+
+  it('formats negative amounts with sign first', () => {
+    expect(formatSgd(-38800)).toBe('-$388.00')
+  })
+
+  it('formats small negative amounts', () => {
+    expect(formatSgd(-150)).toBe('-$1.50')
+  })
+
+  it('formats large values with multiple thousand separators', () => {
+    expect(formatSgd(1000000000)).toBe('$10,000,000.00')
+  })
+
+  it('formats zero', () => {
+    expect(formatSgd(0)).toBe('$0.00')
+  })
 })
