@@ -13,8 +13,13 @@ describe('fly-in with replacement', () => {
   it('is itemised with the six published components', () => {
     expect(withReplacement.kind).toBe('itemised')
     if (withReplacement.kind !== 'itemised') throw new Error('unreachable')
-    expect(withReplacement.lineItems.map((i) => i.label)).toEqual([
-      'Agent fees', 'MOM', 'Insurance', 'SIP', 'Medical', 'Handling & transport',
+    expect(withReplacement.lineItems).toEqual([
+      { label: 'Agent fees', amountCents: 88800 },
+      { label: 'MOM', amountCents: 7000 },
+      { label: 'Insurance', amountCents: 42510 },
+      { label: 'SIP', amountCents: 7700 },
+      { label: 'Medical', amountCents: 6000 },
+      { label: 'Handling & transport', amountCents: 12000 },
     ])
   })
 
