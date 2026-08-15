@@ -89,7 +89,16 @@ const whatsappHref = defaultWhatsappUrl()
   }
 
   .pricing-qualifier {
+    /*
+     * 60ch keeps a readable measure — at 13px that computes to ~500px, and
+     * the sentence needs 669px on one line, so it wraps to two. That is the
+     * right call for reading; what was wrong was WHERE it broke. Without
+     * `balance` the browser fills line one and orphans "and placement
+     * arrangement." on line two, which reads as a mistake rather than a
+     * measure. `balance` splits the two lines evenly instead.
+     */
     max-width: 60ch;
+    text-wrap: balance;
     margin-top: var(--space-8);
     font-family: var(--font-text);
     font-size: var(--size-small);

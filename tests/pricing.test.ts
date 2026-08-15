@@ -54,8 +54,15 @@ describe('fly-in without replacement', () => {
     ])
   })
 
-  it('has no replacement term', () => {
-    expect(withoutReplacement.replacementTerm).toBeNull()
+  // States the absence rather than leaving it null. A null rendered nothing,
+  // so the one difference a visitor is comparing was communicated by a gap
+  // where the other card has a line.
+  it('states that no replacement is included, rather than saying nothing', () => {
+    expect(withoutReplacement.replacementTerm).toBe('No replacement')
+  })
+
+  it('does not promise a replacement it excludes', () => {
+    expect(withoutReplacement.replacementTerm).not.toMatch(/within|\d+\s*month/i)
   })
 })
 

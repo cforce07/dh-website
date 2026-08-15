@@ -52,7 +52,12 @@ export const packages: readonly Package[] = [
     kind: 'itemised',
     id: 'fly-in-without-replacement',
     name: 'Fly-In Without Replacement',
-    replacementTerm: null,
+    // Stated, not absent. This was `null`, so PricingCard rendered nothing
+    // where the other card renders "1 replacement within 6 months" — the
+    // difference a visitor is comparing was communicated by a blank space.
+    // "No replacement." is DirectHired's own wording from the same message
+    // that supplied this breakdown.
+    replacementTerm: 'No replacement',
     lineItems: [
       { label: 'Agent fees', amountCents: 38800 },
       { label: 'MOM', amountCents: 7000 },
