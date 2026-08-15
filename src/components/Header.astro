@@ -1,9 +1,10 @@
 ---
 /**
  * Header — logo left, primary nav centre, CTAs right. Above the desktop
- * breakpoint (64em / 1024px) this is the only nav surface; below it, the
- * centre nav and CTA pair are hidden in favour of <MobileNav>, which
- * renders its own toggle button here and a full-screen panel.
+ * breakpoint (96em / 1536px — see --bp-desktop in tokens.css for why it's
+ * this wide) this is the only nav surface; below it, the centre nav and
+ * CTA pair are hidden in favour of <MobileNav>, which renders its own
+ * toggle button here and a full-screen panel.
  *
  * Conversion hierarchy (spec §6.4, controller ruling): primary "Submit
  * Your Requirements" always precedes secondary "WhatsApp Us", on every
@@ -63,7 +64,9 @@ const whatsappHref = defaultWhatsappUrl()
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--space-6);
+    /* --space-4, not --space-6: part of the width-compaction fix (see
+       --bp-desktop's comment in tokens.css) — every px matters here. */
+    gap: var(--space-4);
     min-height: 4.5rem;
   }
 
@@ -94,7 +97,9 @@ const whatsappHref = defaultWhatsappUrl()
   .primary-nav ul {
     display: flex;
     align-items: center;
-    gap: var(--space-6);
+    /* --space-3, not --space-6: same width-compaction fix as .header-inner
+       above — 7 gaps across 8 items adds up fast. */
+    gap: var(--space-3);
   }
 
   .primary-nav a {
@@ -117,12 +122,30 @@ const whatsappHref = defaultWhatsappUrl()
     gap: var(--space-3);
   }
 
-  /* 64em matches --bp-desktop in tokens.css (kept in sync by hand — see
-     that token's comment for why it's wider than --bp-tablet). Below
-     this, MobileNav owns navigation. Must match MobileNav.astro and
-     MobileCtaBar.astro exactly, or a viewport range opens where neither
-     nav surface is present. */
-  @media (min-width: 64em) {
+  /*
+   * Button.astro's default horizontal padding (--space-6, 24px/side) is
+   * generous enough that, combined with 8 nav labels, the header simply
+   * does not fit in one line until a very wide viewport (measured: without
+   * this, natural crossover is ~1695px; with it, ~1430px — see
+   * --bp-desktop in tokens.css for the full measurement writeup).
+   * Tightening just the inline padding here (not font-size, so the CTAs
+   * stay visually consistent with every other surface) buys back real
+   * width without touching Button.astro itself, which is outside this
+   * fix's scope. This alone does not make the header fit at any
+   * reasonable breakpoint — see the gap reductions below and the raised
+   * --bp-desktop — it only narrows the gap.
+   */
+  .header-ctas :global(.btn) {
+    padding-inline: var(--space-4);
+  }
+
+  /* 96em matches --bp-desktop in tokens.css (kept in sync by hand — see
+     that token's long comment for the measurement behind this specific
+     value; it is not a round guess). Below this, MobileNav owns
+     navigation. Must match MobileNav.astro and MobileCtaBar.astro
+     exactly, or a viewport range opens where neither nav surface is
+     present. */
+  @media (min-width: 96em) {
     .primary-nav {
       display: block;
     }

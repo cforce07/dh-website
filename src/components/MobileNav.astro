@@ -12,7 +12,10 @@
  *   so it is removed from the accessibility tree and tab order when
  *   closed — no CSS-only illusion of hiding.
  *
- * Visible only below --bp-desktop (64em, tokens.css) — the same
+ * Visible only below --bp-desktop (96em / 1536px, tokens.css — raised
+ * from an original 64em after a real-browser measurement found the
+ * desktop header overflows and forces horizontal document scroll below
+ * that width; see the token's comment for the full writeup) — the same
  * breakpoint Header.astro and MobileCtaBar.astro switch on. Must stay
  * in sync with both (CSS custom properties don't resolve inside @media
  * conditions, so each file repeats the literal value in a comment).
@@ -288,9 +291,9 @@ const whatsappHref = defaultWhatsappUrl()
     width: 100%;
   }
 
-  /* Must match --bp-desktop (tokens.css), and the literal in
+  /* 96em — must match --bp-desktop (tokens.css), and the literal in
      Header.astro / MobileCtaBar.astro. */
-  @media (min-width: 64em) {
+  @media (min-width: 96em) {
     .mobile-nav {
       display: none;
     }

@@ -116,14 +116,34 @@
   /* components to keep them in sync.                                  */
   /* ---------------------------------------------------------------- */
   --bp-tablet: 48em;   /* 768px  — Container's padding step-up. */
-  --bp-desktop: 64em;  /* 1024px — where the full desktop header (logo +
+  --bp-desktop: 96em;  /* 1536px — where the full desktop header (logo +
                            8 nav items + 2 CTAs) fits on one line without
-                           wrapping; Header, MobileNav, and MobileCtaBar
-                           all switch here. Deliberately wider than
-                           --bp-tablet: the nav content does not fit in
-                           the 48-64em range, so keeping the mobile nav
-                           through that range (rather than switching at
-                           48em) avoids a wrapped, two-line desktop nav. */
+                           wrapping or forcing horizontal document scroll;
+                           Header, MobileNav, and MobileCtaBar all switch
+                           here. Deliberately wider than --bp-tablet: the
+                           nav content does not fit in the 48-64em range,
+                           so keeping the mobile nav through that range
+                           (rather than switching at 48em) avoids a
+                           wrapped, two-line desktop nav.
+
+                           Was 64em (1024px) originally, raised after a
+                           real-browser measurement (iframe-harness binary
+                           search across viewport widths, see task-11
+                           fix-round-2 report) found the desktop header —
+                           even after compacting nav-item/CTA spacing in
+                           Header.astro — does not actually fit without
+                           horizontal overflow until ~1430px, because
+                           Container's own max-width (72rem/1152px) caps
+                           the available row width well below what 8 nav
+                           labels + 2 full CTA buttons need. 96em keeps
+                           ~106px of margin above that measured crossover
+                           for cross-browser/OS font-rendering variance.
+                           Do not lower this without re-measuring; do not
+                           trust hand-calculated arithmetic here — the
+                           interaction between flex nowrap overflow and
+                           Container's centering margin does not resolve
+                           the way naive subtraction predicts (verified
+                           empirically, see the fix report for why). */
 
   /* ---------------------------------------------------------------- */
   /* Radius — restrained per spec §3.3                                */
