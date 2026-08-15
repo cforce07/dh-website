@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { execSync } from 'node:child_process'
 import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, extname } from 'node:path'
 import { company } from '../src/data/company'
 import { navItems, legalItems } from '../src/lib/nav'
 
@@ -14,19 +14,56 @@ beforeAll(() => {
   execSync('npm run build:dev', { stdio: 'inherit' })
 }, 180_000)
 
-function sources(dir = 'src'): string[] {
+function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
     const full = join(dir, entry)
     return statSync(full).isDirectory() ? sources(full) : [full]
   })
 }
 
+// Task 16 review, fix round 1: the hardcode scan originally walked only
+// src/. public/ ships HTML/JS/JSON verbatim to the browser, so a hardcoded
+// URL there is just as real a violation as one in src/ — extend the scan
+// to cover it too.
+//
+// Root-level files are scanned too, but only ones with a code/config
+// extension (astro.config.mjs, package.json, tsconfig.json, ...) — NOT
+// every root-level file. The repo root also holds prose docs (e.g. the
+// master context brief) that legitimately quote the production URL as
+// documentation; including those would make this test permanently fail
+// for a reason that isn't a bug. node_modules/, dist/, and .superpowers/
+// are excluded simply by never being walked: only src/, public/, and
+// top-level files are.
+const ROOT_CODE_EXTENSIONS = new Set(['.mjs', '.cjs', '.js', '.ts', '.json', '.astro'])
+
+function rootLevelConfigFiles(): string[] {
+  return readdirSync('.').filter((entry) => {
+    if (statSync(entry).isDirectory()) return false
+    return ROOT_CODE_EXTENSIONS.has(extname(entry))
+  })
+}
+
+function hardcodeScanFiles(): string[] {
+  return [...sources('src'), ...sources('public'), ...rootLevelConfigFiles()]
+}
+
+// Normalises a path (Windows backslashes, a leading "./") so an exact-path
+// comparison works regardless of how the entry was joined.
+function normalize(f: string): string {
+  return f.split('\\').join('/').replace(/^\.\//, '')
+}
+
 describe('CTA integrity', () => {
   it('no component hardcodes the requirement-form URL', () => {
-    const offenders = sources()
-      .filter((f) => !f.endsWith('company.ts'))
+    // Task 16 review, fix round 1: `!f.endsWith('company.ts')` was a
+    // suffix match, not a path match — it would also exclude any future
+    // src/lib/mock-company.ts or test-company.ts, silently removing it
+    // from the one scan that protects the launch-critical URL's single
+    // definition. Compare the normalised path exactly instead.
+    const offenders = hardcodeScanFiles()
+      .filter((f) => normalize(f) !== 'src/data/company.ts')
       .filter((f) => readFileSync(f, 'utf8').includes('/employer-requirement'))
-    expect(offenders).toEqual([])
+    expect(offenders.map(normalize)).toEqual([])
   })
 
   it('the built homepage links to the configured form URL', () => {
