@@ -1,32 +1,27 @@
 ---
 /**
- * SectionHeader — the recurring "eyebrow / title / lede" block that
- * opens most homepage sections. `eyebrow` and `lede` are optional so a
- * section can ship a bare title where that's all it needs.
+ * SectionHeader — the recurring "title / lede" block that opens most
+ * homepage sections. `lede` is optional so a section can ship a bare
+ * title where that's all it needs.
  *
- * The small rule beside the eyebrow is the one place these primitives
- * use --color-brand-teal — the real logo teal, which fails WCAG AA for
- * text and button fills but is fine here because it is purely graphic
- * (a 1.5px rule, not text) and never carries the reading content.
+ * This primitive used to carry an optional `eyebrow` (a small teal-rule
+ * label above the title) with zero call sites anywhere on the site —
+ * dead code that would also have spent the brand's one connective
+ * gesture (the teal rule) on routine section furniture before block 07's
+ * crossbar ever got to mean anything. Deleted; see
+ * docs/design/implementation-plan-2026-08-16.md C-31 / D-11. The teal
+ * rule is reserved for exactly two places: block 07's crossbar and
+ * FinalCta's `.cta-mark`.
  */
 interface Props {
-  eyebrow?: string
   title: string
   lede?: string
 }
 
-const { eyebrow, title, lede } = Astro.props
+const { title, lede } = Astro.props
 ---
 
 <div class="section-header">
-  {
-    eyebrow && (
-      <p class="eyebrow">
-        <span class="eyebrow-mark" aria-hidden="true"></span>
-        {eyebrow}
-      </p>
-    )
-  }
   <h2 class="title">{title}</h2>
   {lede && <p class="lede">{lede}</p>}
 </div>
@@ -35,27 +30,6 @@ const { eyebrow, title, lede } = Astro.props
   .section-header {
     display: flex;
     flex-direction: column;
-  }
-
-  .eyebrow {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    margin-bottom: var(--space-3);
-    font-family: var(--font-text);
-    font-size: var(--size-small);
-    font-weight: var(--font-weight-semibold);
-    letter-spacing: var(--tracking-wide);
-    text-transform: uppercase;
-    color: var(--color-ink-muted);
-  }
-
-  .eyebrow-mark {
-    display: inline-block;
-    width: var(--space-6);
-    height: 2px;
-    border-radius: var(--radius-sm);
-    background: var(--color-brand-teal);
   }
 
   .title {

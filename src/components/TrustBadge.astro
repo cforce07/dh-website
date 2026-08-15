@@ -5,17 +5,26 @@
  * default slot rather than a prop so it can carry plain text ("Since
  * 2022") or, where a fact is not yet verified, a <Tbd> — this component
  * never special-cases which one it received.
+ *
+ * `plate` gives the value a bordered "plate" treatment — for the one
+ * fact on the page that is independently checkable (the MOM licence
+ * number) rather than descriptive. --color-border is a decorative
+ * hairline here (per the contrast note in tokens.css), not the sole
+ * boundary of a control, so the 3:1 non-text threshold does not apply.
  */
 interface Props {
   label: string
+  plate?: boolean
 }
 
-const { label } = Astro.props
+const { label, plate = false } = Astro.props
 ---
 
 <div class="trust-badge">
   <p class="trust-label">{label}</p>
-  <p class="trust-value"><slot /></p>
+  <p class:list={['trust-value', { plate }]}>
+    <slot />
+  </p>
 </div>
 
 <style>
@@ -38,8 +47,15 @@ const { label } = Astro.props
 
   .trust-value {
     font-family: var(--font-text);
-    font-size: var(--size-body);
+    font-size: var(--size-h3);
     font-weight: var(--font-weight-semibold);
     color: var(--color-ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .trust-value.plate {
+    padding: var(--space-2) var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
   }
 </style>

@@ -3,11 +3,11 @@
  * Card — the generic raised-surface container used for feature tiles,
  * job listings, testimonials, etc. across the homepage sections.
  *
- * --color-surface-raised is only a few shades off --color-surface, so a
- * hairline border alone would read flat. --shadow-sm gives it the "lifted
- * paper" separation the spec asks for; the border is a secondary cue,
- * not the only one, so the decorative --color-border hairline is the
- * correct token here (see the contrast note in tokens.css).
+ * Border + shadow + radius together is the combination that reads as a
+ * generic UI-kit card. --shadow-sm is warm-tinted (rgba(42, 39, 36, …),
+ * never black — see tokens.css) and on its own already separates
+ * --color-surface-raised from --color-surface without needing a hairline
+ * on top of it, so the border is dropped rather than the shadow.
  */
 ---
 
@@ -25,7 +25,6 @@
        than only in pricing-grid's stylesheet. */
     min-width: 0;
     background: var(--color-surface-raised);
-    border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     padding: var(--space-8);
     box-shadow: var(--shadow-sm);
