@@ -12,14 +12,23 @@
  * a small round `.side-mark` (the head), with `.bridge` drawing a
  * horizontal bar across their meeting point (the crossbar) — the same
  * two-verticals-plus-crossbar structure as the logo's H, translated into
- * layout rather than redrawn as a literal icon.
+ * layout rather than redrawn as a literal icon. `.match-composition` uses
+ * `align-items: stretch` (the grid default) specifically so `.bridge`
+ * takes on the full row height and its `::before` bar (positioned at
+ * `top: 50%`) actually lands at the row's vertical mid-point — an
+ * `align-items: start` here would collapse the empty `.bridge` div to
+ * zero height and strand the crossbar at the top of the row, next to the
+ * head marks, instead of joining the two sides in the middle.
  *
  * Per brief §22 / §83, this is shown as composition, not prose: the
  * Employer and Helper lists sit side by side with no explanatory
  * paragraph between them, and the resolving line lands only once both
  * sides have been seen. "Happy Employer. Happy Helper." itself appears
  * once, here — the brief's own instruction against turning it into a
- * slogan repeated on every block.
+ * slogan repeated on every block. It is the section's `<h2>` (heading the
+ * composition, so it correctly precedes the `<h3>` Employer/Helper
+ * sub-headings); the resolving line is a visually large `<p>`, not a
+ * second heading, so the page's heading outline stays in sequence.
  */
 import Container from '../components/Container.astro'
 
@@ -30,7 +39,7 @@ const helperSide = ['Skills', 'Experience', 'Expectations', 'Suitable responsibi
 
 <section class="two-sided">
   <Container>
-    <p class="match-kicker">Happy Employer. Happy Helper.</p>
+    <h2 class="match-kicker">Happy Employer. Happy Helper.</h2>
 
     <div class="match-composition">
       <div class="side">
@@ -52,7 +61,7 @@ const helperSide = ['Skills', 'Experience', 'Expectations', 'Suitable responsibi
       </div>
     </div>
 
-    <h2 class="match-resolve">Better matching happens when both sides are understood.</h2>
+    <p class="match-resolve">Better matching happens when both sides are understood.</p>
   </Container>
 </section>
 
@@ -129,7 +138,11 @@ const helperSide = ['Skills', 'Experience', 'Expectations', 'Suitable responsibi
       /* Two verticals either side of a narrow middle column carrying the
          crossbar — see the file header for how this maps to the logo. */
       grid-template-columns: 1fr var(--space-8) 1fr;
-      align-items: start;
+      /* stretch (the grid default), not start — .bridge has no content
+         of its own, so it must be stretched to the row's full height for
+         its ::before crossbar (top: 50%) to land at the true vertical
+         mid-point instead of collapsing to the top of the row. */
+      align-items: stretch;
     }
 
     .side {

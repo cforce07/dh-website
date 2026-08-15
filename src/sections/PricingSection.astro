@@ -10,12 +10,27 @@
  * packageTotalCents() + formatSgd(). PricingCard is where the itemised /
  * total-only branch actually lives; see that component for why the
  * without-replacement total can never grow an invented breakdown.
+ *
+ * Design spec §6.4 names this block among the CTA surfaces that carry the
+ * primary/secondary conversion pair "in that order everywhere, without
+ * exception" — a family that has just resolved "how much does this
+ * cost?" (§84's #1 objection) is at peak intent, so sending them only to
+ * a static detail page would be a weaker ask than every other CTA moment
+ * on the site. The pair renders exactly as in Hero.astro: primary
+ * Submit Your Requirements, secondary WhatsApp Us, both sourced from
+ * company.ts / lib/whatsapp.ts, never hardcoded. "View Pricing" stays as
+ * a small tertiary text link below the pair — the escape hatch for the
+ * minority who want the itemised detail before doing anything else.
  */
 import Container from '../components/Container.astro'
 import SectionHeader from '../components/SectionHeader.astro'
 import PricingCard from '../components/PricingCard.astro'
 import Button from '../components/Button.astro'
 import { packages } from '../data/pricing'
+import { company } from '../data/company'
+import { defaultWhatsappUrl } from '../lib/whatsapp'
+
+const whatsappHref = defaultWhatsappUrl()
 ---
 
 <section class="pricing">
@@ -34,7 +49,11 @@ import { packages } from '../data/pricing'
     </p>
 
     <div class="pricing-cta">
-      <Button variant="ghost" href="/pricing">View Pricing</Button>
+      <div class="pricing-cta-buttons">
+        <Button variant="primary" href={company.requirementFormUrl}>Submit Your Requirements</Button>
+        <Button variant="secondary" href={whatsappHref} external>WhatsApp Us</Button>
+      </div>
+      <a class="pricing-view-link" href="/pricing">View Pricing</a>
     </div>
   </Container>
 </section>
@@ -61,7 +80,34 @@ import { packages } from '../data/pricing'
   }
 
   .pricing-cta {
-    margin-top: var(--space-6);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+    margin-top: var(--space-8);
+  }
+
+  .pricing-cta-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+
+  /* Demoted, not a Button variant — small and muted on purpose, so the
+     primary/secondary pair above reads as the section's real CTA and
+     this stays the escape hatch for readers who want the full price
+     list before doing anything else. */
+  .pricing-view-link {
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-ink-muted);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .pricing-view-link:hover {
+    color: var(--color-accent);
   }
 
   @media (min-width: 48em) {
