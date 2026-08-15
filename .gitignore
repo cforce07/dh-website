@@ -26,6 +26,9 @@ build/
 out/
 .astro/
 
+# Local Lighthouse CI artifacts
+.tmp-lh-profile/
+
 # OS / editor
 Thumbs.db
 desktop.ini
