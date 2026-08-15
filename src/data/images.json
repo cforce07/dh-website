@@ -1,0 +1,166 @@
+[
+  {
+    "id": "hero-together",
+    "title": "Hero — one frame, both people in it",
+    "assetPath": "src/assets/hero-placeholder.svg",
+    "usedBy": [
+      { "file": "src/sections/Hero.astro", "line": 33, "what": "import heroTogether from '../assets/hero-placeholder.svg'" },
+      { "file": "src/sections/Hero.astro", "line": 58, "what": "<Image src={heroTogether} … /> — the page's LCP element" },
+      { "file": "src/sections/Hero.astro", "line": 59, "what": "alt text; must be rewritten with the asset" }
+    ],
+    "provenance": "hand-svg",
+    "renderedAt": "520x416 CSS px in the two-column grid at 64em (container 1152px, 2rem padding each side, --space-12 gap). Widens with the >=80em bleed (Hero.astro:164-170): 616x493 at a 1280px viewport, 936x749 at 1920px, 1256x1005 at 2560px. aspect-ratio is 5/4 at >=64em and 4/3 below, both CSS crops of one 5:4 source drawn at 1400x1120.",
+    "depicts": "Two adults at the same scale on the same plane, both reaching into one task on a shared counter, with a child in front of it. The counter runs edge to edge and every figure meets it — the logo's H crossbar restated as a room. Faceless, abstract, invented.",
+    "replaceWith": "The Priority 1 hero frame from the shot brief (docs/design/brand-assessment-2026-08-15.md §7): one landscape frame, one room, one window light, a helper and a family member in the same ordinary domestic task, both at the same scale, both in focus, shot at eye level in a real Singapore HDB or condo interior.",
+    "aiPermitted": true,
+    "aiForbiddenReason": null,
+    "promptSection": "Slot A — hero-together",
+    "notes": "Currently a vector: 4KB, resolution-independent, and it costs the LCP budget almost nothing. A raster replacement (AI or photographic) is a real performance trade, not a free swap. Hero.astro fixes width/height independently of the source, so the swap is a one-line src change plus new alt text."
+  },
+  {
+    "id": "og-share",
+    "title": "Social share image (Open Graph / Twitter)",
+    "assetPath": null,
+    "usedBy": [
+      { "file": "src/layouts/BaseLayout.astro", "line": 94, "what": "<meta name=\"twitter:card\" content=\"summary\" /> — deliberately NOT summary_large_image, because a large-image card with no image renders worse than a summary card" },
+      { "file": "src/layouts/BaseLayout.astro", "line": 71, "what": "the og: block this image joins, after og:url" }
+    ],
+    "provenance": "none-yet",
+    "renderedAt": "1200x630 (1.91:1). WhatsApp, the live conversion channel for this business, reads og:image directly and renders it at roughly 300x157 in a chat bubble.",
+    "depicts": "Nothing yet — no image is shipped, and the card is honest without one.",
+    "replaceWith": "A DirectHired-owned share card: either a crop of the commissioned hero photograph with the wordmark set over a clear area, or a purely typographic card built from the brand assets.",
+    "aiPermitted": true,
+    "aiForbiddenReason": null,
+    "promptSection": "Slot B — og-share",
+    "notes": "Already tracked as a Category C declared input in scripts/generate-info-required.mjs. Shipping it is a four-line change in BaseLayout.astro: restore summary_large_image and add og:image, og:image:width, og:image:height, twitter:image."
+  },
+  {
+    "id": "helper-profile-portrait",
+    "title": "Helper profile portraits (block 10a)",
+    "assetPath": null,
+    "usedBy": [
+      { "file": "src/sections/MeetHelpers.astro", "line": 48, "what": "the <section> that only renders when the helper-profiles collection is non-empty" },
+      { "file": "src/sections/MeetHelpers.astro", "line": 57, "what": "the profile <Card>, where a portrait would sit" },
+      { "file": "src/content/config.ts", "line": 110, "what": "the helper-profiles collection schema, which has no portrait field and must not gain one before releases exist" }
+    ],
+    "provenance": "none-yet",
+    "renderedAt": "Not rendered. The section is absent from the page while src/content/helper-profiles/ is empty, and the card schema has no image field.",
+    "depicts": "Nothing. No portrait is shipped, referenced, or reserved.",
+    "replaceWith": "Priority 2 of the shot brief: individual portraits of real helpers, eye level, working clothes not uniform, plain background, one consistent crop across all of them, each with a signed release obtained before the shoot in a language the subject reads fluently.",
+    "aiPermitted": false,
+    "aiForbiddenReason": "An AI-generated helper portrait is a fabricated helper. Master brief §78 forbids inventing helper details and §55 forbids presenting placeholder people as actual DirectHired helpers; a face on a profile card asserts that this specific person exists and is available. No prompt is written for this slot. It stays absent until a real, consented photograph exists.",
+    "promptSection": null,
+    "notes": "Do not pair a portrait with a nationality label even once real photographs exist (§7 of the brand assessment) — that turns a person into a category. HelperSources (block 08) already handles nationality as information."
+  },
+  {
+    "id": "review-author-portrait",
+    "title": "Reviewer / testimonial faces (block 10b)",
+    "assetPath": null,
+    "usedBy": [
+      { "file": "src/sections/Reviews.astro", "line": 49, "what": "the <section> that only renders when the reviews collection is non-empty" },
+      { "file": "src/sections/Reviews.astro", "line": 65, "what": "<figcaption class=\"review-meta\"> — the author line, where an avatar would sit" }
+    ],
+    "provenance": "none-yet",
+    "renderedAt": "Not rendered. The section is absent from the page while src/content/reviews/ is empty, and the review schema has no image field.",
+    "depicts": "Nothing. The quote wall is deliberately typographic — stars, quote, attribution line, hairline. No avatar.",
+    "replaceWith": "Nothing is required. A Google review does not need a face, and the unboxed quote wall reads as a testimonial precisely because it is not a widget with a headshot in it. If a face is ever added it must be the real reviewer's, with their written permission.",
+    "aiPermitted": false,
+    "aiForbiddenReason": "An AI face attached to a named review manufactures a customer. Master brief §78 forbids inventing testimonials, and a generated portrait beside a real quote is a fabricated attribution even when the quote itself is genuine. No prompt is written for this slot.",
+    "promptSection": null,
+    "notes": "Also do not substitute a generic silhouette, monogram or initial-avatar as a stand-in for a face — the block is already complete without one."
+  },
+  {
+    "id": "team-and-office",
+    "title": "\"Our team\" and \"our office\" imagery",
+    "assetPath": null,
+    "usedBy": [],
+    "provenance": "none-yet",
+    "renderedAt": "Not rendered. No section on the site claims to show DirectHired's staff or premises.",
+    "depicts": "Nothing.",
+    "replaceWith": "Priority 2 of the shot brief: a real corner of the actual office at working temperature, and a real consultation in progress shot from behind or side-on. Not staged, not empty, not wide-angle.",
+    "aiPermitted": false,
+    "aiForbiddenReason": "A generated office or generated staff photograph is a claim about a real, licensed business (MOM 23C1443) that is simply false. §55 and §78 both apply. This slot is registered with no consumer precisely so that the prohibition is on record before anyone adds an About block and reaches for a plausible-looking interior.",
+    "promptSection": null,
+    "notes": "Registered pre-emptively. If an About or Team block is ever built, this entry is the rule it inherits."
+  },
+  {
+    "id": "logo-wordmark",
+    "title": "DirectHired wordmark (on light grounds)",
+    "assetPath": "src/assets/logo-wordmark.svg",
+    "usedBy": [
+      { "file": "src/components/Header.astro", "line": 26, "what": "import Wordmark from '../assets/logo-wordmark.svg'" },
+      { "file": "src/components/Header.astro", "line": 35, "what": "<Wordmark class=\"logo-wordmark\" aria-hidden=\"true\" /> — rendered at 26px tall, width auto" },
+      { "file": "src/components/MobileNav.astro", "line": 35, "what": "import Wordmark from '../assets/logo-wordmark.svg'" },
+      { "file": "src/components/MobileNav.astro", "line": 60, "what": "<Wordmark class=\"panel-wordmark\" aria-hidden=\"true\" /> — rendered at 26px tall, width auto" }
+    ],
+    "provenance": "real-photo",
+    "renderedAt": "26px tall, width auto (Header.astro:126-130, MobileNav.astro:273-277). Vector, so resolution-independent.",
+    "depicts": "DirectHired's own wordmark — charcoal #4d4d4d letterforms with the teal #00a4a6 H.",
+    "replaceWith": "Nothing outstanding. This is DirectHired's asset, cropped from the vector master at logo/Logo-01.svg.",
+    "aiPermitted": false,
+    "aiForbiddenReason": "A brand mark is not a design brief. Regenerating or redrawing it produces a mark that is not DirectHired's. Extract from the vector master; never trace, never approximate, never generate.",
+    "promptSection": null,
+    "notes": "Fills are attributes rather than a <style> block on purpose — an inlined SVG <style> is document-scoped and would repaint the on-deep variant. See the file's own header comment."
+  },
+  {
+    "id": "logo-wordmark-on-deep",
+    "title": "DirectHired wordmark (on the deep teal ground)",
+    "assetPath": "src/assets/logo-wordmark-on-deep.svg",
+    "usedBy": [
+      { "file": "src/components/Footer.astro", "line": 31, "what": "import WordmarkOnDeep from '../assets/logo-wordmark-on-deep.svg'" },
+      { "file": "src/components/Footer.astro", "line": 46, "what": "<WordmarkOnDeep class=\"footer-wordmark\" aria-hidden=\"true\" /> — rendered at 32px tall, width auto" }
+    ],
+    "provenance": "real-photo",
+    "renderedAt": "32px tall, width auto (Footer.astro:151-155). Larger than the header's 26px because the footer's job is identity, not navigation.",
+    "depicts": "The same wordmark recoloured for #0E3A3B. The only variant that may appear on the deep ground.",
+    "replaceWith": "Nothing outstanding. DirectHired's own asset.",
+    "aiPermitted": false,
+    "aiForbiddenReason": "Same as logo-wordmark: a brand mark is extracted, not generated.",
+    "promptSection": null,
+    "notes": "Never use logo-wordmark.svg or logo-lockup.svg on the deep ground — see Footer.astro:138."
+  },
+  {
+    "id": "favicon-mark",
+    "title": "Favicon — the H mark alone",
+    "assetPath": "public/favicon.svg",
+    "usedBy": [
+      { "file": "src/layouts/BaseLayout.astro", "line": 55, "what": "<link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\" />" }
+    ],
+    "provenance": "real-photo",
+    "renderedAt": "Browser tab, typically 16-32px. Vector; byte-identical to src/assets/logo-mark.svg.",
+    "depicts": "The H from the wordmark — two figures joined at a crossbar — in teal #00a4a6.",
+    "replaceWith": "Nothing outstanding for the SVG. A rasterised 16/32/48 .ico is still missing and deliberately not faked; see the comment at BaseLayout.astro:41-53.",
+    "aiPermitted": false,
+    "aiForbiddenReason": "Same as logo-wordmark. The .ico, when it is made, must be rasterised from this vector — not redrawn and not generated.",
+    "promptSection": null,
+    "notes": "There is deliberately no favicon.ico and no <link> to one. A stale framework .ico behind a correct SVG is worse than no .ico at all."
+  },
+  {
+    "id": "logo-mark",
+    "title": "Mark-only lockup (source asset)",
+    "assetPath": "src/assets/logo-mark.svg",
+    "usedBy": [],
+    "provenance": "real-photo",
+    "renderedAt": "Not rendered from src/. Shipped to the browser as public/favicon.svg, which is byte-identical.",
+    "depicts": "The H mark alone, with <title> and role=\"img\" retained for standalone use.",
+    "replaceWith": "Nothing outstanding.",
+    "aiPermitted": false,
+    "aiForbiddenReason": "Brand mark — extracted from the vector master, never generated.",
+    "promptSection": null,
+    "notes": "Registered even though nothing in src/ imports it, so that a future consumer (app icon, WhatsApp display picture) reaches for this file rather than redrawing the H."
+  },
+  {
+    "id": "logo-lockup",
+    "title": "Full lockup with tagline (reference asset)",
+    "assetPath": "src/assets/logo-lockup.svg",
+    "usedBy": [],
+    "provenance": "real-photo",
+    "renderedAt": "Not rendered anywhere. The footer typesets the tagline in CSS instead — see Footer.astro:165-175 for why.",
+    "depicts": "Wordmark plus the \"Make It Easier For You\" tagline, as cropped from logo/Logo-01.svg.",
+    "replaceWith": "Nothing outstanding.",
+    "aiPermitted": false,
+    "aiForbiddenReason": "Brand mark — extracted from the vector master, never generated.",
+    "promptSection": null,
+    "notes": "Kept as the reference for the tagline's official letterforms and spacing. Do not put it on the deep ground; its fills are the light-ground charcoal."
+  }
+]

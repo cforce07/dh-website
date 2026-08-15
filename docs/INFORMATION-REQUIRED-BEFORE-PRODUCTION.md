@@ -6,9 +6,9 @@
 > npm run build:dev && node scripts/generate-info-required.mjs
 > ```
 
-Three categories, which behave differently and are tracked separately (master brief §79):
+Four categories, which behave differently and are tracked separately (master brief §79):
 
-Categories A and B are **derived** from the codebase and cannot fall out of sync with it. Category C is **declared** — see that section for why those items cannot be derived.
+Categories A, B and D are **derived** from the codebase and cannot fall out of sync with it. Category C is **declared** — see that section for why those items cannot be derived.
 
 ## Category A — Inline gaps (block the production build)
 
@@ -43,3 +43,55 @@ Design spec §5 names three Category A items — the MOM licence number, detaile
   - Source: Brief §79 Reminders 01/02; §55
   - Blocks: `og:image` / `twitter:image`, and with them the image in link previews — including WhatsApp, a secondary conversion channel for this business.
   - Handled meanwhile by: `src/layouts/BaseLayout.astro` declares `twitter:card="summary"` rather than `summary_large_image`, so the preview is correct and complete without an image instead of reserving a hero slot it cannot fill. No placeholder imagery of people is used (§55).
+
+## Category D — Images that are not DirectHired’s own
+
+Every image on the site, minus the ones that are already DirectHired’s own asset. Derived from the image provenance registry (`src/data/images.json`, typed by `src/data/images.ts`), which `tests/image-registry.test.ts` holds against the codebase: every image asset referenced under `src/` must appear in it, and no slot marked real-photo-only may carry AI provenance. `npm run build` **succeeds** with all of these outstanding — a hand-drawn abstract placeholder and an absent block are both honest.
+
+This is the production decision list: for each entry, either supply your own photograph or keep what is there. **Usage sites** is where the swap happens. Entries marked **real photo only** are not a choice — an AI or placeholder image there would fabricate a person or a fact about the business (master brief §55 / §78), so the block stays absent until a real, consented photograph exists.
+
+- **Helper profile portraits (block 10a)** (`helper-profile-portrait`) — **real photo only**
+  - Currently: nothing shipped — the slot renders no image
+  - Depicts: Nothing. No portrait is shipped, referenced, or reserved.
+  - Rendered at: Not rendered. The section is absent from the page while src/content/helper-profiles/ is empty, and the card schema has no image field.
+  - Usage sites:
+    - `src/sections/MeetHelpers.astro:48` — the <section> that only renders when the helper-profiles collection is non-empty
+    - `src/sections/MeetHelpers.astro:57` — the profile <Card>, where a portrait would sit
+    - `src/content/config.ts:110` — the helper-profiles collection schema, which has no portrait field and must not gain one before releases exist
+  - Should become: Priority 2 of the shot brief: individual portraits of real helpers, eye level, working clothes not uniform, plain background, one consistent crop across all of them, each with a signed release obtained before the shoot in a language the subject reads fluently.
+  - AI generation **not permitted**: An AI-generated helper portrait is a fabricated helper. Master brief §78 forbids inventing helper details and §55 forbids presenting placeholder people as actual DirectHired helpers; a face on a profile card asserts that this specific person exists and is available. No prompt is written for this slot. It stays absent until a real, consented photograph exists.
+- **Hero — one frame, both people in it** (`hero-together`)
+  - Currently: hand-drawn SVG placeholder in this repo (`src/assets/hero-placeholder.svg`)
+  - Depicts: Two adults at the same scale on the same plane, both reaching into one task on a shared counter, with a child in front of it. The counter runs edge to edge and every figure meets it — the logo's H crossbar restated as a room. Faceless, abstract, invented.
+  - Rendered at: 520x416 CSS px in the two-column grid at 64em (container 1152px, 2rem padding each side, --space-12 gap). Widens with the >=80em bleed (Hero.astro:164-170): 616x493 at a 1280px viewport, 936x749 at 1920px, 1256x1005 at 2560px. aspect-ratio is 5/4 at >=64em and 4/3 below, both CSS crops of one 5:4 source drawn at 1400x1120.
+  - Usage sites:
+    - `src/sections/Hero.astro:33` — import heroTogether from '../assets/hero-placeholder.svg'
+    - `src/sections/Hero.astro:58` — <Image src={heroTogether} … /> — the page's LCP element
+    - `src/sections/Hero.astro:59` — alt text; must be rewritten with the asset
+  - Should become: The Priority 1 hero frame from the shot brief (docs/design/brand-assessment-2026-08-15.md §7): one landscape frame, one room, one window light, a helper and a family member in the same ordinary domestic task, both at the same scale, both in focus, shot at eye level in a real Singapore HDB or condo interior.
+  - AI generation permitted. Prompt: **Slot A — hero-together** in `docs/design/image-prompts-2026-08-16.md`
+- **Social share image (Open Graph / Twitter)** (`og-share`)
+  - Currently: nothing shipped — the slot renders no image
+  - Depicts: Nothing yet — no image is shipped, and the card is honest without one.
+  - Rendered at: 1200x630 (1.91:1). WhatsApp, the live conversion channel for this business, reads og:image directly and renders it at roughly 300x157 in a chat bubble.
+  - Usage sites:
+    - `src/layouts/BaseLayout.astro:94` — <meta name="twitter:card" content="summary" /> — deliberately NOT summary_large_image, because a large-image card with no image renders worse than a summary card
+    - `src/layouts/BaseLayout.astro:71` — the og: block this image joins, after og:url
+  - Should become: A DirectHired-owned share card: either a crop of the commissioned hero photograph with the wordmark set over a clear area, or a purely typographic card built from the brand assets.
+  - AI generation permitted. Prompt: **Slot B — og-share** in `docs/design/image-prompts-2026-08-16.md`
+- **Reviewer / testimonial faces (block 10b)** (`review-author-portrait`) — **real photo only**
+  - Currently: nothing shipped — the slot renders no image
+  - Depicts: Nothing. The quote wall is deliberately typographic — stars, quote, attribution line, hairline. No avatar.
+  - Rendered at: Not rendered. The section is absent from the page while src/content/reviews/ is empty, and the review schema has no image field.
+  - Usage sites:
+    - `src/sections/Reviews.astro:49` — the <section> that only renders when the reviews collection is non-empty
+    - `src/sections/Reviews.astro:65` — <figcaption class="review-meta"> — the author line, where an avatar would sit
+  - Should become: Nothing is required. A Google review does not need a face, and the unboxed quote wall reads as a testimonial precisely because it is not a widget with a headshot in it. If a face is ever added it must be the real reviewer's, with their written permission.
+  - AI generation **not permitted**: An AI face attached to a named review manufactures a customer. Master brief §78 forbids inventing testimonials, and a generated portrait beside a real quote is a fabricated attribution even when the quote itself is genuine. No prompt is written for this slot.
+- **"Our team" and "our office" imagery** (`team-and-office`) — **real photo only**
+  - Currently: nothing shipped — the slot renders no image
+  - Depicts: Nothing.
+  - Rendered at: Not rendered. No section on the site claims to show DirectHired's staff or premises.
+  - Usage sites: none yet — registered ahead of any consumer
+  - Should become: Priority 2 of the shot brief: a real corner of the actual office at working temperature, and a real consultation in progress shot from behind or side-on. Not staged, not empty, not wide-angle.
+  - AI generation **not permitted**: A generated office or generated staff photograph is a claim about a real, licensed business (MOM 23C1443) that is simply false. §55 and §78 both apply. This slot is registered with no consumer precisely so that the prohibition is on record before anyone adds an About block and reaches for a plausible-looking interior.

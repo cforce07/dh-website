@@ -29,6 +29,22 @@
  *   broken one. So they are declared in DECLARED_INPUTS below, and the
  *   generated document labels them as declared rather than derived.
  *
+ *   Category D — images whose provenance is not `real-photo`, derived from
+ *   the image provenance registry (`src/data/images.json`, typed by
+ *   `src/data/images.ts`). Images are their own category because the
+ *   decision they need is different in kind: A, B and C are missing
+ *   *information*, while every entry here is a rendered thing that already
+ *   works — a hand-drawn placeholder, or a slot deliberately left empty.
+ *   Nothing here blocks the build. What the client needs at production is
+ *   not "what is missing" but "which pictures are not mine, and where does
+ *   each one live", which is why every entry prints its usage sites.
+ *
+ *   Derived, not declared: the registry is asserted against the codebase by
+ *   tests/image-registry.test.ts (every image asset referenced under src/
+ *   must appear in it, and no real-photo-only slot may carry AI
+ *   provenance), so it cannot quietly fall out of step the way a
+ *   hand-written list would.
+ *
  *   Without this category the checklist under-reported: design spec §5
  *   names three Category A items (MOM licence number, detailed
  *   replacement terms, without-replacement inclusion list) and only the
@@ -58,6 +74,7 @@ import { join, relative } from 'node:path'
 const DIST_DIR = 'dist'
 const SECTIONS_DIR = 'src/sections'
 const CONTENT_DIR = 'src/content'
+const IMAGE_REGISTRY_PATH = 'src/data/images.json'
 const OUTPUT_PATH = 'docs/INFORMATION-REQUIRED-BEFORE-PRODUCTION.md'
 
 // Same two patterns as scripts/check-tbd.mjs (kept in sync deliberately —
@@ -198,7 +215,38 @@ function findCategoryB() {
   return empty.sort((a, b) => a.collection.localeCompare(b.collection))
 }
 
-function renderMarkdown(categoryA, categoryB, categoryC) {
+/**
+ * Category D. Read straight from the registry JSON rather than the typed
+ * module beside it: this script is plain Node (CI runs Node 20, which cannot
+ * strip TypeScript), so the JSON is the file both readers share.
+ * `src/data/images.ts` is the typed view for everything inside the Astro
+ * project; the shapes are asserted together in tests/image-registry.test.ts.
+ */
+function findCategoryD() {
+  if (!existsSync(IMAGE_REGISTRY_PATH)) {
+    console.error(
+      `\nNo "${IMAGE_REGISTRY_PATH}" found. The image registry is a required input —\n` +
+        'restore it rather than removing this category, or the checklist silently\n' +
+        'stops reporting which images are not DirectHired’s own.\n',
+    )
+    process.exit(1)
+  }
+
+  const slots = JSON.parse(readFileSync(IMAGE_REGISTRY_PATH, 'utf8'))
+
+  return slots
+    .filter((slot) => slot.provenance !== 'real-photo')
+    .sort((a, b) => a.id.localeCompare(b.id))
+}
+
+const PROVENANCE_LABEL = {
+  'hand-svg': 'hand-drawn SVG placeholder in this repo',
+  'ai-generated': 'AI-generated from a prompt in `docs/design/image-prompts-2026-08-16.md`',
+  'real-photo': 'DirectHired’s own verified asset',
+  'none-yet': 'nothing shipped — the slot renders no image',
+}
+
+function renderMarkdown(categoryA, categoryB, categoryC, categoryD) {
   const lines = []
 
   lines.push('# DirectHired — Information Required Before Production')
@@ -213,11 +261,11 @@ function renderMarkdown(categoryA, categoryB, categoryC) {
   lines.push('> ```')
   lines.push('')
   lines.push(
-    'Three categories, which behave differently and are tracked separately (master brief §79):',
+    'Four categories, which behave differently and are tracked separately (master brief §79):',
   )
   lines.push('')
   lines.push(
-    'Categories A and B are **derived** from the codebase and cannot fall out of sync with it. ' +
+    'Categories A, B and D are **derived** from the codebase and cannot fall out of sync with it. ' +
       'Category C is **declared** — see that section for why those items cannot be derived.',
   )
   lines.push('')
@@ -305,13 +353,67 @@ function renderMarkdown(categoryA, categoryB, categoryC) {
   }
   lines.push('')
 
+  lines.push('## Category D — Images that are not DirectHired’s own')
+  lines.push('')
+  lines.push(
+    'Every image on the site, minus the ones that are already DirectHired’s own asset. Derived ' +
+      'from the image provenance registry (`src/data/images.json`, typed by `src/data/images.ts`), ' +
+      'which `tests/image-registry.test.ts` holds against the codebase: every image asset ' +
+      'referenced under `src/` must appear in it, and no slot marked real-photo-only may carry AI ' +
+      'provenance. `npm run build` **succeeds** with all of these outstanding — a hand-drawn ' +
+      'abstract placeholder and an absent block are both honest.',
+  )
+  lines.push('')
+  lines.push(
+    'This is the production decision list: for each entry, either supply your own photograph or ' +
+      'keep what is there. **Usage sites** is where the swap happens. Entries marked ' +
+      '**real photo only** are not a choice — an AI or placeholder image there would fabricate a ' +
+      'person or a fact about the business (master brief §55 / §78), so the block stays absent ' +
+      'until a real, consented photograph exists.',
+  )
+  lines.push('')
+
+  if (categoryD.length === 0) {
+    lines.push('_None — every registered image is DirectHired’s own asset._')
+  } else {
+    for (const slot of categoryD) {
+      const flag = slot.aiPermitted ? '' : ' — **real photo only**'
+      lines.push(`- **${slot.title}** (\`${slot.id}\`)${flag}`)
+      lines.push(
+        `  - Currently: ${PROVENANCE_LABEL[slot.provenance] ?? slot.provenance}` +
+          (slot.assetPath ? ` (\`${slot.assetPath}\`)` : ''),
+      )
+      lines.push(`  - Depicts: ${slot.depicts}`)
+      lines.push(`  - Rendered at: ${slot.renderedAt}`)
+      if (slot.usedBy.length === 0) {
+        lines.push('  - Usage sites: none yet — registered ahead of any consumer')
+      } else {
+        lines.push('  - Usage sites:')
+        for (const use of slot.usedBy) {
+          lines.push(`    - \`${use.file}:${use.line}\` — ${use.what}`)
+        }
+      }
+      lines.push(`  - Should become: ${slot.replaceWith}`)
+      if (slot.aiPermitted) {
+        lines.push(
+          `  - AI generation permitted. Prompt: **${slot.promptSection}** in ` +
+            '`docs/design/image-prompts-2026-08-16.md`',
+        )
+      } else {
+        lines.push(`  - AI generation **not permitted**: ${slot.aiForbiddenReason}`)
+      }
+    }
+  }
+  lines.push('')
+
   return lines.join('\n')
 }
 
 const categoryA = findCategoryA()
 const categoryB = findCategoryB()
 const categoryC = DECLARED_INPUTS
-const markdown = renderMarkdown(categoryA, categoryB, categoryC)
+const categoryD = findCategoryD()
+const markdown = renderMarkdown(categoryA, categoryB, categoryC, categoryD)
 
 writeFileSync(OUTPUT_PATH, markdown)
 
@@ -319,3 +421,4 @@ console.log(`Wrote ${OUTPUT_PATH}`)
 console.log(`  Category A (inline gaps, block the build): ${categoryA.length}`)
 console.log(`  Category B (whole-block omissions, do not block the build): ${categoryB.length}`)
 console.log(`  Category C (declared, not derivable): ${categoryC.length}`)
+console.log(`  Category D (images not yet DirectHired's own): ${categoryD.length}`)
