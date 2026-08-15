@@ -1,0 +1,40 @@
+---
+/**
+ * Container — the page-width primitive. Every section on the site sits
+ * inside one of these; `width` picks the measure.
+ *
+ * `default` (72rem / 1152px) is the standard section width.
+ * `narrow`  (48rem / 768px) is for reading-width content — long copy,
+ * forms, anything where full section width would over-stretch the line.
+ */
+interface Props {
+  width?: 'default' | 'narrow'
+}
+
+const { width = 'default' } = Astro.props
+---
+
+<div class:list={['container', width]}><slot /></div>
+
+<style>
+  .container {
+    width: 100%;
+    margin-inline: auto;
+    padding-inline: var(--space-6);
+  }
+
+  .default {
+    max-width: 72rem;
+  }
+
+  .narrow {
+    max-width: 48rem;
+  }
+
+  /* Editorial breathing room once there's room to give it. */
+  @media (min-width: 48em) {
+    .container {
+      padding-inline: var(--space-8);
+    }
+  }
+</style>

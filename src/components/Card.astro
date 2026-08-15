@@ -1,0 +1,32 @@
+---
+/**
+ * Card — the generic raised-surface container used for feature tiles,
+ * job listings, testimonials, etc. across the homepage sections.
+ *
+ * --color-surface-raised is only a few shades off --color-surface, so a
+ * hairline border alone would read flat. --shadow-sm gives it the "lifted
+ * paper" separation the spec asks for; the border is a secondary cue,
+ * not the only one, so the decorative --color-border hairline is the
+ * correct token here (see the contrast note in tokens.css).
+ */
+---
+
+<div class="card"><slot /></div>
+
+<style>
+  .card {
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-8);
+    box-shadow: var(--shadow-sm);
+    transition:
+      box-shadow var(--duration-base) var(--ease),
+      transform var(--duration-base) var(--ease);
+  }
+
+  .card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+</style>
