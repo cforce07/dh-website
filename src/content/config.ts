@@ -59,9 +59,21 @@ const reviews = defineCollection({
   type: 'content',
   schema: z.object({
     author: z.string(),
-    rating: z.number().min(1).max(5),
+    // .int(): Reviews.astro renders stars via '★'.repeat(rating) /
+    // '☆'.repeat(5 - rating). String.prototype.repeat coerces its argument
+    // with ToIntegerOrInfinity, so a non-integer (e.g. 4.5) would silently
+    // render a star count that disagrees with the aria-label built from the
+    // same value — a sighted/screen-reader mismatch. Real Google ratings
+    // are integers; enforcing it here catches a malformed entry at content
+    // build time instead of at render time.
+    rating: z.number().min(1).max(5).int(),
     source: z.literal('google'),
-    date: z.string(),
+    // .date(): plain z.string() accepted anything, and Reviews.astro sorts
+    // entries with `new Date(data.date).getTime()`, which is NaN on a
+    // malformed string and produces unstable ordering rather than a build
+    // error. Requiring ISO 8601 (YYYY-MM-DD) here means a bad date fails
+    // fast at content parsing, before it ever reaches the sort.
+    date: z.string().date(),
   }),
 })
 
