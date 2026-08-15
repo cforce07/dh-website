@@ -1,0 +1,84 @@
+---
+/**
+ * FinalCta — block 12. The page's last impression and its designated
+ * conversion surface, so it gets more vertical room than a standard
+ * section (--space-section-lg, tokens.css) and both CTAs at full size
+ * rather than the compact treatment used inline elsewhere on the page.
+ *
+ * Headline and supporting copy are verbatim per the task brief — neither
+ * is assembled from data. URLs are never hardcoded: the primary button
+ * reads `company.requirementFormUrl` and the secondary reads
+ * `defaultWhatsappUrl()`, the same sources Hero (block 01) uses, so a
+ * destination change only ever happens in one place.
+ *
+ * Background stays on --color-surface-raised — block 07 (TwoSidedMatch)
+ * is the only section that shifts to --color-deep, and a second dark
+ * band here would break that "one register change" reading. Weight
+ * instead comes from space, a larger display size on the headline, and a
+ * small decorative rule reusing the brand-teal graphic treatment already
+ * established in SectionHeader / Hero.
+ */
+import Container from '../components/Container.astro'
+import Button from '../components/Button.astro'
+import { company } from '../data/company'
+import { defaultWhatsappUrl } from '../lib/whatsapp'
+
+const whatsappHref = defaultWhatsappUrl()
+---
+
+<section class="final-cta">
+  <Container width="narrow">
+    <span class="cta-mark" aria-hidden="true"></span>
+    <h2 class="cta-headline">Tell us what your family needs.</h2>
+    <p class="cta-copy">Take the first step toward finding a helper who fits your family's needs.</p>
+
+    <div class="cta-actions">
+      <Button variant="primary" href={company.requirementFormUrl}>Submit Your Requirements</Button>
+      <Button variant="secondary" href={whatsappHref} external>WhatsApp Us</Button>
+    </div>
+  </Container>
+</section>
+
+<style>
+  .final-cta {
+    padding-block: var(--space-section-lg);
+    background: var(--color-surface-raised);
+    text-align: center;
+  }
+
+  .cta-mark {
+    display: inline-block;
+    width: var(--space-8);
+    height: 2px;
+    margin-bottom: var(--space-6);
+    border-radius: var(--radius-sm);
+    background: var(--color-brand-teal);
+  }
+
+  .cta-headline {
+    margin: 0 auto;
+    max-width: 22ch;
+    font-family: var(--font-display);
+    font-size: var(--size-h1);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.1;
+    color: var(--color-ink);
+  }
+
+  .cta-copy {
+    max-width: 42ch;
+    margin: var(--space-6) auto 0;
+    font-family: var(--font-text);
+    font-size: var(--size-lede);
+    line-height: 1.5;
+    color: var(--color-ink-muted);
+  }
+
+  .cta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-3);
+    margin-top: var(--space-8);
+  }
+</style>

@@ -1,0 +1,30 @@
+---
+interface Props {
+  item: string
+  owner?: string
+}
+const { item, owner = 'DirectHired' } = Astro.props
+
+if (typeof item !== 'string' || item.trim() === '') {
+  throw new Error(
+    '<Tbd> requires a non-empty `item` describing what is unverified. ' +
+      'An unnamed placeholder cannot tell anyone what information is missing.',
+  )
+}
+---
+
+<span class="tbd" data-tbd={item} data-tbd-owner={owner}>
+  TBD — {item}
+</span>
+
+<style>
+  .tbd {
+    display: inline-block;
+    padding: 0.125em 0.5em;
+    border: 1px dashed currentColor;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 0.85em;
+    opacity: 0.75;
+  }
+</style>

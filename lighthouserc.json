@@ -1,0 +1,18 @@
+{
+  "ci": {
+    "collect": { "staticDistDir": "./dist", "numberOfRuns": 3 },
+    "assert": {
+      "_comment": "aggregationMethod: 'median' (not the lhci default 'optimistic', which grades every assertion on the single best of the 3 runs and would mask a regression that shows up in only 1 or 2 of them).",
+      "aggregationMethod": "median",
+      "assertions": {
+        "categories:performance": ["error", { "minScore": 0.9 }],
+        "categories:accessibility": ["error", { "minScore": 1 }],
+        "categories:seo": ["error", { "minScore": 1 }],
+        "largest-contentful-paint": ["error", { "maxNumericValue": 2500 }],
+        "cumulative-layout-shift": ["error", { "maxNumericValue": 0.1 }],
+        "total-blocking-time": ["error", { "maxNumericValue": 200 }]
+      }
+    },
+    "_totalBlockingTimeIsInpLabProxy": "The design budget is INP < 200ms, but INP is a field metric (real-user CrUX data) that Lighthouse cannot measure in a single-page lab run. total-blocking-time above is the standard lab proxy for JS-driven responsiveness, asserted at the same 200ms threshold as the INP budget -- it is NOT a measurement of INP itself, and a passing TBT does not guarantee a passing field INP."
+  }
+}

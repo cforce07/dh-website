@@ -1,0 +1,78 @@
+---
+/**
+ * SectionHeader — the recurring "eyebrow / title / lede" block that
+ * opens most homepage sections. `eyebrow` and `lede` are optional so a
+ * section can ship a bare title where that's all it needs.
+ *
+ * The small rule beside the eyebrow is the one place these primitives
+ * use --color-brand-teal — the real logo teal, which fails WCAG AA for
+ * text and button fills but is fine here because it is purely graphic
+ * (a 1.5px rule, not text) and never carries the reading content.
+ */
+interface Props {
+  eyebrow?: string
+  title: string
+  lede?: string
+}
+
+const { eyebrow, title, lede } = Astro.props
+---
+
+<div class="section-header">
+  {
+    eyebrow && (
+      <p class="eyebrow">
+        <span class="eyebrow-mark" aria-hidden="true"></span>
+        {eyebrow}
+      </p>
+    )
+  }
+  <h2 class="title">{title}</h2>
+  {lede && <p class="lede">{lede}</p>}
+</div>
+
+<style>
+  .section-header {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+  }
+
+  .eyebrow-mark {
+    display: inline-block;
+    width: var(--space-6);
+    height: 2px;
+    border-radius: var(--radius-sm);
+    background: var(--color-brand-teal);
+  }
+
+  .title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--size-h2);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  .lede {
+    max-width: 60ch;
+    margin-top: var(--space-4);
+    font-family: var(--font-text);
+    font-size: var(--size-lede);
+    font-weight: var(--font-weight-regular);
+    line-height: 1.5;
+    color: var(--color-ink-muted);
+  }
+</style>

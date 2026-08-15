@@ -1,0 +1,25 @@
+{
+  "name": "dh-website",
+  "type": "module",
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=20.3.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build && node scripts/check-tbd.mjs dist",
+    "build:dev": "astro build",
+    "test": "vitest run",
+    "axe": "node scripts/run-axe.mjs",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "astro": "^5.18.2"
+  },
+  "devDependencies": {
+    "@astrojs/sitemap": "^3.7.3",
+    "@axe-core/cli": "^4.13.0",
+    "@lhci/cli": "^0.15.1",
+    "vitest": "^4.1.10"
+  }
+}

@@ -1,0 +1,113 @@
+---
+/**
+ * Problem — block 03. Names the three complaints families bring to
+ * DirectHired, stated plainly so Difference (block 04) can answer each
+ * one in turn. Short by design — this block's job is to set up the next
+ * one, not to dwell.
+ */
+import Container from '../components/Container.astro'
+import Card from '../components/Card.astro'
+import SectionHeader from '../components/SectionHeader.astro'
+
+const problems = [
+  {
+    title: 'Not the right fit',
+    body: "A helper's experience and personality matter as much as their availability. Skip that, and mismatches follow.",
+  },
+  {
+    title: 'Unclear pricing',
+    // "Levies" was removed here: the MOM levy appears nowhere in the brief
+    // or in DirectHired's own breakdown (which lists "MOM — $70" and
+    // nothing else), and §78 forbids inventing government charges.
+    body: 'Agency fees and additional charges are not always explained before a family commits to them.',
+  },
+  {
+    title: 'Previous bad experiences',
+    body: 'Families who have been through a difficult placement before want a different process, not just another agency.',
+  },
+]
+---
+
+<section class="problem">
+  <Container>
+    <SectionHeader title="Finding a helper shouldn't be a guessing game." />
+
+    <div class="problem-grid">
+      {
+        problems.map((problem, i) => (
+          <Card>
+            <div class="problem-card">
+              <span class="problem-icon" aria-hidden="true">
+                {i === 0 && (
+                  <svg viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <circle cx="11" cy="14" r="7" />
+                    <circle cx="18" cy="14" r="7" stroke-dasharray="3 3" />
+                  </svg>
+                )}
+                {i === 1 && (
+                  <svg viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <path d="M15 4h6a2 2 0 0 1 2 2v6L12.5 23a2 2 0 0 1-2.8 0l-6.7-6.7a2 2 0 0 1 0-2.8L15 4Z" stroke-linejoin="round" />
+                    <circle cx="19" cy="9" r="1.6" fill="currentColor" stroke="none" />
+                  </svg>
+                )}
+                {i === 2 && (
+                  <svg viewBox="0 0 28 28" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6">
+                    <path
+                      d="M5 6h18a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H12l-5 4v-4H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                )}
+              </span>
+              <h3 class="problem-title">{problem.title}</h3>
+              <p class="problem-body">{problem.body}</p>
+            </div>
+          </Card>
+        ))
+      }
+    </div>
+  </Container>
+</section>
+
+<style>
+  .problem {
+    padding-block: var(--space-section);
+  }
+
+  .problem-grid {
+    display: grid;
+    gap: var(--space-6);
+    margin-top: var(--space-12);
+  }
+
+  .problem-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .problem-icon {
+    display: inline-flex;
+    color: var(--color-accent);
+  }
+
+  .problem-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  .problem-body {
+    font-family: var(--font-text);
+    line-height: 1.5;
+    color: var(--color-ink-muted);
+  }
+
+  @media (min-width: 48em) {
+    .problem-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+</style>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="800" viewBox="0 0 640 800" role="img" aria-hidden="true">
+  <title>Abstract illustration representing a helper</title>
+  <defs>
+    <linearGradient id="helper-bg" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" />
+      <stop offset="1" stop-color="#FAF8F5" />
+    </linearGradient>
+  </defs>
+
+  <rect width="640" height="800" fill="url(#helper-bg)" />
+  <circle cx="180" cy="190" r="260" fill="#00A4A6" fill-opacity="0.12" />
+  <circle cx="520" cy="700" r="140" fill="#0E3A3B" fill-opacity="0.05" />
+
+  <!-- A single figure, drawn at the same scale and in the same style as the
+       family group next to it, deliberately: this is one full person, not
+       a service icon. -->
+  <circle cx="320" cy="424" r="64" fill="#2A2724" />
+  <path d="M208,640 C208,561 242,482 242,482 L398,482 C398,482 432,561 432,640 Z" fill="#2A2724" />
+
+  <circle cx="365" cy="556" r="6" fill="#00A4A6" />
+</svg>

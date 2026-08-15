@@ -1,0 +1,256 @@
+---
+/**
+ * Footer — company blurb + CTAs, nav items, contact block, social links,
+ * and a legal bottom bar (master brief §76). Every value is sourced from
+ * `company.ts` — no retyped phone numbers, emails, or addresses.
+ *
+ * Deliberately shifts to the deep-teal register (`--color-deep` /
+ * `--color-on-deep` / `--color-accent-on-deep`) for the "end of page"
+ * signal — the one intentional whole-section theme shift on the page,
+ * not a mid-scroll flip.
+ *
+ * Every softer step of that register is a token too — `-soft`, `-muted`,
+ * `--color-border-on-deep`, `--color-border-on-deep-muted`,
+ * `--color-rule-on-deep`. This file previously wrote them inline as
+ * `rgba(250, 248, 245, α)`, which is `--color-on-deep` retyped as raw RGB
+ * eight times over and exactly the hardcoded colour spec §12 forbids. The
+ * tokens are pre-flattened over `--color-deep`, so they are valid ONLY on
+ * this surface; see tokens.css for the measured contrast of each.
+ *
+ * Conversion hierarchy: primary "Submit Your Requirements" precedes
+ * secondary "WhatsApp Us" here too, matching header/mobile nav/mobile bar.
+ */
+import Container from './Container.astro'
+import Button from './Button.astro'
+import { navItems, legalItems } from '../lib/nav'
+import { company } from '../data/company'
+import { defaultWhatsappUrl } from '../lib/whatsapp'
+
+const whatsappHref = defaultWhatsappUrl()
+const year = new Date().getFullYear()
+const addressLine = `${company.address.street}, ${company.address.locality} ${company.address.postalCode}`
+---
+
+<footer class="site-footer">
+  <Container>
+    <div class="footer-top">
+      <div class="footer-brand">
+        <p class="footer-logo">{company.name}</p>
+        <p class="footer-blurb">
+          {company.legalDescription}. {company.placementCount} placements since {company.foundedYear}, matching
+          families in Singapore with helpers they can trust.
+        </p>
+        <div class="footer-ctas">
+          <Button variant="primary" href={company.requirementFormUrl}>Submit Your Requirements</Button>
+          <Button variant="secondary" href={whatsappHref} external>WhatsApp Us</Button>
+        </div>
+      </div>
+
+      <nav class="footer-nav" aria-label="Footer">
+        <p class="footer-heading">Explore</p>
+        <ul>
+          {
+            navItems.map((item) => (
+              <li>
+                <a href={item.href}>{item.label}</a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+
+      <div class="footer-contact">
+        <p class="footer-heading">Contact</p>
+        <ul>
+          <li><a href={`tel:${company.phoneE164}`}>{company.phoneDisplay}</a></li>
+          <li><a href={`mailto:${company.email}`}>{company.email}</a></li>
+          <li>{addressLine}</li>
+          <li>Open {company.openingHours}</li>
+        </ul>
+        <div class="footer-social">
+          <a href={company.socials.facebook} target="_blank" rel="noopener noreferrer" aria-label={`${company.name} on Facebook`}>
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+              <path
+                d="M14.5 8.5H16.5V5.5H14.5C12.567 5.5 11 7.067 11 9V11H9V14H11V19H14V14H16L16.5 11H14V9C14 8.724 14.224 8.5 14.5 8.5Z"
+                fill="currentColor"
+              />
+            </svg>
+          </a>
+          <a href={company.socials.instagram} target="_blank" rel="noopener noreferrer" aria-label={`${company.name} on Instagram`}>
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+              <rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="currentColor" stroke-width="1.6" />
+              <circle cx="12" cy="12" r="3.4" fill="none" stroke="currentColor" stroke-width="1.6" />
+              <circle cx="16.2" cy="7.8" r="0.9" fill="currentColor" />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p class="copyright">&copy; {year} {company.name}. All rights reserved.</p>
+      <ul class="legal-list">
+        {
+          legalItems.map((item) => (
+            <li>
+              <a href={item.href}>{item.label}</a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </Container>
+</footer>
+
+<style>
+  .site-footer {
+    background: var(--color-deep);
+    color: var(--color-on-deep);
+    padding-block: var(--space-16) var(--space-8);
+  }
+
+  .footer-top {
+    display: grid;
+    gap: var(--space-12);
+    grid-template-columns: 1fr;
+    padding-bottom: var(--space-12);
+    border-bottom: 1px solid var(--color-rule-on-deep);
+  }
+
+  .footer-brand {
+    max-width: 32rem;
+  }
+
+  .footer-logo {
+    font-family: var(--font-display);
+    font-size: var(--size-h3);
+    margin-bottom: var(--space-4);
+  }
+
+  .footer-blurb {
+    font-family: var(--font-text);
+    color: var(--color-on-deep-soft);
+    line-height: 1.6;
+    margin-bottom: var(--space-6);
+  }
+
+  .footer-ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+
+  /* The secondary Button's outline uses --color-ink-muted, which reads
+     as near-invisible on this dark surface — override just the border
+     and text colour here so it stays a legible outline, without
+     touching Button.astro's shared styles. */
+  .footer-ctas :global(.secondary) {
+    color: var(--color-on-deep);
+    border-color: var(--color-border-on-deep);
+  }
+
+  .footer-ctas :global(.secondary:hover) {
+    border-color: var(--color-accent-on-deep);
+    color: var(--color-accent-on-deep);
+  }
+
+  .footer-heading {
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-on-deep-muted);
+    margin-bottom: var(--space-4);
+  }
+
+  .footer-nav ul,
+  .footer-contact ul {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .footer-nav a,
+  .footer-contact a {
+    color: var(--color-on-deep);
+    text-decoration: none;
+  }
+
+  .footer-nav a:hover,
+  .footer-contact a:hover {
+    color: var(--color-accent-on-deep);
+  }
+
+  .footer-contact li {
+    color: var(--color-on-deep-soft);
+  }
+
+  .footer-social {
+    display: flex;
+    gap: var(--space-3);
+    margin-top: var(--space-6);
+  }
+
+  .footer-social a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid var(--color-border-on-deep-muted);
+    border-radius: var(--radius-md);
+    color: var(--color-on-deep);
+    transition: border-color var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease);
+  }
+
+  .footer-social a:hover {
+    border-color: var(--color-accent-on-deep);
+    color: var(--color-accent-on-deep);
+  }
+
+  .footer-bottom {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding-top: var(--space-8);
+  }
+
+  .copyright {
+    font-size: var(--size-small);
+    color: var(--color-on-deep-muted);
+  }
+
+  .legal-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-6);
+  }
+
+  .legal-list a {
+    font-size: var(--size-small);
+    color: var(--color-on-deep-muted);
+    text-decoration: none;
+  }
+
+  .legal-list a:hover {
+    color: var(--color-accent-on-deep);
+  }
+
+  /* global.css's :focus-visible rule outlines with --color-accent, which
+     is too dark to read against this section's --color-deep background
+     (both are dark teals). Override to the token built for exactly this
+     — accent-on-deep, 6.18:1 against --color-deep. */
+  .site-footer :global(a:focus-visible),
+  .site-footer :global(button:focus-visible) {
+    outline-color: var(--color-accent-on-deep);
+  }
+
+  @media (min-width: 48em) {
+    .footer-top {
+      grid-template-columns: 1.4fr 1fr 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,118 @@
+---
+/**
+ * MobileCtaBar — fixed bottom bar, visible only below --bp-desktop
+ * (96em / 1536px, tokens.css — raised from an original 64em; see the
+ * token's comment for the real-browser measurement behind that change)
+ * — the same breakpoint Header.astro and MobileNav.astro switch on; the
+ * max-width query below must keep using the literal in sync with theirs.
+ * Carries both CTAs, primary given visual weight via flex-grow.
+ *
+ * It must never occlude content: `--mobile-bar-height` is the single
+ * source both this bar's min-height and the global `body` bottom padding
+ * are derived from, so the two can't drift apart. The bar's own bottom
+ * padding additionally reserves `env(safe-area-inset-bottom)` for
+ * home-indicator devices, and the body padding adds the same safe-area
+ * term — so on a device with a safe-area inset, body padding is always
+ * at least as large as the bar's actual rendered height (verified by
+ * construction: floor height 4.75rem vs. actual content+padding of
+ * roughly 4.5rem, a deliberate buffer).
+ */
+import Button from './Button.astro'
+import { company } from '../data/company'
+import { defaultWhatsappUrl } from '../lib/whatsapp'
+
+const whatsappHref = defaultWhatsappUrl()
+---
+
+<div class="mobile-cta-bar" role="region" aria-label="Contact actions">
+  <Button variant="primary" href={company.requirementFormUrl}>Submit Your Requirements</Button>
+  <Button variant="secondary" href={whatsappHref} external>WhatsApp Us</Button>
+</div>
+
+<style>
+  :global(:root) {
+    --mobile-bar-height: 4.75rem;
+  }
+
+  .mobile-cta-bar {
+    display: none;
+  }
+
+  .mobile-cta-bar :global(.btn) {
+    flex: 1;
+    /*
+     * Compaction, same technique as Header.astro's CTA override: default
+     * padding (--space-6, 24px/side) makes both buttons wider than they
+     * need to be. Reduces how narrow the row layout below needs to get
+     * before falling back to the stacked layout at --bp-cta-bar-stack.
+     */
+    padding-inline: var(--space-4);
+  }
+
+  .mobile-cta-bar :global(.primary) {
+    flex: 1.4;
+  }
+
+  /* 95.99em, one hair below --bp-desktop (96em), so this query and
+     Header/MobileNav's `min-width: 96em` never both match at once.
+     Must match Header.astro and MobileNav.astro exactly. */
+  @media (max-width: 95.99em) {
+    :global(body) {
+      padding-bottom: calc(var(--mobile-bar-height) + env(safe-area-inset-bottom));
+    }
+
+    .mobile-cta-bar {
+      display: flex;
+      align-items: stretch;
+      gap: var(--space-3);
+      position: fixed;
+      inset-inline: 0;
+      inset-block-end: 0;
+      z-index: 40;
+      min-height: var(--mobile-bar-height);
+      padding: var(--space-3) var(--space-4);
+      padding-bottom: calc(var(--space-3) + env(safe-area-inset-bottom));
+      background: var(--color-surface-raised);
+      border-top: 1px solid var(--color-border);
+      box-shadow: var(--shadow-md);
+    }
+  }
+
+  /*
+   * Below ~405-410px (measured), "Submit Your Requirements" + "WhatsApp
+   * Us" side by side no longer fit even with the compact padding above —
+   * the secondary button's right edge renders past the viewport edge.
+   * This does NOT show up as `document.scrollWidth > clientWidth`: the
+   * bar is `position: fixed`, and fixed-position elements are excluded
+   * from a document's scrollable-overflow calculation (scrolling
+   * wouldn't reveal more of something that doesn't move with scroll).
+   * The button is genuinely clipped and unreachable, not just off the
+   * visible edge of a scrollable page — a real bug the scrollWidth
+   * metric alone cannot catch. Found by directly measuring each CTA's
+   * `getBoundingClientRect().right` against viewport width, not by
+   * trusting the document-level overflow figure.
+   *
+   * Fix: stack instead of shrinking further. 26em (416px) sits above the
+   * measured crossover with margin. `align-items: stretch` (already set
+   * above) makes each full-width in column mode, which fits by
+   * construction regardless of text length — no further padding/font
+   * shrinkage needed, so "Submit Your Requirements" stays fully legible
+   * even on the narrowest mandated viewport (320px).
+   *
+   * --mobile-bar-height is redefined here, not hardcoded separately —
+   * body's padding-bottom above reads the same variable, so the two
+   * still cannot drift out of sync in the stacked case either.
+   */
+  @media (max-width: 26em) {
+    :global(:root) {
+      /* Measured natural height at 320/375px: 136px (8.5rem) exactly.
+         9rem (144px) keeps the same deliberate buffer as the default
+         value above, rather than shipping a floor with zero margin. */
+      --mobile-bar-height: 9rem;
+    }
+
+    .mobile-cta-bar {
+      flex-direction: column;
+    }
+  }
+</style>

@@ -1,0 +1,86 @@
+---
+/**
+ * Services — block 09. Maps over the `services` content collection; six
+ * cards today, but nothing here assumes that count, so a seventh service
+ * file is the only change needed to add one.
+ *
+ * Same slug caveat as HelperSources: read `service.slug`, not
+ * `service.data.slug` (src/content/config.ts:35-42).
+ *
+ * Deliberately not a repeat of HelperSources' card composition (flag +
+ * body + "Learn more" link) — the whole title is the link here, and there
+ * is no secondary link element, so two consecutive card grids don't read
+ * as the same block twice.
+ */
+import { getCollection } from 'astro:content'
+import Container from '../components/Container.astro'
+import SectionHeader from '../components/SectionHeader.astro'
+import Card from '../components/Card.astro'
+
+const services = (await getCollection('services')).sort((a, b) => a.data.order - b.data.order)
+---
+
+<section class="services">
+  <Container>
+    <SectionHeader title="Services for every part of the process" />
+
+    <div class="services-grid">
+      {
+        services.map((service) => (
+          <Card>
+            <a class="service-card" href={`/services/${service.slug}`}>
+              <h3 class="service-title">{service.data.title}</h3>
+              <p class="service-summary">{service.data.summary}</p>
+            </a>
+          </Card>
+        ))
+      }
+    </div>
+  </Container>
+</section>
+
+<style>
+  .services {
+    padding-block: var(--space-section);
+    /* --color-surface, not --color-surface-raised: this section renders
+       Card, which is itself --color-surface-raised. Measured via
+       getComputedStyle (not just the token names) — section and card
+       resolved to the identical rendered rgb(255,255,255), leaving zero
+       background contrast; separation was 100% a 1px border and
+       shadow-sm (max alpha .06). See task-17-report.md's
+       section-background audit. */
+    background: var(--color-surface);
+  }
+
+  .services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: var(--space-6);
+    margin-top: var(--space-12);
+  }
+
+  .service-card {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .service-title {
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  .service-summary {
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.5;
+    color: var(--color-ink-muted);
+  }
+
+  .service-card:hover .service-title {
+    color: var(--color-accent);
+  }
+</style>

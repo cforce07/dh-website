@@ -1,0 +1,141 @@
+---
+/**
+ * PricingSection — block 06, moved up from position 9 per the design
+ * spec's §84 argument: a family should be able to answer "how much does
+ * this cost?" within seconds, and transparent pricing is one of the three
+ * brand pillars (see Difference.astro), so surfacing it early is itself
+ * the trust argument.
+ *
+ * Never a hardcoded price string — every figure below comes from
+ * packageTotalCents() + formatSgd(). PricingCard is where the itemised /
+ * total-only branch actually lives; see that component for why the
+ * without-replacement total can never grow an invented breakdown.
+ *
+ * Design spec §6.4 names this block among the CTA surfaces that carry the
+ * primary/secondary conversion pair "in that order everywhere, without
+ * exception" — a family that has just resolved "how much does this
+ * cost?" (§84's #1 objection) is at peak intent, so sending them only to
+ * a static detail page would be a weaker ask than every other CTA moment
+ * on the site. The pair renders exactly as in Hero.astro: primary
+ * Submit Your Requirements, secondary WhatsApp Us, both sourced from
+ * company.ts / lib/whatsapp.ts, never hardcoded. "View Pricing" stays as
+ * a small tertiary text link below the pair — the escape hatch for the
+ * minority who want the itemised detail before doing anything else.
+ *
+ * The lede must stay consistent with `.pricing-qualifier` below it. Brief
+ * §19 states additional helper placement-related fees may apply, and
+ * forbids representing the package total as necessarily the complete
+ * final employer cost — so "explained in full", "everything you pay", or
+ * any equivalent completeness promise is contradicted by the qualifier
+ * this very section renders. The lede instead surfaces the qualifier's
+ * existence upfront, which is the honest and defensible version of the
+ * claim.
+ */
+import Container from '../components/Container.astro'
+import SectionHeader from '../components/SectionHeader.astro'
+import PricingCard from '../components/PricingCard.astro'
+import Button from '../components/Button.astro'
+import { packages } from '../data/pricing'
+import { company } from '../data/company'
+import { defaultWhatsappUrl } from '../lib/whatsapp'
+
+const whatsappHref = defaultWhatsappUrl()
+---
+
+<section class="pricing">
+  <Container>
+    <SectionHeader
+      title="Transparent Pricing. No Guesswork."
+      lede="Two ways to bring a helper into your home, with package costs set out upfront — including where further placement-related fees can apply."
+    />
+
+    <div class="pricing-grid">
+      {packages.map((pkg) => <PricingCard pkg={pkg} />)}
+    </div>
+
+    <p class="pricing-qualifier">
+      Additional helper placement-related fees may apply depending on the selected helper and placement arrangement.
+    </p>
+
+    <div class="pricing-cta">
+      <div class="pricing-cta-buttons">
+        <Button variant="primary" href={company.requirementFormUrl}>Submit Your Requirements</Button>
+        <Button variant="secondary" href={whatsappHref} external>WhatsApp Us</Button>
+      </div>
+      <a class="pricing-view-link" href="/pricing">View Pricing</a>
+    </div>
+  </Container>
+</section>
+
+<style>
+  .pricing {
+    padding-block: var(--space-section);
+    /* --color-surface, not --color-surface-raised: this section renders
+       Card via PricingCard, and Card itself is --color-surface-raised.
+       A raised section background was identical to the card background
+       it hosts — measured via getComputedStyle, not just the token
+       names, since backgroundColor doesn't cascade and an unset section
+       background can resolve to a different visible color than its own
+       declared value would suggest. Zero rendered contrast left the
+       cards separated only by a 1px border and shadow-sm (max alpha
+       .06). See task-17-report.md's section-background audit. */
+    background: var(--color-surface);
+  }
+
+  .pricing-grid {
+    display: grid;
+    gap: var(--space-8);
+    margin-top: var(--space-12);
+  }
+
+  .pricing-qualifier {
+    max-width: 60ch;
+    margin-top: var(--space-8);
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    line-height: 1.5;
+    color: var(--color-ink-muted);
+  }
+
+  .pricing-cta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+    margin-top: var(--space-8);
+  }
+
+  .pricing-cta-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+
+  /* Demoted, not a Button variant — small and muted on purpose, so the
+     primary/secondary pair above reads as the section's real CTA and
+     this stays the escape hatch for readers who want the full price
+     list before doing anything else. */
+  .pricing-view-link {
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-ink-muted);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .pricing-view-link:hover {
+    color: var(--color-accent);
+  }
+
+  @media (min-width: 48em) {
+    .pricing-grid {
+      /* Unequal on purpose: the itemised package genuinely has more to
+         show (six line items) than the total-only package (one number),
+         so a 3fr/2fr split reflects real content weight rather than
+         forcing two visually identical cards. */
+      grid-template-columns: 3fr 2fr;
+      align-items: start;
+    }
+  }
+</style>

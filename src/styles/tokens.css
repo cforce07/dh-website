@@ -1,0 +1,217 @@
+/*
+ * DirectHired design tokens.
+ * Colour values approved in docs/design/palette-proposal.md (Task 7).
+ * Do not hardcode colour, spacing, or radius values in components —
+ * these tokens are the only source of truth.
+ */
+
+/*
+ * Self-hosted fonts (no font-CDN requests — spec forbids render-blocking
+ * third-party font requests). Both files are variable fonts: a single
+ * woff2 backs every declared weight below, because the browser maps the
+ * @font-face `font-weight` value onto the file's `wght` axis instance
+ * (CSS Fonts Module Level 4). Latin subset only.
+ */
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/figtree-variable.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('/fonts/fraunces-variable.woff2') format('woff2');
+}
+
+:root {
+  /* ---------------------------------------------------------------- */
+  /* Colour — values approved in docs/design/palette-proposal.md      */
+  /* ---------------------------------------------------------------- */
+  --color-ink: #2A2724;
+  --color-ink-muted: #4d4d4d;
+  --color-surface: #FAF8F5;
+  --color-surface-raised: #FFFFFF;
+  --color-accent: #046A6C;
+  --color-accent-hover: #005F61;
+
+  /*
+   * --color-brand-teal is the real teal from the logo (#00a4a6). It
+   * measures only 2.89:1 against --color-surface and FAILS WCAG AA for
+   * text (needs 4.5:1) and for button fills. It exists for GRAPHIC USE
+   * ONLY — decorative rules, icon fills, the logo's H motif. NEVER use
+   * it for text or as a button background. Use --color-accent (the
+   * darkened #046A6C, 6.03:1) for any interactive or text purpose that
+   * needs to read as "brand teal." Do not "correct" this back to the
+   * brand colour — that silently breaks accessibility.
+   */
+  --color-brand-teal: #00a4a6;
+
+  --color-deep: #0E3A3B;
+  --color-on-deep: #FAF8F5;
+  --color-accent-on-deep: #3FC9CB;
+
+  /*
+   * The rest of the deep-surface register. --color-on-deep alone is a
+   * single brightness, so components on --color-deep (Footer, and any
+   * future deep-surface block) previously reached for raw
+   * `rgba(250, 248, 245, α)` — which is --color-on-deep retyped as
+   * literal RGB, exactly the hardcoded colour spec §12 forbids. These
+   * five tokens are those alpha steps pre-flattened over --color-deep,
+   * so a component never types a colour value again.
+   *
+   * Flattened to hex on purpose, not stored as rgba():
+   *   - the composite is what the eye actually receives, so the token's
+   *     value IS its rendered colour — no mental compositing at the call
+   *     site;
+   *   - tests/tokens.test.ts can then parse and assert their contrast
+   *     directly, which an alpha channel would defeat.
+   *
+   * Because they are pre-flattened, they are ONLY valid on
+   * --color-deep. On any other background they are a wrong colour, not a
+   * translucent one. Measured against --color-deep:
+   *
+   *   --color-on-deep-soft         8.10:1  body copy
+   *   --color-on-deep-muted        5.28:1  small labels, legal, copyright
+   *   --color-border-on-deep       4.14:1  control outlines that must read
+   *   --color-border-on-deep-muted 2.42:1  icon-button outlines
+   *   --color-rule-on-deep         1.56:1  structural hairlines
+   *
+   * The first three carry text or a control boundary and are asserted in
+   * tests/tokens.test.ts. The last two are decorative lines, held to the
+   * same reasoning as --color-border above.
+   */
+  --color-on-deep-soft: #CBD2D0;
+  --color-on-deep-muted: #9CACAB;
+  --color-border-on-deep: #849998;
+  --color-border-on-deep-muted: #557373;
+  --color-rule-on-deep: #315757;
+
+  /*
+   * --color-border is a decorative hairline (~1.3:1 against surface) and
+   * is not a contrast-bearing element, so the 3:1 non-text threshold
+   * does not apply to it. Where a border is the ONLY thing distinguishing
+   * a control from its background (e.g. an input outline), use
+   * --color-ink-muted instead — it clears the 3:1 threshold.
+   */
+  --color-border: #DDD8D1;
+
+  /* ---------------------------------------------------------------- */
+  /* Typography                                                       */
+  /* ---------------------------------------------------------------- */
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-text: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --size-small: 0.8125rem;   /* 13px — eyebrows, captions. Never body copy. */
+  --size-body: 1rem;         /* 16px floor */
+  --size-lede: 1.25rem;
+  --size-h3: 1.5rem;
+  --size-h2: clamp(1.75rem, 1.2rem + 2vw, 2.75rem);
+  --size-h1: clamp(2.25rem, 1.5rem + 3.5vw, 4rem);
+
+  /*
+   * Letter-spacing for small uppercase labels (eyebrows, badges).
+   * Not applied to body copy or headings — uppercase tracking at this
+   * scale only reads correctly on short, small-size text.
+   */
+  --tracking-wide: 0.08em;
+
+  /* ---------------------------------------------------------------- */
+  /* Font weight — named stops on Fraunces/Figtree's variable axis     */
+  /* ---------------------------------------------------------------- */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* ---------------------------------------------------------------- */
+  /* Space — 4px base                                                 */
+  /* ---------------------------------------------------------------- */
+  --space-1: 0.25rem;  --space-2: 0.5rem;   --space-3: 0.75rem;
+  --space-4: 1rem;     --space-6: 1.5rem;   --space-8: 2rem;
+  --space-12: 3rem;    --space-16: 4rem;    --space-24: 6rem;
+  --space-section: clamp(4rem, 2rem + 8vw, 8rem);
+
+  /*
+   * The final CTA (block 12) is the page's last impression and a
+   * designated conversion surface — it earns more vertical room than a
+   * standard section without inventing an ad-hoc calc() at the call site.
+   */
+  --space-section-lg: clamp(5rem, 2.5rem + 11vw, 10rem);
+
+  /* ---------------------------------------------------------------- */
+  /* Breakpoints — documentation only. CSS custom properties cannot be */
+  /* referenced inside an @media condition, so every usage repeats the */
+  /* literal em value below in a comment pointing back here. Treat a   */
+  /* breakpoint change as a two-step edit: update the value here, then */
+  /* grep for the literal across Container and the layout-shell        */
+  /* components to keep them in sync.                                  */
+  /* ---------------------------------------------------------------- */
+  --bp-tablet: 48em;   /* 768px  — Container's padding step-up. */
+  --bp-desktop: 96em;  /* 1536px — where the full desktop header (logo +
+                           8 nav items + 2 CTAs) fits on one line without
+                           wrapping or forcing horizontal document scroll;
+                           Header, MobileNav, and MobileCtaBar all switch
+                           here. Deliberately wider than --bp-tablet: the
+                           nav content does not fit in the 48-64em range,
+                           so keeping the mobile nav through that range
+                           (rather than switching at 48em) avoids a
+                           wrapped, two-line desktop nav.
+
+                           Was 64em (1024px) originally, raised after a
+                           real-browser measurement (iframe-harness binary
+                           search across viewport widths, see task-11
+                           fix-round-2 report) found the desktop header —
+                           even after compacting nav-item/CTA spacing in
+                           Header.astro — does not actually fit without
+                           horizontal overflow until ~1430px, because
+                           Container's own max-width (72rem/1152px) caps
+                           the available row width well below what 8 nav
+                           labels + 2 full CTA buttons need. 96em keeps
+                           ~106px of margin above that measured crossover
+                           for cross-browser/OS font-rendering variance.
+                           Do not lower this without re-measuring; do not
+                           trust hand-calculated arithmetic here — the
+                           interaction between flex nowrap overflow and
+                           Container's centering margin does not resolve
+                           the way naive subtraction predicts (verified
+                           empirically, see the fix report for why). */
+
+  /* ---------------------------------------------------------------- */
+  /* Radius — restrained per spec §3.3                                */
+  /* ---------------------------------------------------------------- */
+  --radius-sm: 3px;  --radius-md: 6px;  --radius-lg: 10px;
+
+  /*
+   * Elevation — warm-tinted, never pure black. Tinted off --color-ink
+   * so shadows read as "lifted paper" rather than a generic UI-kit
+   * drop shadow. Keep these subtle: heavy shadows read cheap and fight
+   * the editorial, premium-family direction.
+   *
+   * --shadow-sm distinguishes --color-surface-raised from --color-surface
+   * without a border (spec requirement). --shadow-md is the hover/lift
+   * state — still restrained, just one step up.
+   */
+  --shadow-sm: 0 1px 2px rgba(42, 39, 36, 0.06), 0 2px 8px rgba(42, 39, 36, 0.05);
+  --shadow-md: 0 4px 12px rgba(42, 39, 36, 0.09), 0 12px 28px rgba(42, 39, 36, 0.08);
+
+  /* ---------------------------------------------------------------- */
+  /* Motion                                                           */
+  /* ---------------------------------------------------------------- */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 150ms;
+  --duration-base: 300ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      # IMPORTANT: this must stay `build:dev`, not `build`.
+      #
+      # `npm run build` runs the <Tbd> gate, which fails the build while any
+      # placeholder value (e.g. the MOM licence number) has not yet been
+      # supplied by the client. That failure is deliberate — it is the
+      # acceptance criterion of the gate, not a defect — and CI must not be
+      # blocked by it while the licence number is outstanding. `build:dev`
+      # runs the same Astro build without the gate, which is what CI needs
+      # to produce a `dist/` to test and audit. Do NOT "fix" a red pipeline
+      # here by swapping this back to `build`: that would either permanently
+      # break CI until the client supplies the licence number, or invite
+      # deleting the placeholder/gate to make it pass, which defeats the
+      # entire safety mechanism. `npm run build` (with the gate) is the
+      # release command and is expected to fail until the licence number is
+      # supplied — that is correct, not something to fix here.
+      - name: Build (dev, gate skipped)
+        run: npm run build:dev
+
+      # Design spec §9: "axe runs against the homepage in CI." @axe-core/cli
+      # was installed as a devDependency but nothing invoked it, so the
+      # requirement was declared and never met. `npm run axe` serves the
+      # built dist/ via Astro's preview server and audits the homepage with
+      # axe-core in headless Chrome (bundled chromedriver — no extra setup,
+      # Chrome is preinstalled on ubuntu-latest). It exits non-zero on ANY
+      # WCAG 2.1 A/AA violation, which fails this job. Runs after the build
+      # step above because it audits the built output, not the dev server.
+      - name: Run axe (accessibility)
+        run: npm run axe
+
+      - name: Run Lighthouse CI
+        run: npx @lhci/cli autorun

@@ -1,0 +1,128 @@
+---
+/**
+ * Difference — block 04. Absorbs the origin story (brief §35) and the
+ * three pillars; there is no separate "Why DirectHired" homepage section.
+ * Deliberately not a card grid — Problem (block 03) already used that
+ * layout, so the pillars render as a plain divided row instead, keeping
+ * the two blocks visually distinct.
+ */
+import Container from '../components/Container.astro'
+import SectionHeader from '../components/SectionHeader.astro'
+
+const pillars = [
+  {
+    title: 'Better Matching',
+    body: 'We ask about your household, routines, and expectations first, and only then recommend helpers whose experience actually fits.',
+  },
+  {
+    /*
+     * Wording is constrained by brief §19: additional helper
+     * placement-related fees may apply, so the package total is not
+     * necessarily the complete final employer cost. Any "no added fees" /
+     * "nothing gets added later" phrasing is therefore false on this site's
+     * own terms, and is contradicted by the qualifier PricingSection
+     * renders on the same page. The defensible claim — the one the brief
+     * actually supports at line 795, "clear package pricing without
+     * unnecessary uncertainty" — is that the package is itemised and the
+     * qualifier is stated upfront. Do not restore a completeness promise.
+     */
+    title: 'Transparent Pricing',
+    body: 'Clear package pricing, itemised line by line. Where additional placement-related fees can apply, we say so upfront.',
+  },
+  {
+    /*
+     * Brief §1 / line 797 supports "human guidance throughout the
+     * process" and nothing more specific. Who staffs a placement, and
+     * whether one person carries it end to end, is unconfirmed — §78
+     * forbids inventing staff details — so this pillar describes the
+     * guidance, not the staffing arrangement, and makes no comparison to
+     * how other agencies are staffed.
+     */
+    title: 'Personalised Service',
+    body: 'Human guidance throughout the process, from your first questions through to the placement itself.',
+  },
+]
+---
+
+<section class="difference">
+  <Container>
+    <SectionHeader title="We understand first. We recommend second." />
+
+    <p class="origin-story">
+      DirectHired was created after seeing families go through agencies focused on filling a vacancy, not finding
+      the right person. We built a different process: one that starts with understanding your family before any
+      name is suggested.
+    </p>
+
+    <div class="pillars">
+      {
+        pillars.map((pillar) => (
+          <div class="pillar">
+            <h3 class="pillar-title">{pillar.title}</h3>
+            <p class="pillar-body">{pillar.body}</p>
+          </div>
+        ))
+      }
+    </div>
+  </Container>
+</section>
+
+<style>
+  .difference {
+    padding-block: var(--space-section);
+    background: var(--color-surface-raised);
+  }
+
+  .origin-story {
+    max-width: 60ch;
+    margin-top: var(--space-6);
+    font-family: var(--font-text);
+    font-size: var(--size-lede);
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+  }
+
+  .pillars {
+    display: grid;
+    gap: var(--space-8);
+    margin-top: var(--space-12);
+  }
+
+  .pillar {
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .pillar-title {
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  .pillar-body {
+    font-family: var(--font-text);
+    line-height: 1.5;
+    color: var(--color-ink-muted);
+  }
+
+  @media (min-width: 48em) {
+    .pillars {
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-8);
+    }
+
+    .pillar {
+      padding-top: 0;
+      padding-left: var(--space-6);
+      border-top: none;
+      border-left: 1px solid var(--color-border);
+    }
+
+    .pillar:first-child {
+      padding-left: 0;
+      border-left: none;
+    }
+  }
+</style>
