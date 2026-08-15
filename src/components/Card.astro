@@ -15,6 +15,15 @@
 
 <style>
   .card {
+    /* Grid/flex items default to `min-width: auto`, which floors their
+       size at their content's min-content width — inside a single-column
+       `.pricing-grid` below 48em that stops the card from shrinking to
+       fit the track, causing horizontal overflow (measured at 320px:
+       card renders 285px wide against 257px available). `min-width: 0`
+       only changes behaviour when Card is a grid/flex item; it's a no-op
+       everywhere else, so it's safe to set unconditionally here rather
+       than only in pricing-grid's stylesheet. */
+    min-width: 0;
     background: var(--color-surface-raised);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);

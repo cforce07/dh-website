@@ -24,7 +24,7 @@ import { defaultWhatsappUrl } from '../lib/whatsapp'
 const whatsappHref = defaultWhatsappUrl()
 ---
 
-<div class="mobile-cta-bar">
+<div class="mobile-cta-bar" role="region" aria-label="Contact actions">
   <Button variant="primary" href={company.requirementFormUrl}>Submit Your Requirements</Button>
   <Button variant="secondary" href={whatsappHref} external>WhatsApp Us</Button>
 </div>
