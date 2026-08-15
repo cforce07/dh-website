@@ -1,0 +1,77 @@
+---
+/**
+ * PricingSection — block 06, moved up from position 9 per the design
+ * spec's §84 argument: a family should be able to answer "how much does
+ * this cost?" within seconds, and transparent pricing is one of the three
+ * brand pillars (see Difference.astro), so surfacing it early is itself
+ * the trust argument.
+ *
+ * Never a hardcoded price string — every figure below comes from
+ * packageTotalCents() + formatSgd(). PricingCard is where the itemised /
+ * total-only branch actually lives; see that component for why the
+ * without-replacement total can never grow an invented breakdown.
+ */
+import Container from '../components/Container.astro'
+import SectionHeader from '../components/SectionHeader.astro'
+import PricingCard from '../components/PricingCard.astro'
+import Button from '../components/Button.astro'
+import { packages } from '../data/pricing'
+---
+
+<section class="pricing">
+  <Container>
+    <SectionHeader
+      title="Transparent Pricing. No Guesswork."
+      lede="Two ways to bring a helper into your home, both explained in full before you commit to either."
+    />
+
+    <div class="pricing-grid">
+      {packages.map((pkg) => <PricingCard pkg={pkg} />)}
+    </div>
+
+    <p class="pricing-qualifier">
+      Additional helper placement-related fees may apply depending on the selected helper and placement arrangement.
+    </p>
+
+    <div class="pricing-cta">
+      <Button variant="ghost" href="/pricing">View Pricing</Button>
+    </div>
+  </Container>
+</section>
+
+<style>
+  .pricing {
+    padding-block: var(--space-section);
+    background: var(--color-surface-raised);
+  }
+
+  .pricing-grid {
+    display: grid;
+    gap: var(--space-8);
+    margin-top: var(--space-12);
+  }
+
+  .pricing-qualifier {
+    max-width: 60ch;
+    margin-top: var(--space-8);
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    line-height: 1.5;
+    color: var(--color-ink-muted);
+  }
+
+  .pricing-cta {
+    margin-top: var(--space-6);
+  }
+
+  @media (min-width: 48em) {
+    .pricing-grid {
+      /* Unequal on purpose: the itemised package genuinely has more to
+         show (six line items) than the total-only package (one number),
+         so a 3fr/2fr split reflects real content weight rather than
+         forcing two visually identical cards. */
+      grid-template-columns: 3fr 2fr;
+      align-items: start;
+    }
+  }
+</style>

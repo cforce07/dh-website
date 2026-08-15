@@ -1,0 +1,166 @@
+---
+/**
+ * TwoSidedMatch — block 07, the emotional peak (design spec §6.3) and the
+ * only block that shifts palette register to `--color-deep`.
+ *
+ * The composition is derived from the logo itself rather than an invented
+ * metaphor (see docs/design/palette-proposal.md and logo/logo.png): the
+ * "H" in DirectHired is two human figures — round heads, vertical
+ * bodies — joined by a crossbar where their arms meet. That is "Happy
+ * Employer. Happy Helper." already encoded in the mark. Below, `.side`
+ * renders as two vertical columns from --bp-desktop up, each capped with
+ * a small round `.side-mark` (the head), with `.bridge` drawing a
+ * horizontal bar across their meeting point (the crossbar) — the same
+ * two-verticals-plus-crossbar structure as the logo's H, translated into
+ * layout rather than redrawn as a literal icon.
+ *
+ * Per brief §22 / §83, this is shown as composition, not prose: the
+ * Employer and Helper lists sit side by side with no explanatory
+ * paragraph between them, and the resolving line lands only once both
+ * sides have been seen. "Happy Employer. Happy Helper." itself appears
+ * once, here — the brief's own instruction against turning it into a
+ * slogan repeated on every block.
+ */
+import Container from '../components/Container.astro'
+
+const employerSide = ['Family needs', 'Lifestyle', 'Household responsibilities', 'Skills required', 'Expectations']
+
+const helperSide = ['Skills', 'Experience', 'Expectations', 'Suitable responsibilities', 'Working environment']
+---
+
+<section class="two-sided">
+  <Container>
+    <p class="match-kicker">Happy Employer. Happy Helper.</p>
+
+    <div class="match-composition">
+      <div class="side">
+        <span class="side-mark" aria-hidden="true"></span>
+        <h3 class="side-title">Employer</h3>
+        <ul class="side-list">
+          {employerSide.map((item) => <li>{item}</li>)}
+        </ul>
+      </div>
+
+      <div class="bridge" aria-hidden="true"></div>
+
+      <div class="side">
+        <span class="side-mark" aria-hidden="true"></span>
+        <h3 class="side-title">Helper</h3>
+        <ul class="side-list">
+          {helperSide.map((item) => <li>{item}</li>)}
+        </ul>
+      </div>
+    </div>
+
+    <h2 class="match-resolve">Better matching happens when both sides are understood.</h2>
+  </Container>
+</section>
+
+<style>
+  .two-sided {
+    padding-block: var(--space-section);
+    background: var(--color-deep);
+    color: var(--color-on-deep);
+  }
+
+  .match-kicker {
+    margin: 0;
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-accent-on-deep);
+  }
+
+  .match-composition {
+    display: grid;
+    gap: var(--space-8);
+    margin-top: var(--space-12);
+  }
+
+  .side {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding-top: var(--space-6);
+    border-top: 2px solid var(--color-accent-on-deep);
+  }
+
+  .side-mark {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--color-accent-on-deep);
+  }
+
+  .side-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-on-deep);
+  }
+
+  .side-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    font-family: var(--font-text);
+    color: var(--color-on-deep);
+  }
+
+  .bridge {
+    display: none;
+  }
+
+  .match-resolve {
+    max-width: 42rem;
+    margin-top: var(--space-16);
+    font-family: var(--font-display);
+    font-size: var(--size-h2);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-on-deep);
+  }
+
+  @media (min-width: 64em) {
+    .match-composition {
+      /* Two verticals either side of a narrow middle column carrying the
+         crossbar — see the file header for how this maps to the logo. */
+      grid-template-columns: 1fr var(--space-8) 1fr;
+      align-items: start;
+    }
+
+    .side {
+      border-top: none;
+      padding-top: 0;
+    }
+
+    .side:first-child {
+      border-right: 2px solid var(--color-accent-on-deep);
+      padding-right: var(--space-8);
+    }
+
+    .side:last-child {
+      border-left: 2px solid var(--color-accent-on-deep);
+      padding-left: var(--space-8);
+    }
+
+    .bridge {
+      display: block;
+      position: relative;
+    }
+
+    .bridge::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--color-accent-on-deep);
+      transform: translateY(-50%);
+    }
+  }
+</style>

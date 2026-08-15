@@ -1,0 +1,103 @@
+---
+/**
+ * HelperSources — block 08. Maps over the `helpers` content collection, so
+ * a fourth source (Philippines is plausible later) appears the moment its
+ * markdown file lands, with no change to this component.
+ *
+ * Astro's legacy `type: 'content'` collections reserve the `slug`
+ * frontmatter key and strip it from `data` before Zod validation (see the
+ * comment at src/content/config.ts:35-42) — every href below reads
+ * `helper.slug`, never `helper.data.slug`, or the link silently becomes
+ * `/helpers/undefined`.
+ *
+ * The content files already avoid characterising any nationality; this
+ * component renders their copy as written and adds no framing of its own.
+ */
+import { getCollection } from 'astro:content'
+import Container from '../components/Container.astro'
+import SectionHeader from '../components/SectionHeader.astro'
+import Card from '../components/Card.astro'
+
+const helperSources = (await getCollection('helpers')).sort((a, b) => a.data.order - b.data.order)
+---
+
+<section class="helper-sources">
+  <Container>
+    <SectionHeader
+      title="Helpers from trusted sources"
+      lede="We work with helpers from a number of countries, each matched to your family based on the requirements you share with us."
+    />
+
+    <div class="source-grid">
+      {
+        helperSources.map((helper) => (
+          <Card>
+            <a class="source-card" href={`/helpers/${helper.slug}`}>
+              <span class="source-flag" aria-hidden="true">
+                {helper.data.flag}
+              </span>
+              <h3 class="source-country">{helper.data.country}</h3>
+              <p class="source-summary">{helper.data.summary}</p>
+              <span class="source-link">Learn more</span>
+            </a>
+          </Card>
+        ))
+      }
+    </div>
+  </Container>
+</section>
+
+<style>
+  .helper-sources {
+    padding-block: var(--space-section);
+  }
+
+  .source-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: var(--space-6);
+    margin-top: var(--space-12);
+  }
+
+  .source-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    height: 100%;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .source-flag {
+    font-size: 2rem;
+    line-height: 1;
+  }
+
+  .source-country {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  .source-summary {
+    font-family: var(--font-text);
+    line-height: 1.5;
+    color: var(--color-ink-muted);
+  }
+
+  .source-link {
+    margin-top: auto;
+    padding-top: var(--space-2);
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-accent);
+  }
+
+  .source-card:hover .source-link {
+    color: var(--color-accent-hover);
+    text-decoration: underline;
+  }
+</style>
