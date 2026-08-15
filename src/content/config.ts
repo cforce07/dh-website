@@ -38,11 +38,20 @@ const services = defineCollection({
 // for the country name ("We work with helpers from X and match them to
 // your family..."). Repeated boilerplate with one word swapped is the
 // clearest generated-content tell on the page, and the section lede
-// already says that sentence once. DirectHired has been asked for one
-// distinguishing fact per source (implementation plan D-5); until those
-// arrive, the block carries three names and no filler. Inventing a
-// distinguishing fact — prior experience, languages, paperwork timelines —
-// is a master brief §78 violation, not a copy exercise.
+// already says that sentence once.
+//
+// The field is gone for good, and this is now a settled question rather
+// than an open one. DirectHired was asked for one distinguishing fact per
+// source (implementation plan D-5) and answered on 2026-08-16: there is no
+// real difference. Same service, same package, same matching process; the
+// source country is the only variable. So there is no fact to wait for,
+// and the three summaries could never have been written truthfully.
+//
+// HelperSources.astro states that equivalence once, above the three names,
+// instead — which is the whole of what is true. Do not reintroduce this
+// field. Writing three different sentences means asserting something about
+// each country that nobody here knows, which is a master brief §78
+// violation, and asserting it about a nationality is a §42 one.
 const helpers = defineCollection({
   type: 'content',
   schema: z.object({

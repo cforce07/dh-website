@@ -4,7 +4,9 @@ slug: indonesia
 order: 1
 ---
 
-DirectHired places domestic helpers from Indonesia under our fly-in packages. As with every source, matching starts with understanding your family's needs — we don't recommend anyone until we know what you're looking for.
+DirectHired places domestic helpers from Indonesia under our fly-in packages.
+
+The service is the same whichever country a helper comes from — the same fly-in package, the same matching process. The source is the only difference. Matching starts with understanding your household needs; we don’t recommend anyone until we know what you’re looking for.
 
 - Fly-in placement, with or without replacement
 - Personalised consultation for every family

@@ -8,8 +8,10 @@
  *
  * Never a hardcoded price string — every figure below comes from
  * packageTotalCents() + formatSgd(). PricingCard is where the itemised /
- * total-only branch actually lives; see that component for why the
- * without-replacement total can never grow an invented breakdown.
+ * total-only branch actually lives; see that component for why no package
+ * can grow an *invented* breakdown. The without-replacement package grew a
+ * real one on 2026-08-16, supplied by DirectHired, which is why both cards
+ * now itemise and the grid below is 1fr 1fr rather than 3fr 2fr.
  *
  * Design spec §6.4 names this block among the CTA surfaces that carry the
  * primary/secondary conversion pair "in that order everywhere, without

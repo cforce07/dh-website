@@ -115,6 +115,17 @@ const DECLARED_INPUTS = [
   // nothing uses it: it is what makes an invented itemisation a type error
   // rather than an oversight, and the next package with an unknown
   // breakdown should reach for it rather than guessing.
+  //
+  // NOT AN ENTRY, and deliberately so: "one distinguishing fact per helper
+  // source" (implementation plan D-5, C-62) was going to be added here.
+  // DirectHired answered it on 2026-08-16 before it ever landed — there is
+  // no real difference between Indonesia, Myanmar and Mizoram. Same
+  // service, same package, same matching process; only the source country
+  // differs. There is therefore nothing outstanding to declare: the three
+  // `summary` fields are gone for good (src/content/config.ts) and
+  // HelperSources.astro states the equivalence once instead. Recorded here
+  // so nobody re-opens a question that has an answer.
+  //
   // NOT resolved as of 2026-08-16, and deliberately not deleted.
   //
   // A share image now ships, so the *mechanism* is done: BaseLayout.astro

@@ -36,20 +36,76 @@ describe('helper sources', () => {
     expect(block).not.toMatch(/\.svg['"]/)
   })
 
-  it('carries no per-source summary until a distinguishing fact per source exists', () => {
+  it('carries no per-source summary — settled, not pending', () => {
     // The three summaries were one sentence with the country name swapped,
-    // which is the clearest generated-content tell on the page, and the
-    // section lede already says that sentence once. They were deleted
-    // rather than rewritten because writing three DIFFERENT sentences means
-    // asserting a fact about each source — typical prior experience,
-    // languages, paperwork duration — and nothing in this repository knows
-    // any of them. Restoring the field is fine ONLY together with real
-    // facts from DirectHired; restoring it with boilerplate is a master
-    // brief §78 violation, so this test asks for the field to arrive with
-    // its content rather than ahead of it.
+    // which is the clearest generated-content tell on the page. They were
+    // deleted rather than rewritten, and DirectHired then closed the
+    // question on 2026-08-16 (implementation plan D-5): there is no real
+    // difference between the sources. Same service, same package, same
+    // matching process; only the source country differs.
+    //
+    // So this is not a field waiting on facts that might yet arrive — the
+    // facts do not exist, and three different sentences could only ever be
+    // invented (master brief §78, and §42 for anything said about a
+    // nationality). The field stays gone.
     for (const file of files) {
       const content = readFileSync(`src/content/helpers/${file}`, 'utf8')
       expect(content, `${file} reintroduced a summary field`).not.toMatch(/^summary:/m)
+    }
+  })
+
+  it('states the source equivalence once, in the block, above the three names', () => {
+    // The other half of the same decision, and the reason this assertion
+    // exists at all: deleting the summaries left three bare names with
+    // nothing explaining why they carry no description, which reads as
+    // content that failed to load. The block says the true thing once
+    // instead. If that statement is ever removed, the section silently
+    // regresses to looking broken rather than looking deliberate — the
+    // exact defect a client spotted by eye, so it is asserted rather than
+    // trusted.
+    const block = readFileSync('src/sections/HelperSources.astro', 'utf8')
+    // Below the frontmatter fence, so a mention in the file header comment
+    // cannot satisfy this on its own.
+    const body = block.split(/^---$/m).slice(2).join('---')
+    expect(body).toMatch(/class="source-equivalence"/)
+    expect(body).toMatch(/the service is the same/i)
+    expect(body).toMatch(/the source is the only difference/i)
+  })
+
+  it('says it ONCE — the equivalence is not repeated per source', () => {
+    // Three pseudo-differentiated lines is what was deleted; three
+    // identical lines is the same defect with the pretence removed. Either
+    // way the statement belongs above the row, not inside it, so it must
+    // appear exactly once in the rendered markup and never inside the
+    // helperSources.map() that draws the three names.
+    const block = readFileSync('src/sections/HelperSources.astro', 'utf8')
+    const occurrences = block.match(/The source is the only difference/g) ?? []
+    expect(occurrences).toHaveLength(1)
+
+    const rowStart = block.indexOf('helperSources.map(')
+    const rowEnd = block.indexOf('</div>', block.indexOf('</h3>'))
+    expect(rowStart).toBeGreaterThan(-1)
+    expect(block.slice(rowStart, rowEnd)).not.toMatch(/source-equivalence/)
+  })
+
+  it('never characterises a nationality in the helper content', () => {
+    // Master brief §42. The three bodies say what the SERVICE is, never
+    // what people from a country are like, and the block itself adds no
+    // framing of its own. This catches the most likely regression: a
+    // well-meaning contributor answering "what makes them different?" with
+    // an adjective.
+    const sources = [
+      ...files.map((f) => `src/content/helpers/${f}`),
+      'src/sections/HelperSources.astro',
+    ]
+    // "Helpers from X are/tend to be/are known for ..." in any spelling.
+    const CHARACTERISATION =
+      /(helpers|candidates|women|they)\s+from\s+\w+\s+(are|tend|typically|generally|usually|often)\b/i
+    const KNOWN_FOR = /\b(known|renowned|prized|valued|sought[- ]after)\s+for\b/i
+    for (const file of sources) {
+      const content = readFileSync(file, 'utf8')
+      expect(content, `${file} characterises a nationality`).not.toMatch(CHARACTERISATION)
+      expect(content, `${file} characterises a nationality`).not.toMatch(KNOWN_FOR)
     }
   })
 })

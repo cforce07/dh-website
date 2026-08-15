@@ -4,7 +4,7 @@ surfaces: [home, faq]
 order: 5
 ---
 
-Matching is a personalised, human process. Your consultant will:
+Matching is a personalised, human process. Our team will:
 
 1. Understand your household needs — your routines, and the tasks, schedule and expectations a helper would take on
 2. Recommend suitable candidates based on what you have described

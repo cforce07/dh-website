@@ -25,11 +25,24 @@
  *   2. There is nothing here that needs a container to be legible. Each
  *      source is a name and a link; a box around a name is a widget.
  *
- * There is deliberately no per-source blurb. The `summary` field was
- * deleted with the `flag` field — see the note in src/content/config.ts
- * for why, and implementation-plan D-5 for what unblocks writing real
- * ones. Do not fill this space with a sentence per country that is the
- * same sentence three times.
+ * There is deliberately no per-source blurb, and there will not be one.
+ * The `summary` field held the same sentence three times with the country
+ * name swapped; it was deleted alongside `flag` (see src/content/config.ts
+ * for both) and DirectHired answered the open question on 2026-08-16:
+ * there is no real difference between the sources. Same service, same
+ * package, same matching process — only the source country differs.
+ *
+ * That answer is why `.source-equivalence` below exists. Deleting the
+ * three summaries left three bare names and nothing explaining why they
+ * carry no description, which reads as content that failed to load rather
+ * than as a decision. The honest resolution is to say the true thing ONCE,
+ * above the row, and let the names be names.
+ *
+ * Do not turn that one statement back into three. A sentence per country
+ * can only be written by asserting a fact about each country, nothing in
+ * this repository knows one, and inventing one is a master brief §78
+ * violation as well as a §42 one. tests/content.test.ts asserts both the
+ * absence of the summaries and the presence of this statement.
  */
 import { getCollection } from 'astro:content'
 import Container from '../components/Container.astro'
@@ -44,6 +57,11 @@ const helperSources = (await getCollection('helpers')).sort((a, b) => a.data.ord
       title="Helpers from trusted sources"
       lede="We work with helpers from a number of countries, each matched to your family based on the requirements you share with us."
     />
+
+    <p class="source-equivalence">
+      Whichever country a helper comes from, the service is the same — the same fly-in package,
+      the same matching process. The source is the only difference.
+    </p>
 
     {/* The country name IS the link, rather than a name followed by a
         separate "Learn more". Three links reading "Learn more" give a
@@ -75,10 +93,30 @@ const helperSources = (await getCollection('helpers')).sort((a, b) => a.data.ord
     background: var(--color-surface-raised);
   }
 
+  /* Sits between the lede and the row, and is spaced to belong to the row
+     rather than to read as a second lede: --space-12 above it (the gap the
+     row used to take from the header) and only --space-6 below, so it
+     reads as the line that governs the three names under it.
+
+     Set at --size-body rather than --size-lede so it does not compete with
+     the SectionHeader lede above it, and given the same 60ch measure and
+     `balance` as PricingSection's qualifier, which does the same job in the
+     same register one block earlier. */
+  .source-equivalence {
+    max-width: 60ch;
+    text-wrap: balance;
+    margin-top: var(--space-12);
+    margin-bottom: 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.5;
+    color: var(--color-ink-muted);
+  }
+
   .source-row {
     display: grid;
     gap: var(--space-8);
-    margin-top: var(--space-12);
+    margin-top: var(--space-6);
   }
 
   .source {

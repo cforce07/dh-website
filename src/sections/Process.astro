@@ -1,7 +1,7 @@
 ---
 /**
- * Process — block 05. Five steps of a personalised human consultation,
- * never framed as automated or AI-driven. Rendered as an <ol> (the steps
+ * Process — block 05. A personalised human consultation, never framed as
+ * automated or AI-driven. Rendered as an <ol> (the steps
  * are genuinely sequential, so screen reader users get that order for
  * free) with a connecting rule drawn by this section around ProcessStep's
  * typographic index markers — vertical rail on narrow viewports,
@@ -93,11 +93,18 @@ const stepCount = NUMBER_WORDS[steps.length] ?? String(steps.length)
   }
 
   /*
-   * 80em (1280px), NOT --bp-wide's 64em. Five steps sharing a 1024px
-   * viewport gives each one ~180px of measure: every label wraps after
-   * two words and every description runs 5-7 lines of 3-5 words, which
-   * is not a rail, it is five narrow gutters. At 1280px each step gets
-   * ~215px and the rail reads as intended. 80em has no token — see
+   * 80em (1280px), NOT --bp-wide's 64em. Re-measured after steps 1 and 2
+   * merged (`steps` above), because the original figures were taken with
+   * five: the count is derived now, but this threshold is not, so it has
+   * to be re-justified rather than assumed. At 1024px the container is
+   * 1024 - 2x--space-8 = 960px, and four steps with three --space-6 gaps
+   * take (960 - 72) / 4 = 222px each — up from 173px at five, and still
+   * only ~28 characters per line, so a 30-word description runs five
+   * lines of four words. That is not a rail, it is four narrow gutters.
+   * At 1280px each step gets (1088 - 72) / 4 = 254px and the rail reads
+   * as intended. So 80em survives the merge; it is just no longer the
+   * emphatic call it was. If a step is ever added or removed, redo this
+   * arithmetic rather than trusting the number. 80em has no token — see
    * tokens.css's breakpoint block, which documents --bp-tablet,
    * --bp-wide and --bp-desktop only; that file belongs to another
    * workstream, so this literal is recorded here instead. If a second

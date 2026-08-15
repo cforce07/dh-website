@@ -9,10 +9,16 @@
  * total-only path, or outside this conditional entirely — is a type
  * error, not a runtime mistake someone could ship by accident.
  *
- * The total-only package renders its total alone: no line items, no
- * inclusion list, nothing invented for the discount the brief never
- * itemises. The one non-branching value, the total itself, always comes
- * from packageTotalCents() + formatSgd() — never a literal string.
+ * As of 2026-08-16 BOTH packages are itemised — DirectHired supplied the
+ * without-replacement breakdown — so the total-only branch currently has
+ * no instance. It is kept, not deleted: it is the thing that makes an
+ * invented itemisation a type error, and the next package that arrives
+ * with an unknown breakdown must reach for it rather than guessing. A
+ * total-only package would render its total alone, with no line items and
+ * nothing invented to fill the space.
+ *
+ * The one non-branching value, the total itself, always comes from
+ * packageTotalCents() + formatSgd() — never a literal string.
  */
 import type { Package } from '../data/pricing'
 import { packageTotalCents } from '../data/pricing'
@@ -126,8 +132,10 @@ const total = packageTotalCents(pkg)
     font-variant-numeric: tabular-nums;
   }
 
-  /* The total-only package has nothing else on the card, so its number
-     carries more visual weight to avoid the card reading as sparse. */
+  /* Unused while both packages are itemised, and deliberately retained
+     alongside the total-only branch in the markup above: a total-only
+     card would have nothing else on it, so its number carries more
+     visual weight to stop the card reading as sparse. */
   .total-only .total-amount {
     font-size: 2.25rem;
   }

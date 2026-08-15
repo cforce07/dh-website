@@ -4,4 +4,4 @@ surfaces: [home, faq]
 order: 4
 ---
 
-We currently work with helpers from Indonesia, Myanmar and Mizoram. The same fly-in package pricing applies across all three — see our [Helper Sources](/helpers) page for more on each.
+We currently work with helpers from Indonesia, Myanmar and Mizoram. The service is the same whichever country a helper comes from — the same fly-in package, the same matching process. The source is the only difference. See our [Helper Sources](/helpers) page.
