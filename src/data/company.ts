@@ -21,7 +21,17 @@ export const company = {
 
   openingHours: '24 hours',
   foundedYear: 2022,
-  placementCount: '1,000+',
+  // Revised from "1,000+" to "500+" by DirectHired on 2026-08-15, after MOM's
+  // public directory showed 128 FDW work passes approved in the 12 months to
+  // 09 Aug 2026 and 3 years of agency experience.
+  //
+  // NOT YET EVIDENCED. MOM's figure counts only new FDW work passes in a
+  // rolling 12-month window, so it excludes transfers, replacements and
+  // direct-hire processing — a higher cumulative total is plausible. But a
+  // naive 3-year extrapolation of MOM's number is ~384, and master brief §68
+  // forbids fabricated company statistics. Confirm what this figure counts
+  // and over what period before publication, or remove it.
+  placementCount: '500+',
 
   // MOM Employment Agency licence, supplied by DirectHired on 2026-08-15.
   // Master brief §70: never invent, modify, guess or substitute this value,

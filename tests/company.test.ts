@@ -12,7 +12,7 @@ describe('company data', () => {
 
   it('carries the confirmed company facts', () => {
     expect(company.foundedYear).toBe(2022)
-    expect(company.placementCount).toBe('1,000+')
+    expect(company.placementCount).toBe('500+')
   })
 
   it('exposes exactly one requirement-form URL', () => {
