@@ -88,19 +88,14 @@ const DECLARED_INPUTS = [
       'in `src/data/pricing.ts`, rendered by `src/components/PricingCard.astro`); ' +
       'no conditions are stated.',
   },
-  {
-    item: 'Without-replacement package inclusion list',
-    source: 'Brief §17; design spec §5 Category A',
-    blocks:
-      'itemising the Fly-In Without Replacement package. The brief publishes its ' +
-      'total ($1,252.10) but not its breakdown, so the card can show what the ' +
-      'package costs but not what it contains.',
-    handledBy:
-      '`TotalOnlyPackage` in `src/data/pricing.ts` has no `lineItems` property at ' +
-      'all, which makes an invented itemisation a type error rather than an ' +
-      'oversight. `src/components/PricingCard.astro` renders the total alone — no ' +
-      'inclusion list, no placeholder rows.',
-  },
+  // RESOLVED 2026-08-16 — DirectHired supplied the breakdown, which also
+  // corrected the total from $1,252.10 to $1,140.10. The package is now
+  // `itemised` in src/data/pricing.ts and renders its six line items.
+  //
+  // `TotalOnlyPackage` is deliberately kept in the type union even though
+  // nothing uses it: it is what makes an invented itemisation a type error
+  // rather than an oversight, and the next package with an unknown
+  // breakdown should reach for it rather than guessing.
   {
     item: 'Approved social share image (Open Graph)',
     source: 'Brief §79 Reminders 01/02; §55',

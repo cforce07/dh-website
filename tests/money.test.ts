@@ -21,7 +21,7 @@ describe('formatSgd', () => {
   })
 
   it('formats the without-replacement total', () => {
-    expect(formatSgd(125210)).toBe('$1,252.10')
+    expect(formatSgd(114010)).toBe('$1,140.10')
   })
 
   it('pads a trailing zero in the cents', () => {

@@ -114,10 +114,15 @@ describe('faq pricing figures stay in sync with pricing.ts', () => {
   const dollarPattern = /\$\d{1,3}(?:,\d{3})*(?:\.\d{2})?/g
 
   it('has package totals and line items to check against (sanity check)', () => {
-    // 2 totals + 6 line items = 8 amounts; whole-dollar ones add a second
-    // accepted rendering, so the set is larger than the amount count.
-    expect(amountsCents.length).toBe(8)
-    expect(validAmounts.size).toBeGreaterThanOrEqual(8)
+    // Derived, not hardcoded: both packages are now itemised, so this is
+    // 2 totals + 12 line items. A hardcoded count silently becomes wrong
+    // the moment a package changes shape — which is exactly what happened
+    // when the without-replacement package gained its breakdown.
+    const expected =
+      packages.length +
+      packages.reduce((n, p) => n + (p.kind === 'itemised' ? p.lineItems.length : 0), 0)
+    expect(amountsCents.length).toBe(expected)
+    expect(validAmounts.size).toBeGreaterThanOrEqual(expected)
   })
 
   it('every dollar figure in FAQ content matches a real package total or line item', () => {

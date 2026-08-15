@@ -40,11 +40,27 @@ export const packages: readonly Package[] = [
     ],
   },
   {
-    kind: 'total-only',
+    // Was 'total-only' at $1,252.10 while the breakdown was unknown — the
+    // master brief published that total but never said which line item the
+    // difference came off, so an itemisation would have been invented.
+    //
+    // DirectHired supplied the real breakdown on 2026-08-16, which both
+    // corrects the total ($1,252.10 -> $1,140.10) and makes the package
+    // honestly itemisable. The gap to the with-replacement package is
+    // therefore $500 (agent fees $888 vs $388), not the $388 the brief
+    // describes — the brief's figure was stale.
+    kind: 'itemised',
     id: 'fly-in-without-replacement',
     name: 'Fly-In Without Replacement',
     replacementTerm: null,
-    totalCents: 125210,
+    lineItems: [
+      { label: 'Agent fees', amountCents: 38800 },
+      { label: 'MOM', amountCents: 7000 },
+      { label: 'Insurance', amountCents: 42510 },
+      { label: 'SIP', amountCents: 7700 },
+      { label: 'Medical', amountCents: 6000 },
+      { label: 'Transport', amountCents: 12000 },
+    ],
   },
 ]
 

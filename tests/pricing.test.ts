@@ -30,11 +30,28 @@ describe('fly-in with replacement', () => {
 
 describe('fly-in without replacement', () => {
   it('reports the published total', () => {
-    expect(formatSgd(packageTotalCents(withoutReplacement))).toBe('$1,252.10')
+    expect(formatSgd(packageTotalCents(withoutReplacement))).toBe('$1,140.10')
   })
 
-  it('is total-only, because the brief does not state its breakdown', () => {
-    expect(withoutReplacement.kind).toBe('total-only')
+  // Was 'total-only' while the breakdown was unknown. DirectHired supplied
+  // the real line items on 2026-08-16, so this package is now honestly
+  // itemisable and the total-only guard is no longer needed for it.
+  it('is itemised, from the breakdown DirectHired supplied', () => {
+    expect(withoutReplacement.kind).toBe('itemised')
+  })
+
+  // Label/amount pairs, not labels alone: a transposition would preserve the
+  // total and the label order while publishing wrong per-item amounts.
+  it('carries the supplied line items exactly', () => {
+    if (withoutReplacement.kind !== 'itemised') throw new Error('unreachable')
+    expect(withoutReplacement.lineItems).toEqual([
+      { label: 'Agent fees', amountCents: 38800 },
+      { label: 'MOM', amountCents: 7000 },
+      { label: 'Insurance', amountCents: 42510 },
+      { label: 'SIP', amountCents: 7700 },
+      { label: 'Medical', amountCents: 6000 },
+      { label: 'Transport', amountCents: 12000 },
+    ])
   })
 
   it('has no replacement term', () => {
@@ -43,8 +60,20 @@ describe('fly-in without replacement', () => {
 })
 
 describe('the two packages', () => {
-  it('differ by the documented $388', () => {
+  // $500, not the $388 the master brief describes: the brief's
+  // without-replacement total ($1,252.10) was stale. The real gap is the
+  // agent fee, $888 against $388.
+  it('differ by $500 — the agent fee, and nothing else', () => {
     const difference = packageTotalCents(withReplacement) - packageTotalCents(withoutReplacement)
-    expect(formatSgd(difference)).toBe('$388.00')
+    expect(formatSgd(difference)).toBe('$500.00')
+  })
+
+  it('differ only in the agent fee — every other line item is identical', () => {
+    if (withReplacement.kind !== 'itemised' || withoutReplacement.kind !== 'itemised') {
+      throw new Error('unreachable')
+    }
+    const strip = (p: typeof withReplacement) =>
+      p.lineItems.filter((i) => i.label !== 'Agent fees').map((i) => i.amountCents)
+    expect(strip(withoutReplacement)).toEqual(strip(withReplacement))
   })
 })
