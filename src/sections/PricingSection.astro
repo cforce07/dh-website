@@ -130,12 +130,22 @@ const whatsappHref = defaultWhatsappUrl()
 
   @media (min-width: 48em) {
     .pricing-grid {
-      /* Unequal on purpose: the itemised package genuinely has more to
-         show (six line items) than the total-only package (one number),
-         so a 3fr/2fr split reflects real content weight rather than
-         forcing two visually identical cards. */
-      grid-template-columns: 3fr 2fr;
-      align-items: start;
+      /*
+       * Equal columns, because the two packages now carry equal content.
+       *
+       * This was 3fr/2fr while the without-replacement package was
+       * `total-only` — a single number against six line items, where an
+       * asymmetric split reflected real content weight. DirectHired
+       * supplied that breakdown on 2026-08-16, so both cards now show six
+       * line items and a total, and the asymmetry no longer describes
+       * anything. Two packages a visitor is comparing should be presented
+       * at the same weight; a wider card reads as the recommended one.
+       *
+       * If a future package is ever total-only again, revisit this rather
+       * than leaving a narrow card next to a wide one by accident.
+       */
+      grid-template-columns: 1fr 1fr;
+      align-items: stretch;
     }
   }
 </style>
