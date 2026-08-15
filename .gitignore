@@ -1,0 +1,29 @@
+# Claude Code — machine-local, never commit
+.claude/settings.local.json
+.mcp.json
+claude-session.txt
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.next/
+out/
+
+# OS / editor
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
