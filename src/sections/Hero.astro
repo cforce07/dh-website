@@ -1,0 +1,105 @@
+---
+/**
+ * Hero — block 01. The page's only <h1>. Split composition per brief §54:
+ * family on one side, helper on the other, sharing one visual language so
+ * the pairing itself reads as "a better match" without saying so.
+ *
+ * Imagery is placeholder abstract illustration, not photography of real
+ * people — see the alt text and src/assets/hero-*.svg for why. Swap both
+ * <Image> sources for real photography before launch; nothing else in
+ * this section needs to change when that happens, since width/height are
+ * fixed independently of the source file.
+ */
+import { Image } from 'astro:assets'
+import Container from '../components/Container.astro'
+import Button from '../components/Button.astro'
+import { company } from '../data/company'
+import { defaultWhatsappUrl } from '../lib/whatsapp'
+import heroFamily from '../assets/hero-family.svg'
+import heroHelper from '../assets/hero-helper.svg'
+
+const whatsappHref = defaultWhatsappUrl()
+---
+
+<section class="hero">
+  <Container>
+    <div class="hero-grid">
+      <div class="hero-content">
+        <h1>Find the Right Helper for Your Family</h1>
+        <p class="hero-lede">
+          Every family is different. We take the time to understand your needs before recommending a helper.
+        </p>
+        <div class="hero-ctas">
+          <Button variant="primary" href={company.requirementFormUrl}>Submit Your Requirements</Button>
+          <Button variant="secondary" href={whatsappHref} external>WhatsApp Us</Button>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <Image src={heroFamily} alt="Illustration representing a family" width={640} height={800} class="hero-image" />
+        <Image src={heroHelper} alt="Illustration representing a helper" width={640} height={800} class="hero-image" />
+      </div>
+    </div>
+  </Container>
+</section>
+
+<style>
+  .hero {
+    padding-block: var(--space-12) var(--space-section);
+  }
+
+  .hero-grid {
+    display: grid;
+    gap: var(--space-12);
+    align-items: center;
+  }
+
+  .hero-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    max-width: 34rem;
+  }
+
+  .hero h1 {
+    color: var(--color-ink);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .hero-lede {
+    max-width: 42ch;
+    font-family: var(--font-text);
+    font-size: var(--size-lede);
+    line-height: 1.5;
+    color: var(--color-ink-muted);
+  }
+
+  .hero-ctas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+
+  .hero-visual {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px;
+    background: var(--color-brand-teal);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+  }
+
+  .hero-image {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+  }
+
+  @media (min-width: 64em) {
+    .hero-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+</style>

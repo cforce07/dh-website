@@ -1,0 +1,85 @@
+---
+/**
+ * Process — block 05. Five steps of a personalised human consultation,
+ * never framed as automated or AI-driven. Rendered as an <ol> (the steps
+ * are genuinely sequential, so screen reader users get that order for
+ * free) with a connecting rule drawn by this section around ProcessStep's
+ * typographic index markers — vertical rail on narrow viewports,
+ * horizontal rule above the row from --bp-desktop up.
+ */
+import Container from '../components/Container.astro'
+import SectionHeader from '../components/SectionHeader.astro'
+import ProcessStep from '../components/ProcessStep.astro'
+
+const steps = [
+  {
+    label: 'Understand your family',
+    description: "We start with a conversation about your household, routines, and what a helper's day-to-day would look like.",
+  },
+  {
+    label: 'Understand your needs',
+    description: 'We go deeper into the specific tasks, schedule, and expectations that matter most to you.',
+  },
+  {
+    label: 'Recommend suitable helpers',
+    description: 'Based on that conversation, we recommend a small number of helpers whose experience fits what you described.',
+  },
+  {
+    label: 'Interview & decide',
+    description: 'You interview each candidate directly and decide who joins your household, with your consultant on hand to answer questions.',
+  },
+  {
+    label: 'Support the placement',
+    description: 'We stay involved after the placement starts, so early questions or adjustments do not fall through the cracks.',
+  },
+]
+---
+
+<section class="process">
+  <Container>
+    <SectionHeader
+      title="A better match starts with understanding."
+      lede="Every placement follows the same five-step conversation, built around your family rather than a shortlist."
+    />
+
+    <ol class="process-rail">
+      {
+        steps.map((step, i) => (
+          <li>
+            <ProcessStep index={i + 1} label={step.label} description={step.description} />
+          </li>
+        ))
+      }
+    </ol>
+  </Container>
+</section>
+
+<style>
+  .process {
+    padding-block: var(--space-section);
+  }
+
+  .process-rail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+    margin-top: var(--space-12);
+    padding-left: var(--space-6);
+    border-left: 1.5px solid var(--color-brand-teal);
+  }
+
+  @media (min-width: 64em) {
+    .process-rail {
+      flex-direction: row;
+      gap: var(--space-6);
+      padding-left: 0;
+      padding-top: var(--space-6);
+      border-left: none;
+      border-top: 1.5px solid var(--color-brand-teal);
+    }
+
+    .process-rail > li {
+      flex: 1;
+    }
+  }
+</style>

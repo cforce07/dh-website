@@ -1,0 +1,54 @@
+---
+/**
+ * ProcessStep — one step in the homepage Process block. The index renders
+ * as a typographic marker set in --font-display (Fraunces), not a filled
+ * circle with a number inside it — the spec's "not numbered boxes" rule.
+ * Process.astro supplies the connecting rule around these; this component
+ * only owns the marker + label + description.
+ */
+interface Props {
+  index: number
+  label: string
+  description: string
+}
+
+const { index, label, description } = Astro.props
+const display = index.toString().padStart(2, '0')
+---
+
+<div class="process-step">
+  <span class="step-index" aria-hidden="true">{display}</span>
+  <h3 class="step-label">{label}</h3>
+  <p class="step-description">{description}</p>
+</div>
+
+<style>
+  .process-step {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .step-index {
+    font-family: var(--font-display);
+    font-size: var(--size-h3);
+    font-weight: var(--font-weight-regular);
+    color: var(--color-ink-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .step-label {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  .step-description {
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.5;
+    color: var(--color-ink-muted);
+  }
+</style>

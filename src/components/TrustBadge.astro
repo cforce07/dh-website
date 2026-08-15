@@ -1,0 +1,45 @@
+---
+/**
+ * TrustBadge — a single "label above value" pair used in the homepage
+ * trust bar (MOM licence, years active, placement count). The value is a
+ * default slot rather than a prop so it can carry plain text ("Since
+ * 2022") or, where a fact is not yet verified, a <Tbd> — this component
+ * never special-cases which one it received.
+ */
+interface Props {
+  label: string
+}
+
+const { label } = Astro.props
+---
+
+<div class="trust-badge">
+  <p class="trust-label">{label}</p>
+  <p class="trust-value"><slot /></p>
+</div>
+
+<style>
+  .trust-badge {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    align-items: center;
+    text-align: center;
+  }
+
+  .trust-label {
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+  }
+
+  .trust-value {
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-ink);
+  }
+</style>
