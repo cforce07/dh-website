@@ -1,0 +1,167 @@
+---
+/**
+ * MeetHelpers — block 10a. Conditional on the `helper-profiles` content
+ * collection, which DirectHired has not yet supplied real data for.
+ * Master brief §78 forbids inventing helper profiles, so the collection
+ * starts empty (src/content/helper-profiles/.gitkeep is the only file in
+ * it) and stays empty until verified data lands.
+ *
+ * This is NOT a <Tbd> — a <Tbd> marks an inline gap on a block that still
+ * renders and fails the production build. This block is the opposite: an
+ * absent section is honest, so the whole <section> is wrapped in
+ * `profiles.length > 0 &&` and renders nothing — no shell, no "coming
+ * soon", no skeleton card — when the collection is empty. The page must
+ * flow from block 09 (Services) straight to the FAQ with no gap; see
+ * tests/conditional-blocks.test.ts and the build-output check described
+ * in the task 14 report.
+ *
+ * Card composition intentionally differs from HelperSources (block 08,
+ * flag + prose) and Services (block 09, title-as-link): a profile is a
+ * short structured fact sheet (name, placement type, nationality,
+ * experience, skills) plus whatever narrative the markdown body adds, so
+ * two consecutive grids don't repeat the same shape.
+ */
+import { getCollection } from 'astro:content'
+import Container from '../components/Container.astro'
+import SectionHeader from '../components/SectionHeader.astro'
+import Card from '../components/Card.astro'
+
+const profiles = await getCollection('helper-profiles')
+
+const rendered = await Promise.all(
+  profiles.map(async (profile) => ({
+    profile,
+    Content: (await profile.render()).Content,
+  })),
+)
+---
+
+{
+  profiles.length > 0 && (
+    <section class="meet-helpers">
+      <Container>
+        <SectionHeader
+          title="Meet our helpers"
+          lede="A selection of helpers currently available for placement, each matched on skills and experience rather than availability alone."
+        />
+
+        <div class="helpers-grid">
+          {rendered.map(({ profile, Content }) => (
+            <Card>
+              <div class="helper-card">
+                <div class="helper-head">
+                  <h3 class="helper-name">{profile.data.name}</h3>
+                  <span class="helper-badge">
+                    {profile.data.placementType === 'transfer' ? 'Transfer' : 'New helper'}
+                  </span>
+                </div>
+
+                <p class="helper-facts">
+                  {profile.data.nationality} · {profile.data.experienceYears}{' '}
+                  {profile.data.experienceYears === 1 ? 'year' : 'years'} experience
+                </p>
+
+                <ul class="helper-skills">
+                  {profile.data.skills.map((skill) => (
+                    <li>{skill}</li>
+                  ))}
+                </ul>
+
+                <div class="helper-bio">
+                  <Content />
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </Container>
+    </section>
+  )
+}
+
+<style>
+  .meet-helpers {
+    padding-block: var(--space-section);
+  }
+
+  .helpers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: var(--space-6);
+    margin-top: var(--space-12);
+  }
+
+  .helper-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .helper-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+  }
+
+  .helper-name {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  .helper-badge {
+    flex-shrink: 0;
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-accent);
+  }
+
+  .helper-facts {
+    margin: 0;
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    color: var(--color-ink-muted);
+  }
+
+  .helper-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .helper-skills li {
+    padding: var(--space-1) var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    color: var(--color-ink-muted);
+  }
+
+  .helper-bio {
+    margin-top: var(--space-2);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--color-border);
+    font-family: var(--font-text);
+    line-height: 1.5;
+    color: var(--color-ink-muted);
+  }
+
+  .helper-bio :global(p:first-child) {
+    margin-top: 0;
+  }
+
+  .helper-bio :global(p:last-child) {
+    margin-bottom: 0;
+  }
+</style>

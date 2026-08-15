@@ -37,7 +37,41 @@ const faq = defineCollection({
   }),
 })
 
-// Task 14 adds more collections here (e.g. helper profiles). Each collection
-// is defined the same way — `defineCollection` + a Zod schema — so adding one
-// is an additive edit: declare it above, then add it to the exported map below.
-export const collections = { services, helpers, faq }
+// Task 14: two gated collections backing the conditional homepage blocks
+// (MeetHelpers, Reviews). Master brief §78 forbids inventing helper
+// profiles or reviews, so both start empty (see the .gitkeep files under
+// src/content/helper-profiles and src/content/reviews) and stay empty
+// until DirectHired supplies verified data. The blocks that consume them
+// guard on `.length > 0` and render nothing at all when empty — see
+// src/sections/MeetHelpers.astro and Reviews.astro.
+const helperProfiles = defineCollection({
+  type: 'content',
+  schema: z.object({
+    name: z.string(),
+    nationality: z.string(),
+    placementType: z.enum(['new', 'transfer']),
+    skills: z.array(z.string()),
+    experienceYears: z.number(),
+  }),
+})
+
+const reviews = defineCollection({
+  type: 'content',
+  schema: z.object({
+    author: z.string(),
+    rating: z.number().min(1).max(5),
+    source: z.literal('google'),
+    date: z.string(),
+  }),
+})
+
+// Keys must match the content directory names exactly — Astro resolves
+// getCollection('helper-profiles') against the key below, not the
+// variable name `helperProfiles`.
+export const collections = {
+  services,
+  helpers,
+  faq,
+  'helper-profiles': helperProfiles,
+  reviews,
+}

@@ -100,6 +100,13 @@
   --space-12: 3rem;    --space-16: 4rem;    --space-24: 6rem;
   --space-section: clamp(4rem, 2rem + 8vw, 8rem);
 
+  /*
+   * The final CTA (block 12) is the page's last impression and a
+   * designated conversion surface — it earns more vertical room than a
+   * standard section without inventing an ad-hoc calc() at the call site.
+   */
+  --space-section-lg: clamp(5rem, 2.5rem + 11vw, 10rem);
+
   /* ---------------------------------------------------------------- */
   /* Breakpoints — documentation only. CSS custom properties cannot be */
   /* referenced inside an @media condition, so every usage repeats the */

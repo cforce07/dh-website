@@ -1,0 +1,112 @@
+---
+/**
+ * Reviews — block 10b. Conditional on the `reviews` content collection,
+ * which DirectHired has not yet supplied real Google review data for.
+ * Master brief §78 forbids inventing testimonials, so the collection
+ * starts empty (src/content/reviews/.gitkeep is the only file in it) and
+ * stays empty until verified reviews land.
+ *
+ * Same guard as MeetHelpers, and for the same reason it is NOT a <Tbd>:
+ * the whole <section> is wrapped in `reviews.length > 0 &&` so an empty
+ * collection renders nothing — no shell, no placeholder quote, no star
+ * rating drawn from thin air. See tests/conditional-blocks.test.ts.
+ *
+ * `rating` and `author` are structured frontmatter; the review text
+ * itself is the markdown body, rendered the same way FAQ answers are
+ * (entry.render() → <Content />) rather than duplicated into a schema
+ * field, since it is genuinely prose, not a short label.
+ */
+import { getCollection } from 'astro:content'
+import Container from '../components/Container.astro'
+import SectionHeader from '../components/SectionHeader.astro'
+import Card from '../components/Card.astro'
+
+const reviews = (await getCollection('reviews')).sort(
+  (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime(),
+)
+
+const rendered = await Promise.all(
+  reviews.map(async (review) => ({
+    review,
+    Content: (await review.render()).Content,
+  })),
+)
+---
+
+{
+  reviews.length > 0 && (
+    <section class="reviews">
+      <Container>
+        <SectionHeader title="What families are saying" lede="Reviews from families who found their helper through DirectHired." />
+
+        <div class="reviews-grid">
+          {rendered.map(({ review, Content }) => (
+            <Card>
+              <div class="review-card">
+                <span class="review-stars" aria-label={`${review.data.rating} out of 5 stars`}>
+                  {'★'.repeat(review.data.rating)}
+                  {'☆'.repeat(5 - review.data.rating)}
+                </span>
+
+                <div class="review-body">
+                  <Content />
+                </div>
+
+                <p class="review-meta">{review.data.author} · Google review</p>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </Container>
+    </section>
+  )
+}
+
+<style>
+  .reviews {
+    padding-block: var(--space-section);
+    background: var(--color-surface-raised);
+  }
+
+  .reviews-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: var(--space-6);
+    margin-top: var(--space-12);
+  }
+
+  .review-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    height: 100%;
+  }
+
+  .review-stars {
+    font-size: 1rem;
+    letter-spacing: 0.1em;
+    color: var(--color-accent);
+  }
+
+  .review-body {
+    font-family: var(--font-text);
+    line-height: 1.5;
+    color: var(--color-ink);
+  }
+
+  .review-body :global(p:first-child) {
+    margin-top: 0;
+  }
+
+  .review-body :global(p:last-child) {
+    margin-bottom: 0;
+  }
+
+  .review-meta {
+    margin: auto 0 0;
+    padding-top: var(--space-2);
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    color: var(--color-ink-muted);
+  }
+</style>
