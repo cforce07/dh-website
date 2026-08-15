@@ -2,37 +2,45 @@
   {
     "id": "hero-together",
     "title": "Hero — one frame, both people in it",
-    "assetPath": "src/assets/hero-placeholder.svg",
+    "assetPath": "src/assets/hero-together.png",
     "usedBy": [
-      { "file": "src/sections/Hero.astro", "line": 33, "what": "import heroTogether from '../assets/hero-placeholder.svg'" },
-      { "file": "src/sections/Hero.astro", "line": 58, "what": "<Image src={heroTogether} … /> — the page's LCP element" },
-      { "file": "src/sections/Hero.astro", "line": 59, "what": "alt text; must be rewritten with the asset" }
+      { "file": "src/sections/Hero.astro", "line": 60, "what": "import heroTogether from '../assets/hero-together.png'" },
+      { "file": "src/sections/Hero.astro", "line": 84, "what": "<Picture src={heroTogether} … /> — the page's LCP element" },
+      { "file": "src/sections/Hero.astro", "line": 88, "what": "widths={[440, 620, 780, 960, 1280]} — the responsive srcset Astro emits" },
+      { "file": "src/sections/Hero.astro", "line": 89, "what": "sizes=… — mirrors the four layout states in this file's own CSS; change one and you must change the other" },
+      { "file": "src/sections/Hero.astro", "line": 90, "what": "alt text; must be rewritten with the asset" }
     ],
-    "provenance": "hand-svg",
-    "renderedAt": "520x416 CSS px in the two-column grid at 64em (container 1152px, 2rem padding each side, --space-12 gap). Widens with the >=80em bleed (Hero.astro:164-170): 616x493 at a 1280px viewport, 936x749 at 1920px, 1256x1005 at 2560px. aspect-ratio is 5/4 at >=64em and 4/3 below, both CSS crops of one 5:4 source drawn at 1400x1120.",
-    "depicts": "Two adults at the same scale on the same plane, both reaching into one task on a shared counter, with a child in front of it. The counter runs edge to edge and every figure meets it — the logo's H crossbar restated as a room. Faceless, abstract, invented.",
-    "replaceWith": "The Priority 1 hero frame from the shot brief (docs/design/brand-assessment-2026-08-15.md §7): one landscape frame, one room, one window light, a helper and a family member in the same ordinary domestic task, both at the same scale, both in focus, shot at eye level in a real Singapore HDB or condo interior.",
+    "provenance": "ai-generated",
+    "sourcePrompt": "Prompt A1 (\"warm editorial illustration\", recommended) under \"Slot A — hero-together\" in docs/design/image-prompts-2026-08-16.md. Generated with DALL·E and supplied by DirectHired on 2026-08-16 as images/image_slota_prompt1.png (1402x1122 PNG, 2.2MB), which is kept as the untouched master. src/assets/hero-together.png is a byte-for-byte copy of that master, placed under src/ so astro:assets can process it; no crop or resample was applied, because 1402x1122 is 1.2496 against the 1.25 the layout wants.",
+    "renderedAt": "520x416 CSS px in the two-column grid at 64em (container 1152px, 2rem padding each side, --space-12 gap). Widens with the >=80em bleed (Hero.astro:205-211): 616x493 at a 1280px viewport, 936x749 at 1920px, 1256x1005 at 2560px. aspect-ratio is 5/4 at >=64em and 4/3 below, both CSS crops (object-fit: cover, never a squash) of one 5:4 source. Served as AVIF with a WebP fallback at 440/620/780/960/1280 CSS px: 7.4/11.3/14.9/19.5/29.1 KB as AVIF, 12.7/21.2/32.0/44.3/72.8 KB as WebP. A 1280px browser window at 1x fetches the 620w AVIF, 11,566 bytes. The 2.2MB PNG source is a build input and is never sent to a browser.",
+    "depicts": "Two adults at the same scale on the same plane, facing each other across one kitchen counter with their hands meeting over a single shared bowl, and a child standing between them with one hand raised to the counter edge. A tall grilled window on the left is the only light source. One thin bright-teal line runs along the front of the counter from frame edge to frame edge and passes behind all three figures — the logo's H crossbar restated as a room. Every figure is faceless: no eyes, no mouths, no rendered expression. Warm off-white ground, matte paper texture, no photographic cues.",
+    "replaceWith": "The Priority 1 hero frame from the shot brief (docs/design/brand-assessment-2026-08-15.md §7): one landscape frame, one room, one window light, a helper and a family member in the same ordinary domestic task, both at the same scale, both in focus, shot at eye level in a real Singapore HDB or condo interior. This illustration is a better placeholder, not the answer.",
     "aiPermitted": true,
     "aiForbiddenReason": null,
     "promptSection": "Slot A — hero-together",
-    "notes": "Currently a vector: 4KB, resolution-independent, and it costs the LCP budget almost nothing. A raster replacement (AI or photographic) is a real performance trade, not a free swap. Hero.astro fixes width/height independently of the source, so the swap is a one-line src change plus new alt text."
+    "notes": "Replaced src/assets/hero-placeholder.svg, a 4KB hand-drawn vector that cost the LCP budget almost nothing — so this swap was a real performance trade and was measured as one. Median of 3 Lighthouse runs (npx lhci autorun, the same config CI uses): LCP 1515ms before and 1663ms after, performance 1.00 and CLS 0 in both, page weight 107KB before and 121KB after, against a 2500ms LCP budget asserted in lighthouserc.json. The margin comes from AVIF plus a srcset, not from luck: shipping this PNG unprocessed would be 2.2MB. Anything that removes the <Picture>, the widths/sizes pair, loading=\"eager\" or fetchpriority=\"high\" gives that margin back."
   },
   {
     "id": "og-share",
     "title": "Social share image (Open Graph / Twitter)",
-    "assetPath": null,
+    "assetPath": "src/assets/og-share.png",
     "usedBy": [
-      { "file": "src/layouts/BaseLayout.astro", "line": 94, "what": "<meta name=\"twitter:card\" content=\"summary\" /> — deliberately NOT summary_large_image, because a large-image card with no image renders worse than a summary card" },
-      { "file": "src/layouts/BaseLayout.astro", "line": 71, "what": "the og: block this image joins, after og:url" }
+      { "file": "src/layouts/BaseLayout.astro", "line": 19, "what": "import ogSource from '../assets/og-share.png'" },
+      { "file": "src/layouts/BaseLayout.astro", "line": 46, "what": "getImage({ src: ogSource, format: 'jpeg', quality: 78 }) — JPEG on purpose; several share consumers still refuse WebP and AVIF" },
+      { "file": "src/layouts/BaseLayout.astro", "line": 47, "what": "new URL(ogImage.src, Astro.site).href — the absolute URL, built exactly the way `canonical` is" },
+      { "file": "src/layouts/BaseLayout.astro", "line": 102, "what": "<meta property=\"og:image\" …/> plus :width, :height, :type and :alt" },
+      { "file": "src/layouts/BaseLayout.astro", "line": 127, "what": "<meta name=\"twitter:card\" content=\"summary_large_image\" /> — valid only while an og:image ships; back to \"summary\" in the same commit if this image is ever removed" },
+      { "file": "src/layouts/BaseLayout.astro", "line": 128, "what": "<meta name=\"twitter:image\" …/> and twitter:image:alt" }
     ],
-    "provenance": "none-yet",
-    "renderedAt": "1200x630 (1.91:1). WhatsApp, the live conversion channel for this business, reads og:image directly and renders it at roughly 300x157 in a chat bubble.",
-    "depicts": "Nothing yet — no image is shipped, and the card is honest without one.",
-    "replaceWith": "A DirectHired-owned share card: either a crop of the commissioned hero photograph with the wordmark set over a clear area, or a purely typographic card built from the brand assets.",
+    "provenance": "ai-generated",
+    "sourcePrompt": "Prompt B1 (\"the shared counter, at share-card scale\", recommended) under \"Slot B — og-share\" in docs/design/image-prompts-2026-08-16.md. Generated with DALL·E and supplied by DirectHired on 2026-08-16 as images/image_slotb_promp1.png (1730x909 PNG, 2.0MB), which is kept as the untouched master. src/assets/og-share.png is that master centre-cropped and downscaled to exactly 1200x630 (Lanczos 3): 1730x909 is 1.9032 against the 1.9048 Open Graph wants, so the crop discards about half a pixel of height and nothing else — in particular it does not touch the clear right-hand third the wordmark is meant to sit in.",
+    "renderedAt": "1200x630 (1.91:1), shipped as a ~57KB JPEG transcoded at build time by astro:assets. WhatsApp, the live conversion channel for this business, reads og:image directly and renders it at roughly 300x157 in a chat bubble. Not fetched by the page itself, so it costs the LCP budget nothing.",
+    "depicts": "One long kitchen counter seen straight on, running unbroken from edge to edge with a thin bright-teal line along its front. Two adults of the same height stand at it, leaning in over a single shared bowl with their hands together; both are faceless and neither wears a uniform. The right third is deliberately calm and near-empty — clear space left for the wordmark to be set over later in a design tool, which has not been done. Warm off-white ground so the card reads on both light and dark chat backgrounds.",
+    "replaceWith": "A DirectHired-owned share card: either a crop of the commissioned hero photograph with the wordmark set over a clear area, or a purely typographic card built from the brand assets. The current card carries no wordmark at all, which is the most visible thing it is still missing.",
     "aiPermitted": true,
     "aiForbiddenReason": null,
     "promptSection": "Slot B — og-share",
-    "notes": "Already tracked as a Category C declared input in scripts/generate-info-required.mjs. Shipping it is a four-line change in BaseLayout.astro: restore summary_large_image and add og:image, og:image:width, og:image:height, twitter:image."
+    "notes": "Shipping this restored twitter:card=\"summary_large_image\" in BaseLayout.astro, which had been held at \"summary\" precisely because no image existed. That reasoning expired rather than being overruled — the two must move together in both directions. JPEG rather than WebP/AVIF is not an oversight: this asset is fetched by crawlers, not by the browser, and the modern-format argument that governs the hero does not apply. Still tracked as a Category C declared input in scripts/generate-info-required.mjs, because an AI illustration is not DirectHired's approved brand asset."
   },
   {
     "id": "helper-profile-portrait",

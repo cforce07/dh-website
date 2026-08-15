@@ -96,7 +96,10 @@ describe('image provenance registry', () => {
     // Without this, a scanner regression that matched nothing would make the
     // test above pass vacuously.
     const found = new Set(referencedAssets().keys())
-    expect(found).toContain('src/assets/hero-placeholder.svg')
+    // A raster and a vector, deliberately: the scanner must not quietly
+    // regress to matching only .svg.
+    expect(found).toContain('src/assets/hero-together.png')
+    expect(found).toContain('src/assets/og-share.png')
     expect(found).toContain('src/assets/logo-wordmark.svg')
     expect(found).toContain('src/assets/logo-wordmark-on-deep.svg')
     expect(found).toContain('public/favicon.svg')

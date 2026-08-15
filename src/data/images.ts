@@ -58,6 +58,14 @@ export type ImageSlot = {
   readonly assetPath: string | null
   readonly usedBy: readonly UsageSite[]
   readonly provenance: Provenance
+  /**
+   * For `ai-generated` slots only: which prompt in
+   * `docs/design/image-prompts-2026-08-16.md` produced *this specific file*,
+   * which master it was generated from, and any crop or resize applied on the
+   * way in. `promptSection` names the slot's brief; this names the run.
+   * Absent on every other provenance, where there is no prompt to record.
+   */
+  readonly sourcePrompt?: string
   /** The real rendered size, read off the CSS — not a guess. */
   readonly renderedAt: string
   readonly depicts: string

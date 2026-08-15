@@ -90,6 +90,14 @@ and resolution-independent, which is worth naming: replacing it with any
 raster image is a real speed cost, not a free swap. If a generation is only
 *slightly* better than the drawing, keep the drawing.
 
+> **Delivered 2026-08-16.** Prompt A1 was used. The brief above is left as it
+> was issued; what actually shipped is recorded in `src/data/images.json`
+> (slot `hero-together`) and in Category D of
+> `docs/INFORMATION-REQUIRED-BEFORE-PRODUCTION.md`. The hand-drawn SVG named
+> in this paragraph no longer exists — the master is
+> `images/image_slota_prompt1.png` and the build input is
+> `src/assets/hero-together.png`.
+
 ### What it must depict, and why
 
 One frame. One room. One light. Two adults **at the same scale, on the same
@@ -191,6 +199,14 @@ that is not warm, reject it.
 large-image card with no image renders *worse* than not asking for one.
 
 **Currently** nothing. There is no share image.
+
+> **Delivered 2026-08-16.** Prompt B1 was used. The brief above is left as it
+> was issued; what actually shipped is recorded in `src/data/images.json`
+> (slot `og-share`) and in Category D of
+> `docs/INFORMATION-REQUIRED-BEFORE-PRODUCTION.md`. `twitter:card` is now
+> `summary_large_image`, so the "currently declares summary" note above is
+> historical. The wordmark has **not** been set over the clear right-hand
+> third yet — that is still outstanding.
 
 ### What it must depict, and why
 
