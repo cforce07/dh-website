@@ -11,10 +11,19 @@
  * disclosure triangle is removed and replaced with a custom plus/minus
  * indicator that flips purely off the `[open]` attribute selector — no
  * script is involved in that either.
+ *
+ * Also emits a FAQPage JSON-LD block for the same six entries (Task 15
+ * fix round 1, master brief §50). The script tag is placed in-section
+ * rather than via BaseLayout's `slot="head"` — a `slot="head"` attribute
+ * set inside this component's own template would not forward up through
+ * <BaseLayout><Faq /></BaseLayout> since Faq isn't given any children to
+ * slot in the first place. Google's structured-data guidance permits
+ * JSON-LD anywhere in <head> or <body>, so this is valid as-is.
  */
 import { getCollection } from 'astro:content'
 import Container from '../components/Container.astro'
 import SectionHeader from '../components/SectionHeader.astro'
+import { faqPageSchema, markdownToPlainText } from '../lib/structured-data'
 
 const homeFaqs = (await getCollection('faq'))
   .filter((entry) => entry.data.surfaces.includes('home'))
@@ -27,9 +36,20 @@ const rendered = await Promise.all(
     Content: (await entry.render()).Content,
   })),
 )
+
+// Structured data reuses the same six entries as the visible list, converting
+// each entry's raw markdown body to plain text for acceptedAnswer.text. This
+// does not affect the <Content /> markdown rendering below.
+const faqSchema = faqPageSchema(
+  homeFaqs.map((entry) => ({
+    question: entry.data.question,
+    answer: markdownToPlainText(entry.body ?? ''),
+  })),
+)
 ---
 
 <section class="faq">
+  <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
   <Container width="narrow">
     <SectionHeader
       title="Questions families ask us"

@@ -2,6 +2,12 @@ export const company = {
   name: 'DirectHired',
   legalDescription: 'Singapore-based domestic helper agency',
 
+  // The single source of truth for the production domain. astro.config.mjs,
+  // src/lib/structured-data.ts, and public/robots.txt (verified by a test,
+  // since a static .txt file cannot import this) all derive from this value
+  // rather than repeating the literal.
+  siteUrl: 'https://www.directhired.com',
+
   phoneE164: '+6598556637',
   phoneDisplay: '+65 9855 6637',
   email: 'hello@directhired.com',
