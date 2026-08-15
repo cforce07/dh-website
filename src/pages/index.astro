@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro'
+import { employmentAgencySchema } from '../lib/structured-data'
 import Hero from '../sections/Hero.astro'
 import TrustBar from '../sections/TrustBar.astro'
 import Problem from '../sections/Problem.astro'
@@ -19,6 +20,7 @@ import FinalCta from '../sections/FinalCta.astro'
   title="DirectHired — Direct-hire domestic helpers in Singapore"
   description="DirectHired matches Singapore families with domestic helpers directly, with transparent pricing and no hidden agency markups."
 >
+  <script type="application/ld+json" set:html={JSON.stringify(employmentAgencySchema())} slot="head" />
   <Hero />
   <TrustBar />
   <Problem />
