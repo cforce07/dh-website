@@ -63,4 +63,42 @@ describe('token contrast', () => {
   it('the control-boundary colour meets the non-text threshold', () => {
     expect(contrastRatio(token('ink-muted'), token('surface'))).toBeGreaterThanOrEqual(3)
   })
+
+  // --color-surface-teal (C-01): 8% --color-brand-teal over --color-surface,
+  // giving #00a4a6 real graphic area without ever setting text in it (the
+  // brand teal itself stays text/fill-forbidden — see the warning comment
+  // above --color-brand-teal). Text placed on this wash must still clear
+  // AA on its own merits. Measured: ink 12.87:1, ink-muted 7.32:1,
+  // accent 5.54:1 — all clear with margin.
+  it('body text on the teal wash meets AA', () => {
+    expect(contrastRatio(token('ink'), token('surface-teal'))).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('muted text on the teal wash meets AA', () => {
+    expect(contrastRatio(token('ink-muted'), token('surface-teal'))).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('accent meets AA against the teal wash', () => {
+    expect(contrastRatio(token('accent'), token('surface-teal'))).toBeGreaterThanOrEqual(4.5)
+  })
+
+  // --color-accent-hover (C-02): darkened from #005F61 to #00494B. The old
+  // value sat 1.0 contrast-step from --color-accent (7.05:1 vs 6.03:1 on
+  // --color-surface) — close enough to read as a rendering artefact rather
+  // than a deliberate state change. Consumers (Button.astro's primary
+  // hover background, paired with --color-surface text; Faq.astro and
+  // HelperSources.astro, as a plain text colour on --color-surface) both
+  // need this to clear AA in its own right. Measured: 9.64:1.
+  it('accent-hover meets AA against surface (used as both text and a button fill paired with surface-coloured text)', () => {
+    expect(contrastRatio(token('accent-hover'), token('surface'))).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('accent-hover is a visually distinct step from accent, not a rendering artefact', () => {
+    // Both measured against the same surface so the two contrast figures
+    // are directly comparable as "steps": the old value (#005F61) sat at
+    // 7.05:1 vs accent's 6.03:1 — a 1.17x step. Require a clearer jump.
+    const accentRatio = contrastRatio(token('accent'), token('surface'))
+    const hoverRatio = contrastRatio(token('accent-hover'), token('surface'))
+    expect(hoverRatio / accentRatio).toBeGreaterThanOrEqual(1.4)
+  })
 })

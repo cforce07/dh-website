@@ -36,8 +36,32 @@
   --color-ink-muted: #4d4d4d;
   --color-surface: #FAF8F5;
   --color-surface-raised: #FFFFFF;
+
+  /*
+   * --color-surface-teal: --color-brand-teal (#00a4a6) washed to 8% over
+   * --color-surface. Gives the brand colour real graphic AREA (a section
+   * ground) instead of only hairlines and icon fills, without ever putting
+   * it behind text or inside a button fill — --color-brand-teal itself
+   * stays exactly as constrained below. Text placed on this wash still
+   * has to clear AA on its own merits; see tests/tokens.test.ts. Flattened
+   * to a hex literal (not left as an alpha overlay) for the same reason as
+   * the --color-*-on-deep ramp: the token's value is what the eye actually
+   * receives, so its contrast is directly assertable.
+   */
+  --color-surface-teal: #E6F1EF;
+
   --color-accent: #046A6C;
-  --color-accent-hover: #005F61;
+
+  /*
+   * --color-accent-hover: darkened from the original #005F61. That value
+   * sat only 1.0 contrast-step from --color-accent (7.05:1 vs 6.03:1 on
+   * --color-surface) — close enough that the hover state read as a
+   * rendering artefact rather than a deliberate darkening, and it was a
+   * fourth distinct teal in a palette that otherwise has exactly three
+   * jobs (brand ground, interactive, on-dark). #00494B measures 9.64:1 on
+   * --color-surface, a clearly perceptible step down from --color-accent.
+   */
+  --color-accent-hover: #00494B;
 
   /*
    * --color-brand-teal is the real teal from the logo (#00a4a6). It
