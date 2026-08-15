@@ -31,7 +31,9 @@ const { width = 'default' } = Astro.props
     max-width: 48rem;
   }
 
-  /* Editorial breathing room once there's room to give it. */
+  /* Editorial breathing room once there's room to give it.
+     48em matches --bp-tablet in tokens.css — keep in sync by hand,
+     custom properties don't resolve inside @media conditions. */
   @media (min-width: 48em) {
     .container {
       padding-inline: var(--space-8);

@@ -1,0 +1,134 @@
+---
+/**
+ * Header — logo left, primary nav centre, CTAs right. Above the desktop
+ * breakpoint (64em / 1024px) this is the only nav surface; below it, the
+ * centre nav and CTA pair are hidden in favour of <MobileNav>, which
+ * renders its own toggle button here and a full-screen panel.
+ *
+ * Conversion hierarchy (spec §6.4, controller ruling): primary "Submit
+ * Your Requirements" always precedes secondary "WhatsApp Us", on every
+ * surface. The primary href comes from `company.requirementFormUrl`
+ * only — never hardcode it, a later test asserts that.
+ */
+import Container from './Container.astro'
+import Button from './Button.astro'
+import MobileNav from './MobileNav.astro'
+import { navItems } from '../lib/nav'
+import { company } from '../data/company'
+import { defaultWhatsappUrl } from '../lib/whatsapp'
+
+const whatsappHref = defaultWhatsappUrl()
+---
+
+<header class="site-header">
+  <Container>
+    <div class="header-inner">
+      <a class="logo" href="/" aria-label={`${company.name} home`}>
+        <span class="logo-mark" aria-hidden="true"></span>
+        {company.name}
+      </a>
+
+      <nav class="primary-nav" aria-label="Primary">
+        <ul>
+          {
+            navItems.map((item) => (
+              <li>
+                <a href={item.href}>{item.label}</a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+
+      <div class="header-ctas">
+        <Button variant="primary" href={company.requirementFormUrl}>Submit Your Requirements</Button>
+        <Button variant="secondary" href={whatsappHref} external>WhatsApp Us</Button>
+      </div>
+
+      <MobileNav />
+    </div>
+  </Container>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-6);
+    min-height: 4.5rem;
+  }
+
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-family: var(--font-display);
+    font-size: var(--size-h3);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .logo-mark {
+    display: inline-block;
+    width: 0.6em;
+    height: 0.6em;
+    border-radius: var(--radius-sm);
+    background: var(--color-brand-teal);
+  }
+
+  .primary-nav {
+    display: none;
+  }
+
+  .primary-nav ul {
+    display: flex;
+    align-items: center;
+    gap: var(--space-6);
+  }
+
+  .primary-nav a {
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink-muted);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color var(--duration-fast) var(--ease);
+  }
+
+  .primary-nav a:hover {
+    color: var(--color-accent);
+  }
+
+  .header-ctas {
+    display: none;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  /* 64em matches --bp-desktop in tokens.css (kept in sync by hand — see
+     that token's comment for why it's wider than --bp-tablet). Below
+     this, MobileNav owns navigation. Must match MobileNav.astro and
+     MobileCtaBar.astro exactly, or a viewport range opens where neither
+     nav surface is present. */
+  @media (min-width: 64em) {
+    .primary-nav {
+      display: block;
+    }
+
+    .header-ctas {
+      display: flex;
+    }
+  }
+</style>

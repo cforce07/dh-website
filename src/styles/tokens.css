@@ -101,6 +101,24 @@
   --space-section: clamp(4rem, 2rem + 8vw, 8rem);
 
   /* ---------------------------------------------------------------- */
+  /* Breakpoints — documentation only. CSS custom properties cannot be */
+  /* referenced inside an @media condition, so every usage repeats the */
+  /* literal em value below in a comment pointing back here. Treat a   */
+  /* breakpoint change as a two-step edit: update the value here, then */
+  /* grep for the literal across Container and the layout-shell        */
+  /* components to keep them in sync.                                  */
+  /* ---------------------------------------------------------------- */
+  --bp-tablet: 48em;   /* 768px  — Container's padding step-up. */
+  --bp-desktop: 64em;  /* 1024px — where the full desktop header (logo +
+                           8 nav items + 2 CTAs) fits on one line without
+                           wrapping; Header, MobileNav, and MobileCtaBar
+                           all switch here. Deliberately wider than
+                           --bp-tablet: the nav content does not fit in
+                           the 48-64em range, so keeping the mobile nav
+                           through that range (rather than switching at
+                           48em) avoids a wrapped, two-line desktop nav. */
+
+  /* ---------------------------------------------------------------- */
   /* Radius — restrained per spec §3.3                                */
   /* ---------------------------------------------------------------- */
   --radius-sm: 3px;  --radius-md: 6px;  --radius-lg: 10px;
