@@ -23,6 +23,11 @@ export const company = {
   foundedYear: 2022,
   placementCount: '1,000+',
 
+  // MOM Employment Agency licence, supplied by DirectHired on 2026-08-15.
+  // Master brief §70: never invent, modify, guess or substitute this value,
+  // and verify it against the official MOM source before publication.
+  momLicence: '23C1443',
+
   // The form is built but not yet wired to the production domain.
   // This is the ONLY definition of the destination. Repoint here at launch.
   requirementFormUrl: 'https://www.directhired.com/employer-requirement',

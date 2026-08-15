@@ -1,23 +1,23 @@
 ---
 /**
- * TrustBar — block 02. Three facts, presented plainly: the MOM licence is
- * unverified and rendered as a <Tbd> (see task-12 brief and
- * scripts/check-tbd.mjs — this is what makes `npm run build` fail on
- * purpose until DirectHired supplies the real number). The other two are
- * sourced from company.ts, never retyped.
+ * TrustBar — block 02. Three facts, presented plainly, all three sourced
+ * from company.ts and never retyped.
+ *
+ * The MOM licence was a <Tbd> until DirectHired supplied it on 2026-08-15,
+ * which is what made `npm run build` fail by design until then. Master
+ * brief §70 still applies to the value itself: never invent, modify or
+ * substitute it, and verify against the official MOM source before
+ * publication.
  */
 import Container from '../components/Container.astro'
 import TrustBadge from '../components/TrustBadge.astro'
-import Tbd from '../components/Tbd.astro'
 import { company } from '../data/company'
 ---
 
 <section class="trust-bar">
   <Container>
     <div class="trust-grid">
-      <TrustBadge label="MOM Licensed">
-        <Tbd item="MOM licence number" />
-      </TrustBadge>
+      <TrustBadge label="MOM Licensed">{company.momLicence}</TrustBadge>
       <TrustBadge label="Established">Since {company.foundedYear}</TrustBadge>
       <TrustBadge label="Track Record">{company.placementCount} Helpers Placed</TrustBadge>
     </div>

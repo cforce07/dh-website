@@ -14,9 +14,7 @@ Categories A and B are **derived** from the codebase and cannot fall out of sync
 
 A missing value on a block that still renders. Each is marked with `<Tbd>` in the source and shows up as a `data-tbd` attribute in the built HTML. `npm run build` runs `scripts/check-tbd.mjs` against `dist/` and **fails** while any of these remain — publishing a rendered block with a hole in it is a broken claim.
 
-- **MOM licence number**
-  - Blocks: `npm run build` (the `scripts/check-tbd.mjs` gate)
-  - Found in: `index.html`
+_None found — every inline value in the current build is verified._
 
 ## Category B — Whole-block omissions (do not block the production build)
 
