@@ -36,8 +36,26 @@ const whatsappHref = defaultWhatsappUrl()
       </div>
 
       <div class="hero-visual">
-        <Image src={heroFamily} alt="Illustration representing a family" width={640} height={800} class="hero-image" />
-        <Image src={heroHelper} alt="Illustration representing a helper" width={640} height={800} class="hero-image" />
+        <Image
+          src={heroFamily}
+          alt="Illustration representing a family"
+          width={640}
+          height={800}
+          class="hero-image"
+          loading="eager"
+          decoding="async"
+          fetchpriority="high"
+        />
+        <Image
+          src={heroHelper}
+          alt="Illustration representing a helper"
+          width={640}
+          height={800}
+          class="hero-image"
+          loading="eager"
+          decoding="async"
+          fetchpriority="high"
+        />
       </div>
     </div>
   </Container>
@@ -80,6 +98,13 @@ const whatsappHref = defaultWhatsappUrl()
     gap: var(--space-3);
   }
 
+  /*
+   * The 2px gap between the two images shows through as a seam in
+   * --color-brand-teal. This is the logo's real teal, which fails WCAG AA
+   * for text and button fills (see the token's comment in tokens.css) —
+   * legitimate here only because it is a graphic seam, not text. Never
+   * repurpose this rule as a text colour, and never widen it into a fill.
+   */
   .hero-visual {
     display: grid;
     grid-template-columns: 1fr 1fr;
