@@ -171,3 +171,49 @@ describe('internal link resolution', () => {
     expect(coveredOnlyByAllowlist.length).toBeGreaterThan(0)
   })
 })
+
+// --- conditional-block content-cache guard ------------------------------
+//
+// Task 17 audit found that `node_modules/.astro/data-store.json` — Astro's
+// persistent content-layer cache, gitignored and environment-local — can
+// go stale relative to the actual content directories on disk. When it
+// does, `getCollection()` returns a cached entry that no longer exists as
+// a file, and a component that correctly guards on `.length > 0` renders
+// it anyway. This shipped a fabricated "Test Helper" profile into
+// dist/index.html's meet-helpers section in this exact environment, with
+// every test passing, because tests/conditional-blocks.test.ts checks
+// MeetHelpers/Reviews via Astro's container API against the *collection*
+// (which was correctly empty) — it never inspects what the *build*
+// actually produced. The stale cache sits between those two things, so a
+// collection-level check alone cannot catch it.
+//
+// This guard closes that gap by asserting against dist/index.html itself,
+// the same artifact a real deploy would ship. It reuses the build from
+// this file's beforeAll rather than triggering a second one.
+//
+// On a site whose master brief's central rule is "never invent business
+// information" (§78: no fabricated helper profiles, no invented
+// testimonials), this is the check that would have caught the actual
+// shipped defect — a collection-only test could not have.
+describe('conditional block content-cache guard', () => {
+  it('helper-profiles and reviews collections are currently empty (precondition for the checks below)', () => {
+    const helperProfileFiles = readdirSync('src/content/helper-profiles').filter((f) => f !== '.gitkeep')
+    const reviewFiles = readdirSync('src/content/reviews').filter((f) => f !== '.gitkeep')
+    expect(helperProfileFiles).toHaveLength(0)
+    expect(reviewFiles).toHaveLength(0)
+  })
+
+  it('the BUILT homepage contains no meet-helpers section or profile markup while helper-profiles is empty', () => {
+    const html = readFileSync('dist/index.html', 'utf8')
+    expect(html).not.toMatch(/<section[^>]*class="meet-helpers"/)
+    expect(html).not.toMatch(/class="helper-card"/)
+    expect(html).not.toMatch(/class="helpers-grid"/)
+  })
+
+  it('the BUILT homepage contains no reviews section or review markup while reviews is empty', () => {
+    const html = readFileSync('dist/index.html', 'utf8')
+    expect(html).not.toMatch(/<section[^>]*class="reviews"/)
+    expect(html).not.toMatch(/class="review-card"/)
+    expect(html).not.toMatch(/class="reviews-grid"/)
+  })
+})

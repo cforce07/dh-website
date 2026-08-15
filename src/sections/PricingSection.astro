@@ -61,7 +61,16 @@ const whatsappHref = defaultWhatsappUrl()
 <style>
   .pricing {
     padding-block: var(--space-section);
-    background: var(--color-surface-raised);
+    /* --color-surface, not --color-surface-raised: this section renders
+       Card via PricingCard, and Card itself is --color-surface-raised.
+       A raised section background was identical to the card background
+       it hosts — measured via getComputedStyle, not just the token
+       names, since backgroundColor doesn't cascade and an unset section
+       background can resolve to a different visible color than its own
+       declared value would suggest. Zero rendered contrast left the
+       cards separated only by a 1px border and shadow-sm (max alpha
+       .06). See task-17-report.md's section-background audit. */
+    background: var(--color-surface);
   }
 
   .pricing-grid {

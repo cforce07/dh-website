@@ -65,7 +65,13 @@ const rendered = await Promise.all(
 <style>
   .reviews {
     padding-block: var(--space-section);
-    background: var(--color-surface-raised);
+    /* --color-surface, not --color-surface-raised: this section renders
+       Card, which is itself --color-surface-raised. Not yet renderable
+       (reviews collection is empty), but the same collision as
+       PricingSection/Services would apply the moment it is populated —
+       fixed proactively for consistency. See task-17-report.md's
+       section-background audit. */
+    background: var(--color-surface);
   }
 
   .reviews-grid {

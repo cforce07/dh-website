@@ -42,7 +42,14 @@ const services = (await getCollection('services')).sort((a, b) => a.data.order -
 <style>
   .services {
     padding-block: var(--space-section);
-    background: var(--color-surface-raised);
+    /* --color-surface, not --color-surface-raised: this section renders
+       Card, which is itself --color-surface-raised. Measured via
+       getComputedStyle (not just the token names) — section and card
+       resolved to the identical rendered rgb(255,255,255), leaving zero
+       background contrast; separation was 100% a 1px border and
+       shadow-sm (max alpha .06). See task-17-report.md's
+       section-background audit. */
+    background: var(--color-surface);
   }
 
   .services-grid {
