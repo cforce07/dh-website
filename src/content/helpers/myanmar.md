@@ -1,8 +1,6 @@
 ---
 country: Myanmar
 slug: myanmar
-flag: 🇲🇲
-summary: We work with helpers from Myanmar and match them to your family based on the requirements you share with us.
 order: 2
 ---
 

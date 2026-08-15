@@ -4,21 +4,42 @@
  * only block that shifts palette register to `--color-deep`.
  *
  * The composition is derived from the logo itself rather than an invented
- * metaphor (see docs/design/palette-proposal.md and logo/logo.png): the
- * "H" in DirectHired is two human figures — round heads, vertical
+ * metaphor (see docs/design/palette-proposal.md and src/assets/logo-mark.svg):
+ * the "H" in DirectHired is two human figures — round heads, vertical
  * bodies — joined by a crossbar where their arms meet. That is "Happy
- * Employer. Happy Helper." already encoded in the mark. Below, `.side`
- * renders as two vertical columns from --bp-desktop up, each capped with
- * a small round `.side-mark` (the head), with `.bridge` drawing a
- * horizontal bar across their meeting point (the crossbar) — the same
- * two-verticals-plus-crossbar structure as the logo's H, translated into
- * layout rather than redrawn as a literal icon. `.match-composition` uses
- * `align-items: stretch` (the grid default) specifically so `.bridge`
- * takes on the full row height and its `::before` bar (positioned at
- * `top: 50%`) actually lands at the row's vertical mid-point — an
- * `align-items: start` here would collapse the empty `.bridge` div to
- * zero height and strand the crossbar at the top of the row, next to the
- * head marks, instead of joining the two sides in the middle.
+ * Employer. Happy Helper." already encoded in the mark. From --bp-wide up
+ * the block redraws that H at page scale:
+ *
+ *   - the two `.side` columns carry the uprights, as a 2px rule on the
+ *     OUTER edge of each column (left rule on the left column, right rule
+ *     on the right), exactly as the H's two strokes are its outer ones.
+ *     They used to sit on the inner edges, both against the central
+ *     gutter, which draws `] [` rather than an H;
+ *   - each `.side-mark` is a head and sits centred ON its own upright, at
+ *     the top, the way the mark's two circles cap its two bodies. It used
+ *     to float at the top-left of the text column ~400px from any rule,
+ *     reading as a decorative bullet that connected to nothing;
+ *   - `.match-composition::before` is the crossbar. It is absolutely
+ *     positioned across the whole composition, `left: 0` to `right: 0`,
+ *     so it terminates exactly on the outer edge of each upright and
+ *     visibly MEETS them. Previously it was `.bridge::before`, which
+ *     spanned only the 32px middle grid column and had a 32px grid gap on
+ *     each side, so it reached neither upright and rendered as a short
+ *     dash floating in clear space.
+ *
+ * The crossbar's height is not 50%: it lands in `--head-clear`, the band
+ * between the head marks and the `.side-title`s, which is content-free in
+ * both columns by construction (`.side-mark`'s margin-bottom and the
+ * crossbar's `top` are derived from the same two custom properties). That
+ * is both where the mark puts it — the arms meet high on the body, not
+ * halfway down it — and the only horizontal line through this layout that
+ * cannot strike through text however the titles wrap.
+ *
+ * The crossbar is the page's ONE connective gesture. Everything else on
+ * this page that draws a line is a divider (section rules, `.pillar`
+ * borders, the FAQ hairlines); this is the single line whose whole job is
+ * to touch two things. If a future change makes it stop touching, the
+ * block has lost its reason to exist.
  *
  * Per brief §22 / §83, this is shown as composition, not prose: the
  * Employer and Helper lists sit side by side with no explanatory
@@ -49,8 +70,6 @@ const helperSide = ['Skills', 'Experience', 'Expectations', 'Suitable responsibi
           {employerSide.map((item) => <li>{item}</li>)}
         </ul>
       </div>
-
-      <div class="bridge" aria-hidden="true"></div>
 
       <div class="side">
         <span class="side-mark" aria-hidden="true"></span>
@@ -83,6 +102,17 @@ const helperSide = ['Skills', 'Experience', 'Expectations', 'Suitable responsibi
   }
 
   .match-composition {
+    /*
+     * --head-size / --head-clear are the two numbers the whole figure is
+     * built from, declared once here so the head marks and the crossbar
+     * cannot drift apart. --head-clear is the vertical band between the
+     * heads and the titles; the crossbar lands in the middle of it, which
+     * is why that band has to be wider than the flex gap that would
+     * otherwise separate the two.
+     */
+    --head-size: 1rem;
+    --head-clear: var(--space-6);
+
     display: grid;
     gap: var(--space-8);
     margin-top: var(--space-12);
@@ -98,8 +128,11 @@ const helperSide = ['Skills', 'Experience', 'Expectations', 'Suitable responsibi
 
   .side-mark {
     display: inline-block;
-    width: 10px;
-    height: 10px;
+    width: var(--head-size);
+    height: var(--head-size);
+    /* Opens --head-clear between the head and the title on top of the
+       flex gap already between them. Paired with the crossbar's `top`. */
+    margin-bottom: calc(var(--head-clear) - var(--space-4));
     border-radius: 50%;
     background: var(--color-accent-on-deep);
   }
@@ -120,10 +153,6 @@ const helperSide = ['Skills', 'Experience', 'Expectations', 'Suitable responsibi
     color: var(--color-on-deep);
   }
 
-  .bridge {
-    display: none;
-  }
-
   .match-resolve {
     max-width: 42rem;
     margin-top: var(--space-16);
@@ -133,16 +162,39 @@ const helperSide = ['Skills', 'Experience', 'Expectations', 'Suitable responsibi
     color: var(--color-on-deep);
   }
 
+  /* 64em is --bp-wide (tokens.css) — a content-layout switch, not a nav
+     breakpoint. This is where the two sides can sit side by side with
+     enough width between them for the H to read; the file header above
+     describes what gets drawn from here up. */
   @media (min-width: 64em) {
     .match-composition {
-      /* Two verticals either side of a narrow middle column carrying the
-         crossbar — see the file header for how this maps to the logo. */
-      grid-template-columns: 1fr var(--space-8) 1fr;
-      /* stretch (the grid default), not start — .bridge has no content
-         of its own, so it must be stretched to the row's full height for
-         its ::before crossbar (top: 50%) to land at the true vertical
-         mid-point instead of collapsing to the top of the row. */
+      /* max-content, not 1fr: each side is exactly as wide as its own
+         list, and `space-between` then pushes one to each edge of the
+         composition. Two 1fr tracks made columns ~670px wide holding
+         ~230px of text, so the right-hand upright stood 400px clear of
+         the words it belonged to and read as an unrelated page rule.
+         Sized to content, each upright sits against its own side and the
+         empty space falls in the middle — which is the span the crossbar
+         crosses. --space-24 is the floor on that gap, not its usual
+         value. */
+      grid-template-columns: max-content max-content;
+      justify-content: space-between;
+      column-gap: var(--space-24);
+      /* Capped at the same 48rem reading measure Container calls
+         `narrow`, and left-aligned on the page's axis with the kicker
+         and the resolving line. Left to fill the full 72rem container
+         the two uprights stand 1,088px apart around a 260px-tall figure,
+         and a rule that runs the whole column width stops reading as a
+         drawn mark and starts reading as a section border. Bounded, it
+         reads as one object on the page. */
+      max-width: 48rem;
+      /* stretch (the grid default), stated because it is load-bearing:
+         the uprights ARE the two columns' borders, so an `start` here
+         would let one column's list wrap to a different height and draw
+         an H with legs of different lengths. */
       align-items: stretch;
+      /* Containing block for the crossbar. */
+      position: relative;
     }
 
     .side {
@@ -150,30 +202,49 @@ const helperSide = ['Skills', 'Experience', 'Expectations', 'Suitable responsibi
       padding-top: 0;
     }
 
+    /* The uprights: outer edge of each column, so the pair brackets the
+       whole composition the way the mark's two strokes bracket the H. */
     .side:first-child {
-      border-right: 2px solid var(--color-accent-on-deep);
-      padding-right: var(--space-8);
-    }
-
-    .side:last-child {
       border-left: 2px solid var(--color-accent-on-deep);
       padding-left: var(--space-8);
     }
 
-    .bridge {
-      display: block;
-      position: relative;
+    .side:last-child {
+      border-right: 2px solid var(--color-accent-on-deep);
+      padding-right: var(--space-8);
     }
 
-    .bridge::before {
+    /*
+     * Each head sits centred ON its own upright. The offset is
+     * (padding + half the border) out to the rule, then half the head
+     * back, i.e. --space-8 + 1px + --head-size/2 = 32 + 1 + 8 = 41px.
+     * A flex column puts every item on its own line, so this moves the
+     * mark alone and leaves the title and list on the text axis.
+     */
+    .side:first-child .side-mark {
+      margin-left: calc((var(--space-8) + 1px + var(--head-size) / 2) * -1);
+    }
+
+    .side:last-child .side-mark {
+      align-self: flex-end;
+      margin-right: calc((var(--space-8) + 1px + var(--head-size) / 2) * -1);
+    }
+
+    /*
+     * The crossbar. left/right: 0 is the composition's content box, whose
+     * edges ARE the outer edges of the two uprights (a grid item's border
+     * starts at its column edge), so the bar terminates on both rules
+     * with no gap — it is a connector, not a floating dash. Absolutely
+     * positioned, so it is not a grid item and does not take a column.
+     */
+    .match-composition::before {
       content: '';
       position: absolute;
-      top: 50%;
+      top: calc(var(--head-size) + var(--head-clear) / 2 - 1px);
       left: 0;
       right: 0;
       height: 2px;
       background: var(--color-accent-on-deep);
-      transform: translateY(-50%);
     }
   }
 </style>

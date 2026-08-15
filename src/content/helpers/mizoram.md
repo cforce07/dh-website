@@ -1,8 +1,6 @@
 ---
 country: Mizoram
 slug: mizoram
-flag: 🇮🇳
-summary: We work with helpers from Mizoram and match them to your family based on the requirements you share with us.
 order: 3
 ---
 

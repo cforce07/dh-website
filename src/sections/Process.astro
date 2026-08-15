@@ -20,7 +20,7 @@ import ProcessStep from '../components/ProcessStep.astro'
 const steps = [
   {
     label: 'Understand your family',
-    description: "We start with a conversation about your household, routines, and what a helper's day-to-day would look like.",
+    description: 'We start with a conversation about your household, routines, and what a helper’s day-to-day would look like.',
   },
   {
     label: 'Understand your needs',
@@ -63,6 +63,18 @@ const steps = [
 <style>
   .process {
     padding-block: var(--space-section);
+    /*
+     * The one section on the page grounded in --color-surface-teal
+     * (tokens.css): --color-brand-teal washed to 8% over --color-surface.
+     * It is here rather than anywhere else because Process is already the
+     * only block using brand teal as a graphic (the rail below), it hosts
+     * no Card, and a ground change between 05 and 06 breaks up what was
+     * otherwise a long unbroken cream run. Measured on this wash:
+     * ink 12.87:1, ink-muted 7.32:1, accent 5.54:1 — all clear AA, and
+     * asserted in tests/tokens.test.ts. One section only: a second teal
+     * ground turns a register into wallpaper.
+     */
+    background: var(--color-surface-teal);
   }
 
   .process-rail {
@@ -74,7 +86,18 @@ const steps = [
     border-left: 1.5px solid var(--color-brand-teal);
   }
 
-  @media (min-width: 64em) {
+  /*
+   * 80em (1280px), NOT --bp-wide's 64em. Five steps sharing a 1024px
+   * viewport gives each one ~180px of measure: every label wraps after
+   * two words and every description runs 5-7 lines of 3-5 words, which
+   * is not a rail, it is five narrow gutters. At 1280px each step gets
+   * ~215px and the rail reads as intended. 80em has no token — see
+   * tokens.css's breakpoint block, which documents --bp-tablet,
+   * --bp-wide and --bp-desktop only; that file belongs to another
+   * workstream, so this literal is recorded here instead. If a second
+   * file ever needs 80em, name it there first.
+   */
+  @media (min-width: 80em) {
     .process-rail {
       flex-direction: row;
       gap: var(--space-6);

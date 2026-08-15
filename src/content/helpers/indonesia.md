@@ -1,8 +1,6 @@
 ---
 country: Indonesia
 slug: indonesia
-flag: 🇮🇩
-summary: We work with helpers from Indonesia and match them to your family based on the requirements you share with us.
 order: 1
 ---
 

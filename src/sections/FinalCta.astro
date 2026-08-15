@@ -11,12 +11,17 @@
  * `defaultWhatsappUrl()`, the same sources Hero (block 01) uses, so a
  * destination change only ever happens in one place.
  *
- * Background stays on --color-surface-raised — block 07 (TwoSidedMatch)
- * is the only section that shifts to --color-deep, and a second dark
- * band here would break that "one register change" reading. Weight
- * instead comes from space, a larger display size on the headline, and a
- * small decorative rule reusing the brand-teal graphic treatment already
- * established in SectionHeader / Hero.
+ * Block 07 (TwoSidedMatch) is the only section that shifts to
+ * --color-deep, and a second dark band here would break that "one
+ * register change" reading. Weight comes instead from space, a larger
+ * display size on the headline, and a small decorative rule reusing the
+ * brand-teal graphic treatment established in Hero.
+ *
+ * The ground is --color-surface (cream), not --color-surface-raised: it
+ * is the last step of the page's alternating sequence and block 11 (FAQ)
+ * immediately above it is white. Changed 2026-08-16 with the rest of the
+ * sequence; the two must be judged together, so do not flip this one
+ * back on its own.
  */
 import Container from '../components/Container.astro'
 import Button from '../components/Button.astro'
@@ -30,7 +35,7 @@ const whatsappHref = defaultWhatsappUrl()
   <Container width="narrow">
     <span class="cta-mark" aria-hidden="true"></span>
     <h2 class="cta-headline">Tell us what your family needs.</h2>
-    <p class="cta-copy">Take the first step toward finding a helper who fits your family's needs.</p>
+    <p class="cta-copy">Take the first step toward finding a helper who fits your family’s needs.</p>
 
     <div class="cta-actions">
       <Button variant="primary" href={company.requirementFormUrl}>Submit Your Requirements</Button>
@@ -42,7 +47,7 @@ const whatsappHref = defaultWhatsappUrl()
 <style>
   .final-cta {
     padding-block: var(--space-section-lg);
-    background: var(--color-surface-raised);
+    background: var(--color-surface);
     text-align: center;
   }
 

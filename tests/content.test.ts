@@ -14,6 +14,44 @@ describe('helper sources', () => {
     const content = readFileSync('src/content/helpers/mizoram.md', 'utf8')
     expect(content).not.toMatch(/\bIndia\b/)
   })
+
+  it('carries no flag of any kind, emoji or vector', () => {
+    // The `flag` field held regional-indicator emoji pairs. Chrome and Edge
+    // on Windows ship no emoji-flag glyphs, so the three cards rendered as
+    // the bare letters "ID", "MM" and "IN" at 32px — and "IN" is India's
+    // code on a card headed Mizoram, which is the very thing the test above
+    // exists to prevent. Replacing the emoji with SVG national flags was
+    // rejected for the same reason: it is the same error at higher
+    // fidelity, not a fix. This assertion covers BOTH routes back.
+    const REGIONAL_INDICATORS = /[\u{1F1E6}-\u{1F1FF}]/u
+    for (const file of files) {
+      const content = readFileSync(`src/content/helpers/${file}`, 'utf8')
+      expect(content, `${file} reintroduced a flag field`).not.toMatch(/^flag:/m)
+      expect(content, `${file} reintroduced an emoji flag`).not.toMatch(REGIONAL_INDICATORS)
+    }
+    const schema = readFileSync('src/content/config.ts', 'utf8')
+    expect(schema.replace(/\/\/[^\n]*/g, ' ')).not.toMatch(/\bflag:/)
+    const block = readFileSync('src/sections/HelperSources.astro', 'utf8')
+    expect(block).not.toMatch(/data\.flag/)
+    expect(block).not.toMatch(/\.svg['"]/)
+  })
+
+  it('carries no per-source summary until a distinguishing fact per source exists', () => {
+    // The three summaries were one sentence with the country name swapped,
+    // which is the clearest generated-content tell on the page, and the
+    // section lede already says that sentence once. They were deleted
+    // rather than rewritten because writing three DIFFERENT sentences means
+    // asserting a fact about each source — typical prior experience,
+    // languages, paperwork duration — and nothing in this repository knows
+    // any of them. Restoring the field is fine ONLY together with real
+    // facts from DirectHired; restoring it with boilerplate is a master
+    // brief §78 violation, so this test asks for the field to arrive with
+    // its content rather than ahead of it.
+    for (const file of files) {
+      const content = readFileSync(`src/content/helpers/${file}`, 'utf8')
+      expect(content, `${file} reintroduced a summary field`).not.toMatch(/^summary:/m)
+    }
+  })
 })
 
 describe('services', () => {

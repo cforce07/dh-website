@@ -15,11 +15,22 @@
  * itself is the markdown body, rendered the same way FAQ answers are
  * (entry.render() → <Content />) rather than duplicated into a schema
  * field, since it is genuinely prose, not a short label.
+ *
+ * Unboxed, as of 2026-08-16. A boxed Google review is a widget; an
+ * unboxed one is a testimonial — the quote is set in --font-display at
+ * reading size, separated from its neighbours by a hairline and nothing
+ * else. Practically it also takes this block off Card, which is what
+ * lets block 10b sit on cream between two white neighbours instead of
+ * being forced onto the same ground as blocks 08-11 (see the ground
+ * sequence note in HelperSources.astro). This was rebuilt while the
+ * collection is still empty, so it carries zero regression surface: the
+ * `reviews.length > 0 &&` guard and the renders-absolutely-nothing
+ * behaviour are unchanged and still covered by
+ * tests/conditional-blocks.test.ts.
  */
 import { getCollection } from 'astro:content'
 import Container from '../components/Container.astro'
 import SectionHeader from '../components/SectionHeader.astro'
-import Card from '../components/Card.astro'
 
 const reviews = (await getCollection('reviews')).sort(
   (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime(),
@@ -39,22 +50,20 @@ const rendered = await Promise.all(
       <Container>
         <SectionHeader title="What families are saying" lede="Reviews from families who found their helper through DirectHired." />
 
-        <div class="reviews-grid">
+        <div class="quote-wall">
           {rendered.map(({ review, Content }) => (
-            <Card>
-              <div class="review-card">
-                <span class="review-stars" aria-label={`${review.data.rating} out of 5 stars`}>
-                  {'★'.repeat(review.data.rating)}
-                  {'☆'.repeat(5 - review.data.rating)}
-                </span>
+            <figure class="quote">
+              <span class="review-stars" aria-label={`${review.data.rating} out of 5 stars`}>
+                {'★'.repeat(review.data.rating)}
+                {'☆'.repeat(5 - review.data.rating)}
+              </span>
 
-                <div class="review-body">
-                  <Content />
-                </div>
+              <blockquote class="review-body">
+                <Content />
+              </blockquote>
 
-                <p class="review-meta">{review.data.author} · Google review</p>
-              </div>
-            </Card>
+              <figcaption class="review-meta">{review.data.author} · Google review</figcaption>
+            </figure>
           ))}
         </div>
       </Container>
@@ -65,27 +74,27 @@ const rendered = await Promise.all(
 <style>
   .reviews {
     padding-block: var(--space-section);
-    /* --color-surface, not --color-surface-raised: this section renders
-       Card, which is itself --color-surface-raised. Not yet renderable
-       (reviews collection is empty), but the same collision as
-       PricingSection/Services would apply the moment it is populated —
-       fixed proactively for consistency. See task-17-report.md's
-       section-background audit. */
+    /* Cream, between white neighbours (10a Meet Helpers above, 11 FAQ
+       below). This block no longer renders Card, so the white-card-on-
+       white-ground collision that forced --color-surface here in the
+       first place no longer applies — but cream is still the right
+       choice, for rhythm rather than for contrast. */
     background: var(--color-surface);
   }
 
-  .reviews-grid {
+  .quote-wall {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-    gap: var(--space-6);
+    gap: var(--space-8);
     margin-top: var(--space-12);
   }
 
-  .review-card {
+  .quote {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
-    height: 100%;
+    gap: var(--space-4);
+    margin: 0;
+    padding-top: var(--space-8);
+    border-top: 1px solid var(--color-border);
   }
 
   .review-stars {
@@ -95,9 +104,17 @@ const rendered = await Promise.all(
   }
 
   .review-body {
-    font-family: var(--font-text);
-    line-height: 1.5;
+    /* The quote itself, in the display face at reading size — the thing
+       that separates a testimonial from a review widget. Measure capped
+       so a long review does not run the full column width. */
+    max-width: 34ch;
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--size-lede);
+    font-weight: var(--font-weight-regular);
+    line-height: 1.4;
     color: var(--color-ink);
+    text-wrap: pretty;
   }
 
   .review-body :global(p:first-child) {
@@ -109,10 +126,21 @@ const rendered = await Promise.all(
   }
 
   .review-meta {
-    margin: auto 0 0;
-    padding-top: var(--space-2);
+    margin: 0;
     font-family: var(--font-text);
     font-size: var(--size-small);
     color: var(--color-ink-muted);
+  }
+
+  /* 48em is --bp-tablet (tokens.css). Two quotes abreast is as wide as
+     this should go — three columns of pull quote start reading as a
+     card grid again, which is the thing this block came out of. An
+     explicit count, not auto-fit: an odd number of reviews must leave
+     the last quote in a half row, not an empty cell in a full one. */
+  @media (min-width: 48em) {
+    .quote-wall {
+      grid-template-columns: repeat(2, 1fr);
+      column-gap: var(--space-12);
+    }
   }
 </style>

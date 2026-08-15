@@ -12,11 +12,28 @@
  *
  * The content files already avoid characterising any nationality; this
  * component renders their copy as written and adds no framing of its own.
+ *
+ * NOT a card grid, and no longer one as of 2026-08-16. Two reasons, and
+ * both matter:
+ *
+ *   1. Card is --color-surface-raised, so any section hosting one is
+ *      forced onto cream to keep the cards visible. Five card-hosting
+ *      sections in a row is what flattened blocks 08-11 into a single
+ *      ~2,400px cream field. Unboxing this block is what lets the page's
+ *      ground alternation resume. The divided-row pattern is lifted from
+ *      Difference.astro (block 04), which chose it for the same reason.
+ *   2. There is nothing here that needs a container to be legible. Each
+ *      source is a name and a link; a box around a name is a widget.
+ *
+ * There is deliberately no per-source blurb. The `summary` field was
+ * deleted with the `flag` field — see the note in src/content/config.ts
+ * for why, and implementation-plan D-5 for what unblocks writing real
+ * ones. Do not fill this space with a sentence per country that is the
+ * same sentence three times.
  */
 import { getCollection } from 'astro:content'
 import Container from '../components/Container.astro'
 import SectionHeader from '../components/SectionHeader.astro'
-import Card from '../components/Card.astro'
 
 const helperSources = (await getCollection('helpers')).sort((a, b) => a.data.order - b.data.order)
 ---
@@ -28,19 +45,21 @@ const helperSources = (await getCollection('helpers')).sort((a, b) => a.data.ord
       lede="We work with helpers from a number of countries, each matched to your family based on the requirements you share with us."
     />
 
-    <div class="source-grid">
+    {/* The country name IS the link, rather than a name followed by a
+        separate "Learn more". Three links reading "Learn more" give a
+        screen reader three identical accessible names pointing at three
+        different pages, and Lighthouse's `link-text` SEO audit fails
+        them outright — measured on this page, it took the SEO category
+        from 1.00 to 0.92. That audit reads the visible text only, so an
+        aria-label does not rescue it. */}
+    <div class="source-row">
       {
         helperSources.map((helper) => (
-          <Card>
-            <a class="source-card" href={`/helpers/${helper.slug}`}>
-              <span class="source-flag" aria-hidden="true">
-                {helper.data.flag}
-              </span>
-              <h3 class="source-country">{helper.data.country}</h3>
-              <p class="source-summary">{helper.data.summary}</p>
-              <span class="source-link">Learn more</span>
-            </a>
-          </Card>
+          <div class="source">
+            <h3 class="source-country">
+              <a class="source-link" href={`/helpers/${helper.slug}`}>{helper.data.country}</a>
+            </h3>
+          </div>
         ))
       }
     </div>
@@ -50,54 +69,78 @@ const helperSources = (await getCollection('helpers')).sort((a, b) => a.data.ord
 <style>
   .helper-sources {
     padding-block: var(--space-section);
+    /* White, and it can be white because this block no longer hosts a
+       Card. Blocks 08-11 were one unbroken cream field until this one
+       came out of boxes; see the file header. */
+    background: var(--color-surface-raised);
   }
 
-  .source-grid {
+  .source-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-    gap: var(--space-6);
+    gap: var(--space-8);
     margin-top: var(--space-12);
   }
 
-  .source-card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-3);
-    height: 100%;
-    color: inherit;
-    text-decoration: none;
-  }
-
-  .source-flag {
-    font-size: 2rem;
-    line-height: 1;
+  .source {
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-border);
   }
 
   .source-country {
     margin: 0;
     font-family: var(--font-display);
-    font-size: 1.25rem;
+    /* Larger than a card title was. With no blurb under it the name IS
+       the content of the row, so it is set to carry that weight. */
+    font-size: var(--size-h3);
     font-weight: var(--font-weight-medium);
     color: var(--color-ink);
   }
 
-  .source-summary {
-    font-family: var(--font-text);
-    line-height: 1.5;
-    color: var(--color-ink-muted);
-  }
-
+  /* A permanent underline, not a hover-only one: with the name as the
+     only content of the row, nothing else signals that it is clickable,
+     and a hover cue is no cue at all on a touch screen. Kept thin and
+     hairline-coloured so it reads as an affordance rather than as the
+     third rule in a row that already has two. */
   .source-link {
-    margin-top: auto;
-    padding-top: var(--space-2);
-    font-family: var(--font-text);
-    font-size: var(--size-small);
-    font-weight: var(--font-weight-semibold);
-    color: var(--color-accent);
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-decoration-color: var(--color-border);
+    text-underline-offset: 6px;
+    transition: color var(--duration-fast) var(--ease);
   }
 
-  .source-card:hover .source-link {
-    color: var(--color-accent-hover);
-    text-decoration: underline;
+  .source-link:hover {
+    color: var(--color-accent);
+    text-decoration-color: var(--color-accent);
+  }
+
+  /* 48em is --bp-tablet (tokens.css). Same divided-row step-up as
+     Difference.astro's pillars: the rule moves from above each item to
+     between them.
+
+     An explicit count, not `repeat(auto-fit, minmax(...))`. auto-fit
+     picks its column count from available width and leaves orphan cells
+     whenever the content count is not a multiple of it — the defect
+     Services (block 09) had, where six cards rendered 4 + 2 with two
+     visibly empty cells at >=1280px. Three sources is three columns. A
+     fourth source is a design decision (2x2 vs 4-up), not something to
+     be discovered at a viewport width, so it lands here by hand. */
+  @media (min-width: 48em) {
+    .source-row {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .source {
+      padding-top: 0;
+      padding-left: var(--space-6);
+      border-top: none;
+      border-left: 1px solid var(--color-border);
+    }
+
+    .source:first-child {
+      padding-left: 0;
+      border-left: none;
+    }
   }
 </style>

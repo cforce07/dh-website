@@ -49,7 +49,7 @@ const rendered = await Promise.all(
       <Container>
         <SectionHeader
           title="Meet our helpers"
-          lede="Profiles showing the experience and skills we match against each family's needs."
+          lede="Profiles showing the experience and skills we match against each family’s needs."
         />
 
         <div class="helpers-grid">
@@ -89,11 +89,29 @@ const rendered = await Promise.all(
 <style>
   .meet-helpers {
     padding-block: var(--space-section);
+    /*
+     * White, which puts this block between cream neighbours (09 Services
+     * above, 10b Reviews below) so the page's ground alternation holds
+     * through the back half. It DOES host Card, and Card is white too —
+     * that combination was previously a bug on three sections, where a
+     * white card on a white ground was separated only by a 1px border.
+     * It is viable here only because Card's border was removed and its
+     * warm-tinted --shadow-sm now carries the separation on its own.
+     * Anyone populating the helper-profiles collection: look at this
+     * block on a real screen before shipping it, because it is the one
+     * card grid on the page whose ground matches its cards.
+     */
+    background: var(--color-surface-raised);
   }
 
   .helpers-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    /* Explicit counts rather than `repeat(auto-fit, minmax(16rem, 1fr))`
+       — auto-fit picks columns from width alone, so 5 or 7 profiles
+       would render with visibly empty trailing cells, the same defect
+       Services (block 09) had. 3-up at --bp-wide; revisit the count when
+       real profile data lands and the true item count is known. */
+    grid-template-columns: 1fr;
     gap: var(--space-6);
     margin-top: var(--space-12);
   }
@@ -170,5 +188,18 @@ const rendered = await Promise.all(
 
   .helper-bio :global(p:last-child) {
     margin-bottom: 0;
+  }
+
+  /* 48em is --bp-tablet, 64em is --bp-wide (tokens.css). */
+  @media (min-width: 48em) {
+    .helpers-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (min-width: 64em) {
+    .helpers-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
   }
 </style>

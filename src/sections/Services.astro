@@ -54,7 +54,14 @@ const services = (await getCollection('services')).sort((a, b) => a.data.order -
 
   .services-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    /* Explicit counts, not `repeat(auto-fit, minmax(15rem, 1fr))`.
+       auto-fit derives its column count from available width with no
+       knowledge of how many items there are: at >=1280px it resolved to
+       four columns, so six services rendered 4 + 2 with two visibly
+       empty cells, and each card's content box fell to ~205px — five to
+       seven line wraps of three or four words. 2-up then 3-up divides
+       six exactly and holds the measure. */
+    grid-template-columns: 1fr;
     gap: var(--space-6);
     margin-top: var(--space-12);
   }
@@ -82,5 +89,19 @@ const services = (await getCollection('services')).sort((a, b) => a.data.order -
 
   .service-card:hover .service-title {
     color: var(--color-accent);
+  }
+
+  /* 48em is --bp-tablet, 64em is --bp-wide (tokens.css). Six services
+     divide exactly by both, so no row ever ends in an empty cell. */
+  @media (min-width: 48em) {
+    .services-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (min-width: 64em) {
+    .services-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
   }
 </style>

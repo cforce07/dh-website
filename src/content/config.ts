@@ -18,12 +18,35 @@ const services = defineCollection({
   }),
 })
 
+// `flag` and `summary` were both removed on 2026-08-16; both removals are
+// deliberate and neither should be restored without the reason below being
+// answered first.
+//
+// `flag` held a regional-indicator emoji pair (🇮🇩 / 🇲🇲 / 🇮🇳). Chrome and
+// Edge on Windows ship no emoji-flag glyphs, so on the most common desktop
+// OS the three cards rendered as the bare letters "ID", "MM" and "IN" at
+// 32px in Fraunces — a block whose entire visual vocabulary was three
+// glyphs, showing three grey letter-pairs, and invisible to anyone
+// reviewing on a Mac. "IN" was worse than broken: Mizoram is a state of
+// India, and both the master brief (§13) and tests/content.test.ts forbid
+// this site labelling it as India. Replacing the emoji with SVG national
+// flags was considered and rejected (implementation plan R-6) — a
+// "Mizoram" card carrying India's flag in crisp vector is the same error
+// at higher fidelity.
+//
+// `summary` held one sentence per source, identical across all three but
+// for the country name ("We work with helpers from X and match them to
+// your family..."). Repeated boilerplate with one word swapped is the
+// clearest generated-content tell on the page, and the section lede
+// already says that sentence once. DirectHired has been asked for one
+// distinguishing fact per source (implementation plan D-5); until those
+// arrive, the block carries three names and no filler. Inventing a
+// distinguishing fact — prior experience, languages, paperwork timelines —
+// is a master brief §78 violation, not a copy exercise.
 const helpers = defineCollection({
   type: 'content',
   schema: z.object({
     country: z.string(),
-    flag: z.string(),
-    summary: z.string().max(200),
     order: z.number(),
   }),
 })

@@ -50,10 +50,24 @@ const faqSchema = faqPageSchema(
 
 <section class="faq">
   <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
-  <Container width="narrow">
+  {/*
+    Container `default` (72rem), NOT `narrow` (48rem), with the reading
+    measure applied to `.faq-column` inside it.
+
+    A narrow Container centres its 768px column inside the viewport, so at
+    1920px this block's left edge sat at x=598 while every other section
+    heading on the page started at x=408 — a 190px indent, with
+    left-aligned text inside it, reading as a mistake rather than a
+    decision. Narrowing the measure is the right instinct; centring it is
+    what broke the page's left axis. FinalCta uses `narrow` correctly
+    because it is `text-align: center` throughout, so its column has no
+    left axis to disagree with.
+  */}
+  <Container>
+    <div class="faq-column">
     <SectionHeader
       title="Questions families ask us"
-      lede="A few of the things we're asked most often. See the full list for everything else."
+      lede="A few of the things we’re asked most often. See the full list for everything else."
     />
 
     <div class="faq-list">
@@ -72,15 +86,28 @@ const faqSchema = faqPageSchema(
       }
     </div>
 
-    <p class="faq-more">
-      <a class="faq-link" href="/faq">See all FAQs</a>
-    </p>
+      <p class="faq-more">
+        <a class="faq-link" href="/faq">See all FAQs</a>
+      </p>
+    </div>
   </Container>
 </section>
 
 <style>
   .faq {
     padding-block: var(--space-section);
+    /* White, between cream neighbours (10b Reviews above — or 09
+       Services, while 10a/10b render nothing — and 12 Final CTA below).
+       No Card in this block, so white is free here. */
+    background: var(--color-surface-raised);
+  }
+
+  /* The reading measure, matched to Container's `narrow` (48rem) but left-
+     aligned inside the default container instead of centred in the
+     viewport, so the FAQ's left edge lands on the same axis as every
+     other section heading on the page. */
+  .faq-column {
+    max-width: 48rem;
   }
 
   .faq-list {
