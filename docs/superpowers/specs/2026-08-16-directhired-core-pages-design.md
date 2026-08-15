@@ -1,0 +1,203 @@
+# DirectHired Website — Core Pages
+
+**Design specification, sub-project 2 of 4**
+Date: 2026-08-16
+Status: Approved for planning
+Builds on: `docs/superpowers/specs/2026-08-15-directhired-foundation-homepage-design.md`
+Source brief: `DirectHired Website — Master Context & Design Brief for Claude Code + Taste Skills.md` (V1.0)
+
+---
+
+## 1. Scope
+
+Six pages: `/pricing`, `/find-your-helper`, `/why-directhired`, `/about`, `/faq`, `/contact`.
+Corresponds to Phase 3 of the source brief.
+
+**Build order: `/pricing` first and complete, reviewed against the live site, then the remaining five in one pass.**
+
+Sub-project 1 used a vertical slice because the design system was unproven. It is now proven. The risk here is different: `/pricing` is worth more than the other five combined — it answers §84's number-one objection and targets §49's strongest commercial-intent queries — and building six at once gives it a sixth of the attention.
+
+**Out of scope, deferred to sub-project 3:** the 6 service detail pages, 3 helper-source detail pages, and 4 legal pages. `/services` and `/helpers` index pages also stay out; they are entry points to those families.
+
+**Explicitly not built** (§40, §77): helper search, filtering, or browse; any new content type or CMS; any mention of the Philippines, including "coming soon".
+
+---
+
+## 2. Business information supplied for this sub-project
+
+DirectHired supplied the following on 2026-08-16. It unblocks the two most valuable pages. Nothing here may be extended, rounded, or inferred beyond what is written.
+
+### 2.1 Replacement
+
+- **Trigger:** the employer requests it. No justification required.
+- **Sole exclusion:** the employer has breached the Employment Act or abused the helper.
+- **Entitlement:** strictly one replacement, within **6 months of the deployment date**.
+- **Cost:** the employer re-pays the third-party components — MOM, insurance, SIP, medical, handling & transport. **DirectHired's agent fee is not charged again.**
+- **Loan carry-forward:** any outstanding balance from the replaced helper reduces what the employer advances for the new one, as a subtraction:
+
+```
+New helper's loan                                    $2,500
+Less: outstanding balance from the replaced helper  −$1,500
+                                                    ───────
+Employer advances                                    $1,000
+```
+
+Figures illustrative. The mechanism is the subtraction, not the numbers.
+
+### 2.2 Timeline
+
+- **From source country:** approximately **2 weeks** after confirmation.
+- **Transfer helper:** approximately **1 week**.
+- Applies to Indonesia, Myanmar and Mizoram. No other source may be named.
+
+### 2.3 Loan and placement fee
+
+- **Placement fee:** fixed at **one month's salary**. Same for new and transfer helpers.
+- **Loan:** genuinely case-by-case; ranges differ by profile. **No range may be published.**
+- **Repayment:** **1 to 7 months**, 7 being the maximum DirectHired accepts, repaid from the helper's basic salary monthly. During repayment the helper receives off-day compensation.
+
+### 2.4 Framing — binding on all copy
+
+The employer **advances** the loan and placement fee and **recovers** it through the helper's repayment. It is ultimately the **helper's** cost.
+
+Current site copy says these fees "may apply", which reads as a cost the employer bears. That is wrong and must be corrected wherever it appears. Copy must state both halves: the employer funds it first, and it is repaid.
+
+### 2.5 Compliance gate
+
+§2.3's repayment terms describe a **salary-deduction arrangement on a licensed employment agency's public website**, in an area MOM regulates closely. Source brief §19 requires final wording here to be reviewed against DirectHired's actual commercial and regulatory terms before publication.
+
+**This paragraph ships behind a declared input requiring DirectHired's compliance sign-off.** Not because the facts are doubted, but because it is the highest-liability sentence on the site.
+
+---
+
+## 3. Architecture
+
+### 3.1 Section reuse — parameterise the few, reuse the rest
+
+Several homepage sections belong on these pages. Three options were considered:
+
+- **Copy them** — guarantees drift. Six pages later, six versions of the CTA.
+- **Reuse verbatim** — a page repeating the homepage gives a visitor no reason to be there, and creates duplicate content across the site.
+- **Parameterise the few that need it** — chosen.
+
+`Process` and `FinalCta` gain optional heading and lede props so a page can frame them for its own context while the underlying content stays single-sourced. `TwoSidedMatch` and `TrustBar` are reused unchanged.
+
+This matters concretely: the process changed from five steps to four on 2026-08-16. That must never need doing twice.
+
+**`Faq` needs more than a prop, and the spec was initially wrong about this.** It currently hardcodes `.filter(e => e.data.surfaces.includes('home'))` and `.slice(0, 6)` — so it is not reusable as-is. Two distinct needs:
+
+- **Flat, filtered** — the homepage (6 tagged `home`) and `/pricing` (entries tagged `pricing`). `Faq` gains `surface` and `limit` props; the hardcoded values become its defaults so the homepage is unchanged.
+- **Grouped** — `/faq` renders all 14 under four headings (Cost & Pricing / Helpers & Sources / Process & Timing / Replacement). That is a different layout, not a parameter, and it needs a **`category` field added to the `faq` collection schema** — which does not exist today.
+
+So: `Faq` is parameterised for the flat case, `/faq` gets its own grouped layout reusing the same `<details>` item rendering, and the collection schema gains one required field. Adding a required field means all 6 existing entries need it — that is part of the work, not an afterthought.
+
+### 3.2 Page composition
+
+| Page | Structure |
+|---|---|
+| `/pricing` | Both packages itemised · what's included · replacement mechanics with the worked sum · loan and placement fee per §2.4 · pricing-tagged FAQs · CTA |
+| `/find-your-helper` | Matching explained · `Process` reframed as "what happens after you submit" · response expectation · form CTA. Not a filter or search (§40) |
+| `/why-directhired` | Origin · three pillars at length · `TwoSidedMatch` · credentials · CTA |
+| `/about` | Company story · philosophy · Singapore presence · credentials with the verified MOM licence · CTA |
+| `/faq` | All 14 of §37's questions, grouped: Cost & Pricing / Helpers & Sources / Process & Timing / Replacement |
+| `/contact` | Details from `company.ts` · office · hours · socials · `EmploymentAgency` structured data |
+
+### 3.3 Content model
+
+The `faq` collection's existing `surfaces` field carries page routing: entries tagged `'pricing'` surface on `/pricing`, `'faq'` on `/faq`, `'home'` on the homepage. No new collection.
+
+**One schema change:** a required `category` field on `faq`, one of `cost` / `sources` / `process` / `replacement`, used only by `/faq`'s grouped layout. All 6 existing entries must gain it — a required field with no default breaks the build until they do, which is the correct behaviour and should not be worked around with an optional field.
+
+Eight new FAQ entries are authored from §2's supplied information, bringing the total to fourteen.
+
+### 3.4 Decisions taken by default
+
+Recorded because DirectHired did not answer and these can be overruled:
+
+- **`/contact` is built and linked from the footer, not the navigation.** The nav is at its width budget; the footer already carries the details, and the page is where local-SEO signals belong (§51).
+- **The About founding story uses source brief §35 verbatim** — *"DirectHired was created after seeing families struggle with agencies that focused on filling vacancies instead of finding the right fit."* Nothing expanded. Recorded as wanting DirectHired's own words.
+
+---
+
+## 4. SEO
+
+Each page owns one distinct intent from §49:
+
+| Page | Primary intent |
+|---|---|
+| `/pricing` | maid agency pricing Singapore · how much does a maid cost Singapore |
+| `/faq` | long tail, via `FAQPage` structured data across all 14 |
+| `/find-your-helper` | maid placement Singapore |
+| `/why-directhired`, `/about` | brand and trust queries |
+| `/contact` | local intent, via `EmploymentAgency` structured data |
+
+**Per page:** unique title and meta description, canonical URL, `BreadcrumbList`, OG tags. All flow through the existing `BaseLayout` — inputs, not new machinery.
+
+**The internal linking triangle** (foundation spec §7) becomes buildable for the first time: Pricing ↔ Find Your Helper ↔ FAQ, all three ↔ the requirement form. Sub-project 1 could not build it because there was nowhere to link.
+
+---
+
+## 5. Testing
+
+Sub-project 1's guards inspect `index.astro` only. Extended to all seven pages:
+
+1. **Exactly one `<h1>` per page**, correct nesting, no skipped levels
+2. **No hardcoded requirement-form URL** anywhere; every primary CTA resolves through `company.requirementFormUrl`
+3. **The pricing drift guard extended to `/pricing`** — that page repeats figures in prose, which is exactly where a stale number hides
+4. **No invented business information** — the existing greps for "perfect match", AI matching, instant response, invented timelines, nationality characterisation, and "country" applied to Mizoram, applied to every page
+5. **Every internal link resolves**, with the allowlist reduced to the legal and detail pages still outstanding
+6. **The §2.3 compliance paragraph is gated** — a test asserting it cannot ship without its declared input resolved
+
+Every new assertion must be able to fail. Mutation-check anything load-bearing.
+
+---
+
+## 6. Performance and accessibility
+
+Unchanged from the foundation spec, now enforced across seven pages:
+
+- LCP < 2.5s, CLS < 0.1, TBT < 200ms; performance/accessibility/SEO 1.00 in CI at median aggregation
+- WCAG AA on every pairing. `--color-brand-teal` (#00a4a6, 2.89:1) remains graphic-only — never text, never a button fill
+- `axe` at zero violations
+- Zero horizontal overflow, 320px upward
+- Block 07's `--color-deep` remains the only palette register shift; a second dark band on another page needs its own justification
+
+---
+
+## 7. Content integrity
+
+Binding, unchanged from the foundation spec, plus:
+
+- Never name the Philippines or any source beyond Indonesia, Myanmar and Mizoram
+- Never describe Mizoram as a country — it is a state of India (§13, §412)
+- Never publish a loan range; §2.3 says it is case-by-case
+- Never present the loan or placement fee as a cost the employer bears (§2.4)
+- Never state a timeline beyond §2.2's figures
+
+---
+
+## 8. Definition of done
+
+- [ ] `/pricing` built, reviewed against the live site, and approved before the other five begin
+- [ ] All six pages built; every nav and footer link except legal and detail pages resolves
+- [ ] Eight new FAQ entries authored from §2; all 14 grouped and rendering
+- [ ] The replacement worked sum renders as a sum
+- [ ] Loan and placement copy reframed per §2.4 everywhere it appears, homepage included
+- [ ] The §2.3 paragraph gated behind its compliance declared input
+- [ ] `Process` and `FinalCta` parameterised; `Faq` gains surface/limit props with current values as defaults; `faq` schema gains `category` and all 6 existing entries updated; no section duplicated
+- [ ] Internal linking triangle in place
+- [ ] All §5 guards extended to seven pages, each mutation-checked
+- [ ] Lighthouse budget and axe hold on every page
+- [ ] `docs/OPEN-DECISIONS.md` updated
+
+---
+
+## 9. Open inputs
+
+| Input | Needed by |
+|---|---|
+| Compliance sign-off on §2.3 | Publication of the loan repayment paragraph |
+| Production requirement-form URL | Launch — six pages now multiply one broken conversion path |
+| Founding story in DirectHired's words | `/about` (brief §35 line ships meanwhile) |
+| Google reviews, helper profile data | Blocks 10a/10b, still absent |
+| Real photography | Sub-project 4 |
