@@ -1,8 +1,12 @@
 ---
 /**
  * HelperSources — block 08. Maps over the `helpers` content collection, so
- * a fourth source (Philippines is plausible later) appears the moment its
- * markdown file lands, with no change to this component.
+ * a fourth source (Philippines is plausible later) appears in the row the
+ * moment its markdown file lands — no markup change, no data change here.
+ * The ONE thing a fourth source still needs is a column count: the grid
+ * below is an explicit `repeat(3, 1fr)`, not `auto-fit`, and 2x2 vs 4-up
+ * is a design decision rather than something to discover at a viewport
+ * width. See the comment on that media query for the reasoning.
  *
  * Astro's legacy `type: 'content'` collections reserve the `slug`
  * frontmatter key and strip it from `data` before Zod validation (see the
@@ -26,11 +30,11 @@
  *      source is a name and a link; a box around a name is a widget.
  *
  * There is deliberately no per-source blurb, and there will not be one.
- * The `summary` field held the same sentence three times with the country
+ * The `summary` field held the same sentence three times with the source
  * name swapped; it was deleted alongside `flag` (see src/content/config.ts
  * for both) and DirectHired answered the open question on 2026-08-16:
  * there is no real difference between the sources. Same service, same
- * package, same matching process — only the source country differs.
+ * package, same matching process — only the source differs.
  *
  * That answer is why `.source-equivalence` below exists. Deleting the
  * three summaries left three bare names and nothing explaining why they
@@ -38,11 +42,19 @@
  * than as a decision. The honest resolution is to say the true thing ONCE,
  * above the row, and let the names be names.
  *
- * Do not turn that one statement back into three. A sentence per country
- * can only be written by asserting a fact about each country, nothing in
+ * Do not turn that one statement back into three. A sentence per source
+ * can only be written by asserting a fact about that place, nothing in
  * this repository knows one, and inventing one is a master brief §78
  * violation as well as a §42 one. tests/content.test.ts asserts both the
  * absence of the summaries and the presence of this statement.
+ *
+ * VOCABULARY: the three sources are Indonesia, Myanmar and MIZORAM, and
+ * Mizoram is a state of India, not a country. Nothing rendered by this
+ * component — lede, equivalence line, class names — may say "country" or
+ * "countries" of the set as a whole. Say "source", or "where a helper
+ * comes from". Master brief §412 also forbids labelling Mizoram "India",
+ * so the honest vocabulary is the source-neutral one, in both directions.
+ * tests/content.test.ts asserts this across the rendered copy.
  */
 import { getCollection } from 'astro:content'
 import Container from '../components/Container.astro'
@@ -55,15 +67,15 @@ const helperSources = (await getCollection('helpers')).sort((a, b) => a.data.ord
   <Container>
     <SectionHeader
       title="Helpers from trusted sources"
-      lede="We work with helpers from a number of countries, each matched to your family based on the requirements you share with us."
+      lede="We work with helpers from a number of sources, each matched to your family based on the requirements you share with us."
     />
 
     <p class="source-equivalence">
-      Whichever country a helper comes from, the service is the same — the same fly-in package,
+      Wherever a helper comes from, the service is the same — the same fly-in package,
       the same matching process. The source is the only difference.
     </p>
 
-    {/* The country name IS the link, rather than a name followed by a
+    {/* The source name IS the link, rather than a name followed by a
         separate "Learn more". Three links reading "Learn more" give a
         screen reader three identical accessible names pointing at three
         different pages, and Lighthouse's `link-text` SEO audit fails
@@ -74,8 +86,8 @@ const helperSources = (await getCollection('helpers')).sort((a, b) => a.data.ord
       {
         helperSources.map((helper) => (
           <div class="source">
-            <h3 class="source-country">
-              <a class="source-link" href={`/helpers/${helper.slug}`}>{helper.data.country}</a>
+            <h3 class="source-name">
+              <a class="source-link" href={`/helpers/${helper.slug}`}>{helper.data.source}</a>
             </h3>
           </div>
         ))
@@ -124,7 +136,7 @@ const helperSources = (await getCollection('helpers')).sort((a, b) => a.data.ord
     border-top: 1px solid var(--color-border);
   }
 
-  .source-country {
+  .source-name {
     margin: 0;
     font-family: var(--font-display);
     /* Larger than a card title was. With no blurb under it the name IS

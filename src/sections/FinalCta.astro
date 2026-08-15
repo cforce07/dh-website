@@ -14,8 +14,17 @@
  * Block 07 (TwoSidedMatch) is the only section that shifts to
  * --color-deep, and a second dark band here would break that "one
  * register change" reading. Weight comes instead from space, a larger
- * display size on the headline, and a small decorative rule reusing the
- * brand-teal graphic treatment established in Hero.
+ * display size on the headline, and a small decorative rule (.cta-mark)
+ * in --color-brand-teal.
+ *
+ * That rule used to be described as "reusing the brand-teal graphic
+ * treatment established in Hero". Hero's teal was the 2px seam dividing
+ * the split diptych, and that whole visual was deleted on 2026-08-16 —
+ * Hero now carries no brand teal at all. The treatment this echoes is
+ * Process's rail (block 05), which is the page's other use of the raw
+ * logo teal as a graphic line. Teal is decorative-only here, as tokens.css
+ * requires: --color-brand-teal never carries text and never fills a
+ * button.
  *
  * The ground is --color-surface (cream), not --color-surface-raised: it
  * is the last step of the page's alternating sequence and block 11 (FAQ)

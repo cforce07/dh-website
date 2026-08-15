@@ -177,8 +177,10 @@ import heroTogether from '../assets/hero-together.png'
     object-fit: cover;
   }
 
-  /* 64em — the undocumented third breakpoint, shared with Process and
-     TwoSidedMatch. Being named --bp-wide in tokens.css by WS-1 (C-19). */
+  /* 64em is --bp-wide in tokens.css (named there, with this file listed as
+     one of its three consumers alongside Process and TwoSidedMatch). Kept
+     in sync by hand — custom properties do not resolve inside an @media
+     condition. */
   @media (min-width: 64em) {
     .hero-grid {
       grid-template-columns: 1fr 1fr;
@@ -190,7 +192,13 @@ import heroTogether from '../assets/hero-together.png'
   }
 
   /*
-   * 80em (1280px) and up: the frame breaks the container's right edge and
+   * 80em is --bp-xwide in tokens.css, which names this file and
+   * Process.astro as its two consumers. Hand-synced, and note that THIS
+   * FILE carries the literal twice: here, and in the first clause of the
+   * <Picture> `sizes` attribute above. Change one and you must change the
+   * other or the browser silently picks the wrong file.
+   *
+   * From here up the frame breaks the container's right edge and
    * runs to the viewport edge, giving the page its one asymmetric axis —
    * at 1920px every other element on the site obeys the same 1152px box with
    * 384px of dead margin each side.

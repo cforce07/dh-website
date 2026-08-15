@@ -7,10 +7,21 @@
  * Same slug caveat as HelperSources: read `service.slug`, not
  * `service.data.slug` (src/content/config.ts:35-42).
  *
- * Deliberately not a repeat of HelperSources' card composition (flag +
- * body + "Learn more" link) — the whole title is the link here, and there
- * is no secondary link element, so two consecutive card grids don't read
- * as the same block twice.
+ * The whole title is the link, and there is no secondary "Learn more"
+ * element — six links reading "Learn more" would give a screen reader six
+ * identical accessible names pointing at six different pages. The same
+ * reasoning, with the Lighthouse `link-text` measurement behind it, is
+ * written out in HelperSources.astro.
+ *
+ * This used to be justified instead as "deliberately not a repeat of
+ * HelperSources' card composition (flag + body + 'Learn more' link)".
+ * There is no such composition to differ from any more: HelperSources
+ * (block 08) stopped being a card grid on 2026-08-16 and is now a divided
+ * row of linked names, with `flag` and `summary` deleted from its schema.
+ * The "two consecutive card grids reading as the same block twice" risk
+ * that sentence was written against is gone with it, so the title-as-link
+ * now stands on the accessibility reason above rather than on contrast
+ * with a neighbour.
  */
 import { getCollection } from 'astro:content'
 import Container from '../components/Container.astro'

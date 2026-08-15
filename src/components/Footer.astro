@@ -176,7 +176,18 @@ const addressLine = `${company.address.street}, ${company.address.locality} ${co
   .footer-tagline {
     font-family: var(--font-text);
     font-size: var(--size-small);
-    letter-spacing: var(--tracking-wide);
+    /*
+     * No --tracking-wide here, deliberately. That token's own contract in
+     * tokens.css scopes it to "small UPPERCASE labels (eyebrows, badges)…
+     * not body copy or headings", because 0.08em only reads correctly on
+     * caps. "Make It Easier For You" is title case, and every other user
+     * of the token on this site (.footer-heading below, .trust-label,
+     * .total-label, .match-kicker) pairs it with text-transform:
+     * uppercase. This one was tracked without being uppercased, which is
+     * the case the token says not to do. Uppercasing it instead was
+     * rejected: the tagline's setting is DirectHired's, taken from their
+     * own logo artwork, and title case is how they set it.
+     */
     color: var(--color-on-deep-muted);
     /*
      * --space-1 (4px), NOT the negative margin this was first written

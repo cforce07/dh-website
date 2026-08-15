@@ -36,15 +36,20 @@ exactly this reason.
 
 ## Decisions with a recommendation (answer when convenient)
 
-| # | Decision | Recommendation |
-|---|---|---|
-| **D-1** | Rename nav "Why DirectHired" → "Why Us"? | **Yes** — the wordmark sits 40px left; buys 65px of header width |
-| **D-2** | MOM licence in a hero eyebrow **or** a strengthened trust bar? *(conflicting — pick one)* | **Trust bar.** A hero eyebrow competes with an `<h1>` and lede that both work |
-| **D-3** | Remove the pricing block's secondary WhatsApp CTA? | **Keep it.** Design spec §6.4 says the pair appears "without exception", and a family that has just resolved cost is at peak intent |
-| **D-7** | May DirectHired display any MOM mark or crest? | **Assume no** until usage terms are produced in writing. A plain bordered licence plate ships today |
-| **D-10** | Fund re-subsetting Fraunces to restore its SOFT/WONK axes? | **No for now.** 67KB in the LCP path against a 2.5s budget, for anxious customers on mid-range Android |
-| **D-11** | Delete the unused `eyebrow` primitive? | **Delete** — zero call sites |
-| **D-12** | Remove the hero's secondary WhatsApp CTA? | **Yes** — on a phone it sits directly above two identical buttons in the fixed bar. Already implemented; flagged so it can be reversed |
+Three of these (**D-1**, **D-2**, **D-11**) are **already implemented**. They are
+listed anyway, and they are not questions — answering "no" now means requesting a
+reversal, which is a small change but a real one. They were previously written as
+open questions, which read as though the site were waiting on you; it is not.
+
+| # | Decision | Recommendation | Status |
+|---|---|---|---|
+| **D-1** | Rename nav "Why DirectHired" → "Why Us"? | **Yes** — the wordmark sits 40px left; buys 65px of header width | **Already implemented** (`src/lib/nav.ts` ships "Why Us"); flagged so it can be reversed. The 65px it bought is spent: it is part of what let the desktop breakpoint come down from 1536px to 1200px, so a reversal means re-measuring the header |
+| **D-2** | MOM licence in a hero eyebrow **or** a strengthened trust bar? *(conflicting — pick one)* | **Trust bar.** A hero eyebrow competes with an `<h1>` and lede that both work | **Already implemented** — the licence is in the trust bar (`src/sections/TrustBar.astro`) and there is no hero eyebrow; flagged so it can be reversed |
+| **D-3** | Remove the pricing block's secondary WhatsApp CTA? | **Keep it.** Design spec §6.4 says the pair appears "without exception", and a family that has just resolved cost is at peak intent | Open — nothing changed pending your answer |
+| **D-7** | May DirectHired display any MOM mark or crest? | **Assume no** until usage terms are produced in writing. A plain bordered licence plate ships today | Open — the safe option ships meanwhile |
+| **D-10** | Fund re-subsetting Fraunces to restore its SOFT/WONK axes? | **No for now.** 67KB in the LCP path against a 2.5s budget, for anxious customers on mid-range Android | Open — costs money, so it is yours to call |
+| **D-11** | Delete the unused `eyebrow` primitive? | **Delete** — zero call sites | **Already implemented** — removed from `src/components/SectionHeader.astro`; flagged so it can be reversed |
+| **D-12** | Remove the hero's secondary WhatsApp CTA? | **Yes** — on a phone it sits directly above two identical buttons in the fixed bar | **Already implemented**; flagged so it can be reversed |
 
 ---
 
@@ -72,6 +77,21 @@ and documents why, but anyone handed the brief will work from old numbers:
 **"Handling & transport" vs "Transport"** — resolved, both cards now read
 "Handling & transport".
 
+**Category A of the production checklist currently detects nothing.**
+`docs/INFORMATION-REQUIRED-BEFORE-PRODUCTION.md` opens with Category A —
+"inline gaps that block the production build" — and it reads *"None found."*
+That is true but weaker than it looks. Category A works by finding `<Tbd>`
+markers in the built HTML, and there are **zero `<Tbd>` call sites anywhere in
+the codebase** since you supplied the MOM licence number on 2026-08-15. So the
+category is reporting that nothing is *marked*, not that nothing is *missing*;
+it cannot currently detect anything at all, and `npm run build` passes its gate.
+
+Nothing is wrong: the gate and the `<Tbd>` component are deliberately kept for
+the next unverified value, and the real outstanding items are the ones in this
+document plus Categories B, C and D of that checklist. It is written down here
+because a client reading "Category A: none found" would reasonably take it as a
+clean bill of health for the whole document, and it is not one.
+
 ---
 
 ## Answered, for the record
@@ -82,4 +102,4 @@ and documents why, but anyone handed the brief will work from old numbers:
 | Placement count | "500+ placements across all services since 2022" | 2026-08-15 |
 | Without-replacement pricing | $1,140.10, itemised; agent fee $388 | 2026-08-16 |
 | Process steps 1 and 2 | Merged into "Understand your household needs" | 2026-08-16 |
-| Helper source differences | None — same service, package and process; only the country differs | 2026-08-16 |
+| Helper source differences | None — same service, package and process; only the source differs | 2026-08-16 |

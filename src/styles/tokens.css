@@ -249,6 +249,51 @@
                            nav (see Header.astro). Removing that makes
                            every width look like it fits. */
 
+  --bp-xwide: 80em;    /* 1280px — the FOURTH breakpoint, and the second
+                           one this file has had to adopt after two
+                           workstreams arrived at the same literal
+                           independently. Above --bp-desktop and unrelated
+                           to it: nothing in the shell switches here, and
+                           the nav is long settled by this width. It marks
+                           the point where the page has surplus horizontal
+                           room and a layout can spend it.
+
+                           Its consumers, both content-layout only:
+
+                             src/sections/Hero.astro    (media query, and
+                                 the first clause of the <Picture> `sizes`
+                                 attribute — those two must agree)
+                             src/sections/Process.astro (media query)
+
+                           Hero breaks the image out of the container's
+                           right edge to the viewport edge here, giving the
+                           page its one asymmetric axis; at 1920px every
+                           other element obeys the same 1152px box with
+                           384px of dead margin each side.
+
+                           Process turns its four-step rail horizontal
+                           here rather than at --bp-wide: at 1024px each
+                           step gets (960 - 72) / 4 = 222px, about 28
+                           characters, so a description runs five lines of
+                           four words. At 1280px each gets (1088 - 72) / 4
+                           = 254px and the rail reads as intended. Redo
+                           that arithmetic if a step is added or removed.
+
+                           The two landed in separate workstreams within a
+                           day of each other, and each file's comment said
+                           "there is no token for 80em; if a second file
+                           ever needs it, name it there first" — a
+                           condition that was already true as each was
+                           written, because neither workstream could see
+                           the other. Named here now so a third consumer
+                           does not repeat that.
+
+                           Same hand-sync rule as every breakpoint above:
+                           custom properties do not resolve inside @media
+                           conditions, so changing this means changing the
+                           literal in both files (three places — Hero has
+                           two). */
+
   /* ---------------------------------------------------------------- */
   /* Radius — restrained per spec §3.3                                */
   /* ---------------------------------------------------------------- */

@@ -15,11 +15,17 @@
  * tests/conditional-blocks.test.ts and the build-output check described
  * in the task 14 report.
  *
- * Card composition intentionally differs from HelperSources (block 08,
- * flag + prose) and Services (block 09, title-as-link): a profile is a
- * short structured fact sheet (name, placement type, nationality,
+ * Card composition intentionally differs from its neighbours: a profile is
+ * a short structured fact sheet (name, placement type, nationality,
  * experience, skills) plus whatever narrative the markdown body adds, so
  * two consecutive grids don't repeat the same shape.
+ *
+ * The neighbours as they stand today: HelperSources (block 08) is no
+ * longer a card grid at all — it is a divided row of linked names, and its
+ * flag + prose composition was deleted with the `flag` and `summary`
+ * fields on 2026-08-16. Services (block 09) is still cards, with the whole
+ * title as the link. So this block is the only cards-with-a-fact-sheet
+ * shape on the page, which is the distinction that mattered.
  *
  * The lede describes what the section SHOWS and asserts nothing about
  * availability. Helper availability is one of the categories §78

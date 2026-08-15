@@ -45,11 +45,22 @@ const whatsappHref = defaultWhatsappUrl()
   .mobile-cta-bar :global(.btn) {
     flex: 1;
     /*
-     * Compaction, same technique as Header.astro's CTA override: default
-     * padding (--space-6, 24px/side) makes both buttons wider than they
-     * need to be. Reduces how narrow the row layout below needs to get
-     * before falling back to the stacked layout at 26em below (there is
-     * no --bp-cta-bar-stack token; the literal lives in this file only).
+     * Compaction: Button.astro's default padding (--space-6, 24px/side)
+     * makes both buttons wider than they need to be here. Reduces how
+     * narrow the row layout has to get before falling back to the stacked
+     * layout at 26em below (there is no --bp-cta-bar-stack token; the
+     * literal lives in this file only).
+     *
+     * This is now the ONLY compaction override on the site. It used to say
+     * "same technique as Header.astro's CTA override" — Header's override
+     * was deleted when the nav trim freed enough width, and Header.astro
+     * now carries a comment expressly forbidding its return ("if the
+     * header stops fitting, the honest fix is fewer things in it or a
+     * wider --bp-desktop"). That reasoning is about the header, not about
+     * this bar: this bar has two full-width buttons in a fixed strip on a
+     * phone, where there is no "fewer things" left to cut — R-7 already
+     * rejected dropping WhatsApp below 416px. So the override stays here
+     * and must not be read as licence to re-add one there.
      */
     padding-inline: var(--space-4);
   }

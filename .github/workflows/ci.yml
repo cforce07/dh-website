@@ -27,18 +27,22 @@ jobs:
       # IMPORTANT: this must stay `build:dev`, not `build`.
       #
       # `npm run build` runs the <Tbd> gate, which fails the build while any
-      # placeholder value (e.g. the MOM licence number) has not yet been
-      # supplied by the client. That failure is deliberate — it is the
-      # acceptance criterion of the gate, not a defect — and CI must not be
-      # blocked by it while the licence number is outstanding. `build:dev`
-      # runs the same Astro build without the gate, which is what CI needs
-      # to produce a `dist/` to test and audit. Do NOT "fix" a red pipeline
-      # here by swapping this back to `build`: that would either permanently
-      # break CI until the client supplies the licence number, or invite
-      # deleting the placeholder/gate to make it pass, which defeats the
-      # entire safety mechanism. `npm run build` (with the gate) is the
-      # release command and is expected to fail until the licence number is
-      # supplied — that is correct, not something to fix here.
+      # placeholder value is still in the rendered output.
+      #
+      # The gate currently PASSES. DirectHired supplied the MOM licence
+      # number on 2026-08-15, that <Tbd> was removed, and no other call site
+      # exists in src/ — so `npm run build` succeeds today. This comment used
+      # to say the gate "is expected to fail until the licence number is
+      # supplied"; that was true when it was written and stopped being true
+      # the day the value landed.
+      #
+      # `build:dev` is still the right command, for a reason that does not
+      # depend on today's state: CI needs a `dist/` to test and audit
+      # regardless of whether some future value is outstanding, and the gate
+      # is a release check, not a build step. Pinning CI to `build` would
+      # make the whole pipeline go red the next time a legitimate <Tbd>
+      # lands — and a red pipeline invites deleting the placeholder or the
+      # gate to make it green, which defeats the mechanism entirely.
       - name: Build (dev, gate skipped)
         run: npm run build:dev
 

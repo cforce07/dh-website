@@ -23,6 +23,18 @@
  * around a number the agency owns is safe, an official-looking seal is
  * not. Do not add one without MOM's usage terms in writing.
  *
+ * "Placements", not "Helpers Placed". The number's BASIS, recorded on
+ * company.placementCount, is "500+ placements across all services since
+ * 2022" — and DirectHired's own note says that explicitly includes
+ * transfers, replacements and direct-hire processing. "Helpers Placed"
+ * reads as new placements only, which is a smaller and different claim,
+ * so putting 500+ behind it overstates the figure against its own source.
+ * Footer.astro already said "500+ placements since 2022"; the same fact
+ * was being published two ways, and this is the one that survives. Master
+ * brief §68: a number is published with the period and scope it was
+ * measured over, or not at all. The neighbouring "Established / Since
+ * 2022" badge carries the period.
+ *
  * This bar carries the licence rather than the hero. The alternative —
  * an eyebrow above the <h1> — was considered and dropped (D-2): the two
  * would have put the same credential on screen twice within 600px, and
@@ -40,7 +52,7 @@ import { company } from '../data/company'
     <div class="trust-grid">
       <TrustBadge label="MOM Licensed" plate>{company.momLicence}</TrustBadge>
       <TrustBadge label="Established">Since {company.foundedYear}</TrustBadge>
-      <TrustBadge label="Track Record">{company.placementCount} Helpers Placed</TrustBadge>
+      <TrustBadge label="Track Record">{company.placementCount} Placements</TrustBadge>
     </div>
   </Container>
 </section>

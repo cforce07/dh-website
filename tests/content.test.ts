@@ -1,7 +1,48 @@
 import { describe, it, expect } from 'vitest'
-import { readdirSync, readFileSync } from 'node:fs'
+import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 import { packages, packageTotalCents } from '../src/data/pricing'
 import { formatSgd } from '../src/lib/money'
+
+/**
+ * Strips every comment form this codebase uses, so a comment that explains
+ * a rule cannot be mistaken for a violation of it. Same technique, and the
+ * same reason, as tests/header-fit.test.ts's `code()`.
+ */
+function code(source: string): string {
+  return source
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ') // Astro/JSX template comments
+    .replace(/\/\*[\s\S]*?\*\//g, ' ') // JS and CSS block comments
+    .replace(/<!--[\s\S]*?-->/g, ' ') // HTML comments
+}
+
+function walk(dir: string): string[] {
+  return readdirSync(dir).flatMap((entry) => {
+    const full = join(dir, entry).split('\\').join('/')
+    return statSync(full).isDirectory() ? walk(full) : [full]
+  })
+}
+
+/**
+ * Everything a visitor can actually read: the content collections verbatim,
+ * plus the comment-free source of every file that renders markup. Data and
+ * lib files are deliberately NOT included — src/data/company.ts's
+ * `address.country: 'SG'` and structured-data.ts's `areaServed: Country`
+ * are the business's own Singapore address, which is a country, and
+ * neither is prose about a helper source.
+ */
+function renderedCopy(): { file: string; text: string }[] {
+  const markdown = walk('src/content')
+    .filter((f) => f.endsWith('.md'))
+    .map((file) => ({ file, text: readFileSync(file, 'utf8') }))
+
+  const markup = ['src/sections', 'src/components', 'src/layouts', 'src/pages']
+    .flatMap(walk)
+    .filter((f) => f.endsWith('.astro'))
+    .map((file) => ({ file, text: code(readFileSync(file, 'utf8')) }))
+
+  return [...markdown, ...markup]
+}
 
 describe('helper sources', () => {
   const files = readdirSync('src/content/helpers')
@@ -13,6 +54,19 @@ describe('helper sources', () => {
   it('never labels Mizoram as India', () => {
     const content = readFileSync('src/content/helpers/mizoram.md', 'utf8')
     expect(content).not.toMatch(/\bIndia\b/)
+  })
+
+  it('has a `source` field, not a `country` one', () => {
+    // The field name is the seed of the prose. While it was `country`, every
+    // sentence written from it inherited the error — see the sweep below.
+    const schema = readFileSync('src/content/config.ts', 'utf8').replace(/\/\/[^\n]*/g, ' ')
+    expect(schema).toMatch(/source: z\.string\(\)/)
+    expect(schema).not.toMatch(/\bcountry:/)
+    for (const file of files) {
+      const content = readFileSync(`src/content/helpers/${file}`, 'utf8')
+      expect(content, `${file} still declares a country field`).toMatch(/^source: /m)
+      expect(content, `${file} still declares a country field`).not.toMatch(/^country: /m)
+    }
   })
 
   it('carries no flag of any kind, emoji or vector', () => {
@@ -37,12 +91,12 @@ describe('helper sources', () => {
   })
 
   it('carries no per-source summary — settled, not pending', () => {
-    // The three summaries were one sentence with the country name swapped,
+    // The three summaries were one sentence with the source name swapped,
     // which is the clearest generated-content tell on the page. They were
     // deleted rather than rewritten, and DirectHired then closed the
     // question on 2026-08-16 (implementation plan D-5): there is no real
     // difference between the sources. Same service, same package, same
-    // matching process; only the source country differs.
+    // matching process; only the source differs.
     //
     // So this is not a field waiting on facts that might yet arrive — the
     // facts do not exist, and three different sentences could only ever be
@@ -90,8 +144,8 @@ describe('helper sources', () => {
 
   it('never characterises a nationality in the helper content', () => {
     // Master brief §42. The three bodies say what the SERVICE is, never
-    // what people from a country are like, and the block itself adds no
-    // framing of its own. This catches the most likely regression: a
+    // what people from a given place are like, and the block itself adds
+    // no framing of its own. This catches the most likely regression: a
     // well-meaning contributor answering "what makes them different?" with
     // an adjective.
     const sources = [
@@ -107,6 +161,50 @@ describe('helper sources', () => {
       expect(content, `${file} characterises a nationality`).not.toMatch(CHARACTERISATION)
       expect(content, `${file} characterises a nationality`).not.toMatch(KNOWN_FOR)
     }
+  })
+})
+
+describe('the site never calls Mizoram a country', () => {
+  /*
+   * Mizoram is a STATE OF INDIA. Two of the three helper sources are
+   * countries and the third is not, so no sentence may describe the set as
+   * countries — and none may describe Mizoram as India either. Master brief
+   * §412, and the same fact src/content/config.ts records as the reason the
+   * `flag` field's "IN" was deleted.
+   *
+   * That flag error was caught and fixed, and then written straight back in
+   * prose across five surfaces, because the only guard was a literal search
+   * for "India" in one file. A single string in a single file is not enough:
+   * the error came back wearing the opposite word. This sweep runs over
+   * EVERY surface a visitor reads and covers both directions.
+   *
+   * The vocabulary that is true of all three sources, and stays true of a
+   * fourth, is "source" / "where a helper comes from". Use it.
+   */
+  const copy = renderedCopy()
+
+  it('scans the surfaces it claims to scan (guards the sweep itself)', () => {
+    // Without this, a broken walker would make both assertions below pass
+    // vacuously — which is the precise failure this whole fix wave exists
+    // to remove from the suite.
+    const all = copy.map((c) => c.text).join('\n')
+    expect(copy.length).toBeGreaterThanOrEqual(20)
+    expect(copy.map((c) => c.file)).toContain('src/content/helpers/mizoram.md')
+    expect(copy.map((c) => c.file)).toContain('src/sections/HelperSources.astro')
+    expect(all).toContain('Mizoram')
+    expect(all).toContain('The source is the only difference')
+  })
+
+  it('says "source", never "country", of where a helper comes from', () => {
+    const offenders = copy
+      .filter(({ text }) => /\bcountr(y|ies)\b/i.test(text))
+      .map(({ file }) => file)
+    expect(offenders).toEqual([])
+  })
+
+  it('never names India in copy a visitor reads', () => {
+    const offenders = copy.filter(({ text }) => /\bIndian?\b/.test(text)).map(({ file }) => file)
+    expect(offenders).toEqual([])
   })
 })
 
@@ -170,15 +268,26 @@ describe('faq pricing figures stay in sync with pricing.ts', () => {
   const dollarPattern = /\$\d{1,3}(?:,\d{3})*(?:\.\d{2})?/g
 
   it('has package totals and line items to check against (sanity check)', () => {
-    // Derived, not hardcoded: both packages are now itemised, so this is
-    // 2 totals + 12 line items. A hardcoded count silently becomes wrong
-    // the moment a package changes shape — which is exactly what happened
-    // when the without-replacement package gained its breakdown.
-    const expected =
-      packages.length +
-      packages.reduce((n, p) => n + (p.kind === 'itemised' ? p.lineItems.length : 0), 0)
-    expect(amountsCents.length).toBe(expected)
-    expect(validAmounts.size).toBeGreaterThanOrEqual(expected)
+    // HARDCODED on purpose. This was briefly derived — `expected` was
+    // recomputed from the same flatMap that built `amountsCents` — which
+    // made the assertion a restatement of its own subject: it held for any
+    // pricing.ts whatsoever, including an empty one, and could not fail.
+    //
+    // 14 = 2 package totals + 12 line items (6 per itemised package). The
+    // point of a literal is that it breaks LOUDLY when a package changes
+    // shape, because that is the moment somebody must go and re-check the
+    // dollar figures typed into the FAQ markdown below — the very thing
+    // this describe block exists to keep in sync. A count that quietly
+    // follows the data notices nothing.
+    //
+    // If a package is added, removed or re-itemised: update this number,
+    // then check src/content/faq/*.md against the new figures.
+    const EXPECTED_AMOUNTS = 14
+    expect(amountsCents.length).toBe(EXPECTED_AMOUNTS)
+    expect(validAmounts.size).toBeGreaterThanOrEqual(EXPECTED_AMOUNTS)
+    // ...and the shape that number describes is the shape that ships.
+    expect(packages).toHaveLength(2)
+    expect(packages.every((p) => p.kind === 'itemised')).toBe(true)
   })
 
   it('every dollar figure in FAQ content matches a real package total or line item', () => {

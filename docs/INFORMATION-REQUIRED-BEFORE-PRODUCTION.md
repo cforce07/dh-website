@@ -16,6 +16,8 @@ A missing value on a block that still renders. Each is marked with `<Tbd>` in th
 
 _None found — every inline value in the current build is verified._
 
+**Read that carefully:** there are currently **0 `<Tbd>` call sites** anywhere in `src/`. The last one, the MOM licence number, was resolved on 2026-08-15. So this category is not reporting that nothing is missing — it is reporting that nothing is *marked*, which is a weaker statement. `npm run build` passes the gate today. The gate and the `<Tbd>` component are deliberately kept for the next unverified value; until one is marked, Category A cannot detect anything and Categories B, C and D carry the whole checklist.
+
 ## Category B — Whole-block omissions (do not block the production build)
 
 An entire section has no backing data, so the section is absent from the page — no shell, no "coming soon" placeholder, no invented content. `npm run build` **succeeds** with these empty; saying nothing is honest. The section reappears automatically once the collection has entries.
@@ -33,7 +35,7 @@ Information DirectHired still owes that leaves **no detectable trace** in the co
 
 They are therefore **declared** in `DECLARED_INPUTS` in `scripts/generate-info-required.mjs` — the only hand-maintained list in this document. The alternative would be sprinkling cosmetic `<Tbd>` markers onto pages purely so this script could find them, which would trade a correct page for a broken one. `npm run build` **succeeds** with these outstanding; nothing false is published.
 
-Design spec §5 names three Category A items — the MOM licence number, detailed replacement terms, and the without-replacement inclusion list. Only the first has a live `<Tbd>`; the other two appear here.
+Design spec §5 names three Category A items — the MOM licence number, detailed replacement terms, and the without-replacement inclusion list. The first was supplied on 2026-08-15 and its `<Tbd>` removed; the other two never had one and appear here.
 
 - **Detailed replacement terms and conditions**
   - Source: Brief §18 / §79 Reminder 04; design spec §5 Category A
@@ -55,22 +57,22 @@ This is the production decision list: for each entry, either supply your own pho
   - Depicts: Nothing. No portrait is shipped, referenced, or reserved.
   - Rendered at: Not rendered. The section is absent from the page while src/content/helper-profiles/ is empty, and the card schema has no image field.
   - Usage sites:
-    - `src/sections/MeetHelpers.astro:48` — the <section> that only renders when the helper-profiles collection is non-empty
-    - `src/sections/MeetHelpers.astro:57` — the profile <Card>, where a portrait would sit
-    - `src/content/config.ts:110` — the helper-profiles collection schema, which has no portrait field and must not gain one before releases exist
+    - `src/sections/MeetHelpers.astro:54` — <section class="meet-helpers"> — renders only when the helper-profiles collection is non-empty
+    - `src/sections/MeetHelpers.astro:64` — <div class="helper-card"> — the profile card body, where a portrait would sit
+    - `src/content/config.ts:87` — const helperProfiles = defineCollection({ — the helper-profiles schema, which has no portrait field and must not gain one before signed releases exist
   - Should become: Priority 2 of the shot brief: individual portraits of real helpers, eye level, working clothes not uniform, plain background, one consistent crop across all of them, each with a signed release obtained before the shoot in a language the subject reads fluently.
   - AI generation **not permitted**: An AI-generated helper portrait is a fabricated helper. Master brief §78 forbids inventing helper details and §55 forbids presenting placeholder people as actual DirectHired helpers; a face on a profile card asserts that this specific person exists and is available. No prompt is written for this slot. It stays absent until a real, consented photograph exists.
 - **Hero — one frame, both people in it** (`hero-together`)
   - Currently: AI-generated from a prompt in `docs/design/image-prompts-2026-08-16.md` (`src/assets/hero-together.png`)
   - Depicts: Two adults at the same scale on the same plane, facing each other across one kitchen counter with their hands meeting over a single shared bowl, and a child standing between them with one hand raised to the counter edge. A tall grilled window on the left is the only light source. One thin bright-teal line runs along the front of the counter from frame edge to frame edge and passes behind all three figures — the logo's H crossbar restated as a room. Every figure is faceless: no eyes, no mouths, no rendered expression. Warm off-white ground, matte paper texture, no photographic cues.
   - Generated from: Prompt A1 ("warm editorial illustration", recommended) under "Slot A — hero-together" in docs/design/image-prompts-2026-08-16.md. Generated with DALL·E and supplied by DirectHired on 2026-08-16 as images/image_slota_prompt1.png (1402x1122 PNG, 2.2MB), which is kept as the untouched master. src/assets/hero-together.png is a byte-for-byte copy of that master, placed under src/ so astro:assets can process it; no crop or resample was applied, because 1402x1122 is 1.2496 against the 1.25 the layout wants.
-  - Rendered at: 520x416 CSS px in the two-column grid at 64em (container 1152px, 2rem padding each side, --space-12 gap). Widens with the >=80em bleed (Hero.astro:205-211): 616x493 at a 1280px viewport, 936x749 at 1920px, 1256x1005 at 2560px. aspect-ratio is 5/4 at >=64em and 4/3 below, both CSS crops (object-fit: cover, never a squash) of one 5:4 source. Served as AVIF with a WebP fallback at 440/620/780/960/1280 CSS px: 7.4/11.3/14.9/19.5/29.1 KB as AVIF, 12.7/21.2/32.0/44.3/72.8 KB as WebP. A 1280px browser window at 1x fetches the 620w AVIF, 11,566 bytes. The 2.2MB PNG source is a build input and is never sent to a browser.
+  - Rendered at: 520x416 CSS px in the two-column grid at 64em (container 1152px, 2rem padding each side, --space-12 gap). Widens with the >=80em bleed (Hero.astro:213-219): 616x493 at a 1280px viewport, 936x749 at 1920px, 1256x1005 at 2560px. aspect-ratio is 5/4 at >=64em and 4/3 below, both CSS crops (object-fit: cover, never a squash) of one 5:4 source. Served as AVIF with a WebP fallback at 440/620/780/960/1280 CSS px: 7.4/11.3/14.9/19.5/29.1 KB as AVIF, 12.7/21.2/32.0/44.3/72.8 KB as WebP. A 1280px browser window at 1x fetches the 620w AVIF, 11,566 bytes. The 2.2MB PNG source is a build input and is never sent to a browser.
   - Usage sites:
     - `src/sections/Hero.astro:60` — import heroTogether from '../assets/hero-together.png'
-    - `src/sections/Hero.astro:84` — <Picture src={heroTogether} … /> — the page's LCP element
+    - `src/sections/Hero.astro:84` — <Picture — the page's LCP element; its src, widths, sizes and alt follow on the lines below
     - `src/sections/Hero.astro:88` — widths={[440, 620, 780, 960, 1280]} — the responsive srcset Astro emits
-    - `src/sections/Hero.astro:89` — sizes=… — mirrors the four layout states in this file's own CSS; change one and you must change the other
-    - `src/sections/Hero.astro:90` — alt text; must be rewritten with the asset
+    - `src/sections/Hero.astro:89` — sizes="(min-width: 80em) calc(50vw - 24px), …" — mirrors the four layout states in this file's own CSS; change one and you must change the other
+    - `src/sections/Hero.astro:90` — alt="Illustration of two adults at one kitchen counter, …" — the alt text; must be rewritten with the asset
   - Should become: The Priority 1 hero frame from the shot brief (docs/design/brand-assessment-2026-08-15.md §7): one landscape frame, one room, one window light, a helper and a family member in the same ordinary domestic task, both at the same scale, both in focus, shot at eye level in a real Singapore HDB or condo interior. This illustration is a better placeholder, not the answer.
   - AI generation permitted. Prompt: **Slot A — hero-together** in `docs/design/image-prompts-2026-08-16.md`
 - **Social share image (Open Graph / Twitter)** (`og-share`)
@@ -82,9 +84,9 @@ This is the production decision list: for each entry, either supply your own pho
     - `src/layouts/BaseLayout.astro:19` — import ogSource from '../assets/og-share.png'
     - `src/layouts/BaseLayout.astro:46` — getImage({ src: ogSource, format: 'jpeg', quality: 78 }) — JPEG on purpose; several share consumers still refuse WebP and AVIF
     - `src/layouts/BaseLayout.astro:47` — new URL(ogImage.src, Astro.site).href — the absolute URL, built exactly the way `canonical` is
-    - `src/layouts/BaseLayout.astro:102` — <meta property="og:image" …/> plus :width, :height, :type and :alt
+    - `src/layouts/BaseLayout.astro:102` — <meta property="og:image" content={ogImageUrl} /> — :width, :height, :type and :alt follow on the four lines below
     - `src/layouts/BaseLayout.astro:127` — <meta name="twitter:card" content="summary_large_image" /> — valid only while an og:image ships; back to "summary" in the same commit if this image is ever removed
-    - `src/layouts/BaseLayout.astro:128` — <meta name="twitter:image" …/> and twitter:image:alt
+    - `src/layouts/BaseLayout.astro:128` — <meta name="twitter:image" content={ogImageUrl} /> — twitter:image:alt follows on the next line
   - Should become: A DirectHired-owned share card: either a crop of the commissioned hero photograph with the wordmark set over a clear area, or a purely typographic card built from the brand assets. The current card carries no wordmark at all, which is the most visible thing it is still missing.
   - AI generation permitted. Prompt: **Slot B — og-share** in `docs/design/image-prompts-2026-08-16.md`
 - **Reviewer / testimonial faces (block 10b)** (`review-author-portrait`) — **real photo only**
@@ -92,7 +94,7 @@ This is the production decision list: for each entry, either supply your own pho
   - Depicts: Nothing. The quote wall is deliberately typographic — stars, quote, attribution line, hairline. No avatar.
   - Rendered at: Not rendered. The section is absent from the page while src/content/reviews/ is empty, and the review schema has no image field.
   - Usage sites:
-    - `src/sections/Reviews.astro:49` — the <section> that only renders when the reviews collection is non-empty
+    - `src/sections/Reviews.astro:49` — <section class="reviews"> — renders only when the reviews collection is non-empty
     - `src/sections/Reviews.astro:65` — <figcaption class="review-meta"> — the author line, where an avatar would sit
   - Should become: Nothing is required. A Google review does not need a face, and the unboxed quote wall reads as a testimonial precisely because it is not a widget with a headshot in it. If a face is ever added it must be the real reviewer's, with their written permission.
   - AI generation **not permitted**: An AI face attached to a named review manufactures a customer. Master brief §78 forbids inventing testimonials, and a generated portrait beside a real quote is a fabricated attribution even when the quote itself is genuine. No prompt is written for this slot.

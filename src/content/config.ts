@@ -35,7 +35,7 @@ const services = defineCollection({
 // at higher fidelity.
 //
 // `summary` held one sentence per source, identical across all three but
-// for the country name ("We work with helpers from X and match them to
+// for the source name ("We work with helpers from X and match them to
 // your family..."). Repeated boilerplate with one word swapped is the
 // clearest generated-content tell on the page, and the section lede
 // already says that sentence once.
@@ -44,18 +44,26 @@ const services = defineCollection({
 // than an open one. DirectHired was asked for one distinguishing fact per
 // source (implementation plan D-5) and answered on 2026-08-16: there is no
 // real difference. Same service, same package, same matching process; the
-// source country is the only variable. So there is no fact to wait for,
-// and the three summaries could never have been written truthfully.
+// source is the only variable. So there is no fact to wait for, and the
+// three summaries could never have been written truthfully.
 //
 // HelperSources.astro states that equivalence once, above the three names,
 // instead — which is the whole of what is true. Do not reintroduce this
 // field. Writing three different sentences means asserting something about
-// each country that nobody here knows, which is a master brief §78
+// each source that nobody here knows, which is a master brief §78
 // violation, and asserting it about a nationality is a §42 one.
+//
+// The display field is `source`, NOT `country`. Two of the three sources
+// are countries and the third, Mizoram, is a state of India — the exact
+// error the deleted `flag` field made in emoji, restated in a field name
+// and then in every sentence built from it. `source` is true of all three
+// and stays true of a fourth, and it is the word the block, its CSS and
+// the FAQ all use. tests/content.test.ts asserts the rendered copy never
+// calls the set "countries".
 const helpers = defineCollection({
   type: 'content',
   schema: z.object({
-    country: z.string(),
+    source: z.string(),
     order: z.number(),
   }),
 })

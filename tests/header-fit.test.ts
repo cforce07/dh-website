@@ -65,6 +65,32 @@ const mobileNav = code(read('src/components/MobileNav.astro'))
 const mobileBar = code(read('src/components/MobileCtaBar.astro'))
 const footer = code(read('src/components/Footer.astro'))
 const layout = code(read('src/layouts/BaseLayout.astro'))
+const container = code(read('src/components/Container.astro'))
+
+/**
+ * The remainder of `source` from `marker` onwards, with the marker's presence
+ * checked rather than assumed.
+ *
+ * `slice(indexOf(x))` is the trap this replaces. When the literal is gone
+ * `indexOf` returns -1 and `slice(-1)` yields the LAST CHARACTER of the file —
+ * a one-character haystack that satisfies every `not.toMatch` written against
+ * it. A guard built that way passes vacuously at the exact moment the thing it
+ * watches has moved, which is the only moment it was ever needed.
+ */
+function sliceFrom(source: string, marker: string): string {
+  const at = source.indexOf(marker)
+  if (at === -1) {
+    throw new Error(`"${marker}" no longer appears in this file — the check below would be vacuous`)
+  }
+  return source.slice(at)
+}
+
+/** A `--space-N` token's value, in px, resolved from tokens.css. */
+function spaceTokenPx(name: string): number {
+  const match = tokens.match(new RegExp(`${name}:\\s*([\\d.]+)rem`))
+  if (!match) throw new Error(`tokens.css no longer declares ${name} in rem`)
+  return Number(match[1]) * 16
+}
 
 /** The single declared value, parsed from the token it is declared in. */
 function declaredBpDesktopEm(): number {
@@ -76,6 +102,36 @@ function declaredBpDesktopEm(): number {
 /** Every `min-width:`/`max-width:` em literal in a component's <style>. */
 function mediaEmLiterals(source: string): number[] {
   return [...source.matchAll(/\((?:min|max)-width:\s*([\d.]+)em\)/g)].map((m) => Number(m[1]))
+}
+
+/**
+ * The shell breakpoint a file actually ships, read from its own CSS.
+ *
+ * Filtered to >= 64em so component-internal queries are excluded — the only
+ * other one in these three files is MobileCtaBar's 26em stacking query, which
+ * is not a nav-surface switch.
+ */
+function shellSwitchEm(source: string, kind: 'min' | 'max'): number {
+  const literals = [...source.matchAll(new RegExp(`\\(${kind}-width:\\s*([\\d.]+)em\\)`, 'g'))]
+    .map((m) => Number(m[1]))
+    .filter((em) => em >= 64)
+  if (literals.length === 0) throw new Error(`no ${kind}-width shell breakpoint in this file`)
+  return Math.min(...literals)
+}
+
+/** Container's `default` measure in px, read from the component that sets it. */
+function containerMaxPx(): number {
+  const match = container.match(/\.default\s*\{[^}]*max-width:\s*([\d.]+)rem/)
+  if (!match) throw new Error('Container.astro no longer declares .default max-width in rem')
+  return Number(match[1]) * 16
+}
+
+/** Container's inline padding above --bp-tablet, per side, in px. */
+function containerPaddingPx(): number {
+  const aboveTablet = sliceFrom(container, '@media (min-width: 48em)')
+  const match = aboveTablet.match(/padding-inline:\s*var\((--space-\d+)\)/)
+  if (!match) throw new Error('Container.astro no longer sets padding-inline above --bp-tablet')
+  return spaceTokenPx(match[1])
 }
 
 describe('--bp-desktop stays synchronised across all four files', () => {
@@ -110,13 +166,27 @@ describe('--bp-desktop stays synchronised across all four files', () => {
   })
 
   it('leaves no viewport width without a nav surface', () => {
-    // Header/MobileNav switch ON at >= bp; MobileCtaBar and the mobile nav
-    // are visible at <= bp - 0.01. Those two ranges must be contiguous and
-    // non-overlapping, which is exactly the -0.01em relationship above.
-    const desktopFrom = bp
-    const mobileUpTo = bp - 0.01
-    expect(mobileUpTo).toBeLessThan(desktopFrom)
-    expect(desktopFrom - mobileUpTo).toBeCloseTo(0.01, 5)
+    // Reads the three files, not arithmetic on one number.
+    //
+    // This was `expect(bp - 0.01).toBeLessThan(bp)` plus a check that their
+    // difference was 0.01. Both are true of every number there has ever
+    // been; the test opened no file, so all three components could have
+    // drifted apart and it would still have been green — on the one check
+    // whose failure mode is a viewport band with NO navigation at all.
+    //
+    // The real claim: the width at which the desktop nav appears, and the
+    // width up to which the mobile surfaces are visible, come from three
+    // separate CSS files and must meet exactly once, with no gap and no
+    // overlap.
+    const desktopFrom = shellSwitchEm(header, 'min')
+    const mobileNavHiddenFrom = shellSwitchEm(mobileNav, 'min')
+    const mobileUpTo = shellSwitchEm(mobileBar, 'max')
+
+    expect(desktopFrom, 'Header and MobileNav switch at different widths').toBe(mobileNavHiddenFrom)
+    expect(mobileUpTo, 'the two nav surfaces overlap').toBeLessThan(desktopFrom)
+    expect(desktopFrom - mobileUpTo, 'a viewport band has no nav surface').toBeCloseTo(0.01, 5)
+    // ...and the pair is anchored to the declared token, not floating free.
+    expect(desktopFrom).toBe(bp)
   })
 })
 
@@ -135,9 +205,23 @@ describe('the header still fits the column at --bp-desktop', () => {
     navItemCount: 7,
     scrollbarPx: 15, // classic Windows Chrome; the worst case we design for
   }
-  const CONTAINER_MAX_PX = 72 * 16 // Container.astro .default max-width: 72rem
-  const CONTAINER_PADDING_PX = 32 * 2 // --space-8 each side above --bp-tablet
+  // Read from Container.astro and tokens.css rather than transcribed, so the
+  // budget below is the box the page actually gives the header. Transcribed
+  // constants were the other half of why the mutation guard could not fail:
+  // the arithmetic could go slack in Container without this file noticing.
+  const CONTAINER_MAX_PX = containerMaxPx()
+  const CONTAINER_PADDING_PX = containerPaddingPx() * 2
   const naturalPx = MEASURED.logoPx + MEASURED.navPx + MEASURED.ctaPx + MEASURED.gapPx
+
+  /**
+   * The one fit predicate. Both the budget check and the mutation guard run
+   * through it, so the guard cannot drift away from the rule it guards.
+   */
+  function fitsAtBreakpoint(widthPx: number, bpEm: number): boolean {
+    const clientPx = bpEm * 16 - MEASURED.scrollbarPx
+    const contentPx = Math.min(clientPx, CONTAINER_MAX_PX) - CONTAINER_PADDING_PX
+    return widthPx <= contentPx
+  }
 
   it('the measured nav width still describes the nav that ships', () => {
     // Guards the measurement itself: add or remove a nav item and the
@@ -147,10 +231,7 @@ describe('the header still fits the column at --bp-desktop', () => {
   })
 
   it('the natural header width fits inside Container at --bp-desktop', () => {
-    const bpPx = declaredBpDesktopEm() * 16
-    const clientPx = bpPx - MEASURED.scrollbarPx
-    const contentPx = Math.min(clientPx, CONTAINER_MAX_PX) - CONTAINER_PADDING_PX
-    expect(naturalPx).toBeLessThanOrEqual(contentPx)
+    expect(fitsAtBreakpoint(naturalPx, declaredBpDesktopEm())).toBe(true)
   })
 
   it('keeps at least 5% of margin over the crossover for font-rendering variance', () => {
@@ -164,14 +245,35 @@ describe('the header still fits the column at --bp-desktop', () => {
   })
 
   it('would fail if the header regained the content that forced 96em', () => {
-    // Proves the budget check above is load-bearing rather than trivially
-    // satisfiable: the pre-trim header (8 nav items, 2 CTAs, compacted
-    // padding) measured 1251.60px natural and must NOT fit at the current
-    // breakpoint. If this ever passes, the arithmetic has gone slack.
-    const preTrimNaturalPx = 1251.6
-    const bpPx = declaredBpDesktopEm() * 16
-    const contentPx = Math.min(bpPx - MEASURED.scrollbarPx, CONTAINER_MAX_PX) - CONTAINER_PADDING_PX
-    expect(preTrimNaturalPx).toBeGreaterThan(contentPx)
+    // The pre-trim header (8 nav items, 2 CTAs, compacted padding) measured
+    // 1251.60px natural and must NOT fit.
+    //
+    // As first written this compared 1251.6 against a `contentPx` that
+    // Container clamps to 1088px for every breakpoint at or above ~68em, so
+    // the comparison held unconditionally — it was a fact about 1251.6 and
+    // 1088, not about this codebase, and it would have gone on passing
+    // through any change to the header, the token or Container.
+    //
+    // What is actually true, and what is asserted here, is stronger AND
+    // falsifiable: the pre-trim header does not fit at the shipped
+    // breakpoint, and it cannot be made to fit at ANY viewport width,
+    // because Container caps its content box at max-width minus padding
+    // regardless of how wide the window is. That cap is the mechanism doing
+    // the work, so the cap is what gets asserted. Widen Container's measure
+    // past ~82rem and this fails — which is correct: at that point the
+    // budget has genuinely gone slack and the trim is no longer what keeps
+    // the header honest.
+    const PRE_TRIM_NATURAL_PX = 1251.6
+    const ANY_WIDTH_EM = 1000
+
+    expect(fitsAtBreakpoint(PRE_TRIM_NATURAL_PX, declaredBpDesktopEm())).toBe(false)
+    expect(fitsAtBreakpoint(PRE_TRIM_NATURAL_PX, ANY_WIDTH_EM)).toBe(false)
+    // The threshold sits strictly between the two headers, so this fails
+    // from either side: if the budget grows enough to admit the pre-trim
+    // header, and if it ever shrinks below the header that ships.
+    expect(fitsAtBreakpoint(naturalPx, declaredBpDesktopEm())).toBe(true)
+    expect(CONTAINER_MAX_PX - CONTAINER_PADDING_PX).toBeLessThan(PRE_TRIM_NATURAL_PX)
+    expect(CONTAINER_MAX_PX - CONTAINER_PADDING_PX).toBeGreaterThanOrEqual(naturalPx)
   })
 })
 
@@ -221,7 +323,16 @@ describe('conversion surfaces after the header CTA trim', () => {
     // range is the cheapest-device, least-likely-to-fill-a-form segment,
     // and this bar is the only surface keeping WhatsApp permanently on
     // screen now that the header's secondary is gone.
-    const stacked = mobileBar.slice(mobileBar.indexOf('@media (max-width: 26em)'))
+    //
+    // sliceFrom(), not slice(indexOf(...)): if the 26em literal is ever
+    // reworded, indexOf returns -1, slice(-1) hands back a single character
+    // and `not.toMatch(/display: none/)` passes against it — this guard
+    // would go green precisely when the range it protects had moved out
+    // from under it. sliceFrom fails loudly instead.
+    expect(mobileBar, 'the stacked range no longer starts at 26em').toContain(
+      '@media (max-width: 26em)',
+    )
+    const stacked = sliceFrom(mobileBar, '@media (max-width: 26em)')
     expect(stacked).not.toMatch(/display:\s*none/)
     expect(mobileBar.match(/variant="secondary"/g) ?? []).toHaveLength(1)
   })

@@ -5,7 +5,10 @@
  * are genuinely sequential, so screen reader users get that order for
  * free) with a connecting rule drawn by this section around ProcessStep's
  * typographic index markers — vertical rail on narrow viewports,
- * horizontal rule above the row from --bp-desktop up.
+ * horizontal rule above the row from --bp-xwide (80em) up. NOT
+ * --bp-desktop (75em), which is where the shell switches: this rail needs
+ * more room than the header does, and the arithmetic for why is on that
+ * media query below.
  *
  * Two wording constraints: brief §23 notes the process may still be
  * refined, so the lede says "typically" rather than asserting that EVERY
@@ -104,11 +107,16 @@ const stepCount = NUMBER_WORDS[steps.length] ?? String(steps.length)
    * At 1280px each step gets (1088 - 72) / 4 = 254px and the rail reads
    * as intended. So 80em survives the merge; it is just no longer the
    * emphatic call it was. If a step is ever added or removed, redo this
-   * arithmetic rather than trusting the number. 80em has no token — see
-   * tokens.css's breakpoint block, which documents --bp-tablet,
-   * --bp-wide and --bp-desktop only; that file belongs to another
-   * workstream, so this literal is recorded here instead. If a second
-   * file ever needs 80em, name it there first.
+   * arithmetic rather than trusting the number.
+   *
+   * 80em IS a token now: --bp-xwide in tokens.css. This comment used to
+   * end "80em has no token... if a second file ever needs 80em, name it
+   * there first" — and that condition was already true as it was written.
+   * Hero.astro's image bleed had landed in a sibling workstream the same
+   * day, with its own copy of the literal and its own note saying the
+   * same thing. Neither could see the other. The token now records both
+   * consumers; the literal below is still hand-synced to it, because
+   * custom properties do not resolve inside an @media condition.
    */
   @media (min-width: 80em) {
     .process-rail {

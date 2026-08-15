@@ -66,9 +66,11 @@
  *   npm run build:dev && node scripts/generate-info-required.mjs
  *
  * (build:dev, not build — Category A's own source data is the *build
- * output*, and `npm run build` would refuse to produce one while the MOM
- * licence <Tbd> is unresolved. build:dev is the same astro build without
- * that gate.)
+ * output*, and `npm run build` refuses to produce one while any <Tbd> is
+ * unresolved. build:dev is the same astro build without that gate. The
+ * MOM licence <Tbd> that used to trigger this was resolved on 2026-08-15
+ * and `npm run build` succeeds today; the distinction is kept because
+ * this script must be runnable whether or not a <Tbd> is outstanding.)
  */
 import { readdirSync, readFileSync, statSync, writeFileSync, existsSync } from 'node:fs'
 import { join, relative } from 'node:path'
@@ -169,6 +171,36 @@ function htmlFiles(dir) {
     if (statSync(full).isDirectory()) return htmlFiles(full)
     return full.endsWith('.html') ? [full] : []
   })
+}
+
+/**
+ * Every place in src/ that actually renders a <Tbd>, excluding the component
+ * itself and any comment that merely mentions it.
+ *
+ * Derived rather than stated: Category A's "none found" line is only honest
+ * if the reader is told whether that means "nothing missing" or "nothing
+ * marked". Since the MOM licence number landed it has meant the latter, and a
+ * hand-written sentence saying so would go stale the moment a <Tbd> returns.
+ */
+function tbdCallSites() {
+  const walk = (dir) =>
+    readdirSync(dir).flatMap((entry) => {
+      const full = join(dir, entry)
+      if (statSync(full).isDirectory()) return walk(full)
+      return [full]
+    })
+
+  const stripComments = (source) =>
+    source
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/<!--[\s\S]*?-->/g, ' ')
+      .replace(/^\s*\/\/[^\n]*/gm, ' ')
+
+  return walk('src')
+    .map((f) => f.split('\\').join('/'))
+    .filter((f) => f !== 'src/components/Tbd.astro')
+    .filter((f) => /<Tbd[\s/>]/.test(stripComments(readFileSync(f, 'utf8'))))
 }
 
 function findCategoryA() {
@@ -318,6 +350,16 @@ function renderMarkdown(categoryA, categoryB, categoryC, categoryD) {
 
   if (categoryA.length === 0) {
     lines.push('_None found — every inline value in the current build is verified._')
+    lines.push('')
+    lines.push(
+      `**Read that carefully:** there are currently **${tbdCallSites().length} \`<Tbd>\` call sites** ` +
+        'anywhere in `src/`. The last one, the MOM licence number, was resolved on 2026-08-15. ' +
+        'So this category is not reporting that nothing is missing — it is reporting that ' +
+        'nothing is *marked*, which is a weaker statement. `npm run build` passes the gate ' +
+        'today. The gate and the `<Tbd>` component are deliberately kept for the next ' +
+        'unverified value; until one is marked, Category A cannot detect anything and ' +
+        'Categories B, C and D carry the whole checklist.',
+    )
   } else {
     for (const { item, files } of categoryA) {
       lines.push(`- **${item}**`)
@@ -374,8 +416,8 @@ function renderMarkdown(categoryA, categoryB, categoryC, categoryD) {
   lines.push('')
   lines.push(
     'Design spec §5 names three Category A items — the MOM licence number, detailed ' +
-      'replacement terms, and the without-replacement inclusion list. Only the first has a ' +
-      'live `<Tbd>`; the other two appear here.',
+      'replacement terms, and the without-replacement inclusion list. The first was supplied ' +
+      'on 2026-08-15 and its `<Tbd>` removed; the other two never had one and appear here.',
   )
   lines.push('')
 

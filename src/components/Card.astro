@@ -1,7 +1,14 @@
 ---
 /**
- * Card — the generic raised-surface container used for feature tiles,
- * job listings, testimonials, etc. across the homepage sections.
+ * Card — the generic raised-surface container.
+ *
+ * Its real consumers, as of 2026-08-16: Problem (block 03), PricingCard
+ * (block 06), Services (block 09) and MeetHelpers (block 10a, which
+ * renders nothing while its collection is empty). It is NOT used by
+ * HelperSources, which was unboxed into a divided row, or by Reviews,
+ * whose quote wall is deliberately typographic. This list used to read
+ * "feature tiles, job listings, testimonials, etc." — this site has never
+ * had job listings, and the testimonials it does have are not cards.
  *
  * Border + shadow + radius together is the combination that reads as a
  * generic UI-kit card. --shadow-sm is warm-tinted (rgba(42, 39, 36, …),

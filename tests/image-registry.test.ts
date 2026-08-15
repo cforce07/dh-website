@@ -147,6 +147,80 @@ describe('image provenance registry', () => {
     expect(broken).toEqual([])
   })
 
+  /**
+   * Every `usedBy[].what` begins with a literal quotation of the line it
+   * cites, terminated by " — " (or by the end of the string). `…` inside the
+   * quotation is an elision and matches any run of text.
+   *
+   * This convention exists because the check above — `1 <= line <= lineCount`
+   * — is all the registry had, and it detects almost nothing. Every entry
+   * could say line 1 and pass. Both drifts this test was written to catch had
+   * already happened and were invisible: `favicon-mark` cited
+   * BaseLayout.astro:55 after commit a05b78e inserted the og block above the
+   * favicon <link>, so it pointed at the viewport meta; and
+   * `helper-profile-portrait` cited config.ts:110, the `})` closing the
+   * *reviews* collection.
+   *
+   * A registry of where images are used is worth having only if a line number
+   * going stale is a failure. The quotation is what makes the line number
+   * checkable, so it is required of every entry rather than of the ones that
+   * happen to have it.
+   */
+  const QUOTE_MIN_LENGTH = 8
+
+  function quotedSource(what: string): string {
+    return what.split(' — ')[0].trim()
+  }
+
+  /** Does `quote` (with `…` as a wildcard) occur in `line`? */
+  function quoteOccursIn(quote: string, line: string): boolean {
+    let from = 0
+    for (const part of quote.split('…').map((p) => p.trim())) {
+      if (part === '') continue
+      const at = line.indexOf(part, from)
+      if (at === -1) return false
+      from = at + part.length
+    }
+    return true
+  }
+
+  it('quotes the line it cites, and the quote is still at that line', () => {
+    const wrong: string[] = []
+
+    for (const slot of images) {
+      for (const use of slot.usedBy) {
+        const quote = quotedSource(use.what)
+        if (quote.length < QUOTE_MIN_LENGTH) {
+          wrong.push(`${slot.id}: ${use.file}:${use.line} quotes nothing ("${use.what}")`)
+          continue
+        }
+        const line = readFileSync(use.file, 'utf8').split('\n')[use.line - 1] ?? ''
+        if (!quoteOccursIn(quote, line)) {
+          wrong.push(
+            `${slot.id}: ${use.file}:${use.line} should read ${quote}\n` +
+              `      but line ${use.line} is: ${line.trim()}`,
+          )
+        }
+      }
+    }
+
+    expect(wrong).toEqual([])
+  })
+
+  it('would notice if every usage site claimed line 1 (guards the check above)', () => {
+    // The failure mode of the previous check, reproduced deliberately: a
+    // registry whose line numbers are all in range but all wrong. If this
+    // ever finds nothing, the quotation check has stopped doing any work.
+    const survivingAtLineOne = images.flatMap((slot) =>
+      slot.usedBy.filter((use) => {
+        const firstLine = readFileSync(use.file, 'utf8').split('\n')[0] ?? ''
+        return quoteOccursIn(quotedSource(use.what), firstLine)
+      }),
+    )
+
+    expect(survivingAtLineOne).toEqual([])
+  })
+
   // The hard boundary. An AI-generated helper IS a fabricated helper, and an
   // AI face beside a real quote IS a fabricated attribution — master brief
   // §55 and §78. Marking a slot real-photo-only has to mean something the
@@ -196,12 +270,43 @@ describe('image provenance registry', () => {
     }
   })
 
-  it('lists exactly the non-real-photo slots as outstanding', () => {
-    const outstanding = outstandingImages().map((slot) => slot.id)
-    expect(outstanding).toEqual([...outstanding].sort())
-    for (const slot of images) {
-      expect(outstanding.includes(slot.id)).toBe(slot.provenance !== 'real-photo')
-    }
+  it('lists exactly the non-real-photo slots as outstanding, by name', () => {
+    // NAMED, not derived. This previously asserted, for every slot,
+    //   outstanding.includes(slot.id) === (slot.provenance !== 'real-photo')
+    // which is outstandingImages()'s own filter restated as its own test. It
+    // held for any registry, any provenance and any number of slots — an
+    // empty registry passed it, and so did one where every image had been
+    // relabelled 'real-photo'.
+    //
+    // This list is what the client is handed at production as "still
+    // outstanding". Flipping a slot's provenance is a claim about who owns
+    // an image and whether it may ship, so it has to be a deliberate edit
+    // in two places, not a quiet one in the JSON. The literal order is also
+    // the assertion that outstandingImages() stays sorted — the generated
+    // checklist's diff depends on it.
+    expect(outstandingImages().map((slot) => slot.id)).toEqual([
+      'helper-profile-portrait',
+      'hero-together',
+      'og-share',
+      'review-author-portrait',
+      'team-and-office',
+    ])
+
+    // The complement, named for the same reason: these five are
+    // DirectHired's own brand artwork and nothing about them is pending.
+    const settled = images
+      .filter((slot) => slot.provenance === 'real-photo')
+      .map((slot) => slot.id)
+      .sort()
+    expect(settled).toEqual([
+      'favicon-mark',
+      'logo-lockup',
+      'logo-mark',
+      'logo-wordmark',
+      'logo-wordmark-on-deep',
+    ])
+    // No slot may be in neither list.
+    expect(outstandingImages().length + settled.length).toBe(images.length)
   })
 
   it('is wired into the generated production checklist', () => {

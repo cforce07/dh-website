@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 import { contrastRatio } from '../src/lib/contrast'
 
 const css = readFileSync('src/styles/tokens.css', 'utf8')
@@ -100,5 +101,62 @@ describe('token contrast', () => {
     const accentRatio = contrastRatio(token('accent'), token('surface'))
     const hoverRatio = contrastRatio(token('accent-hover'), token('surface'))
     expect(hoverRatio / accentRatio).toBeGreaterThanOrEqual(1.4)
+  })
+})
+
+describe('--tracking-wide is used only where its contract allows', () => {
+  /*
+   * The token's own words in tokens.css: "Letter-spacing for small
+   * uppercase labels (eyebrows, badges). Not applied to body copy or
+   * headings — uppercase tracking at this scale only reads correctly on
+   * short, small-size text."
+   *
+   * Footer.astro's tagline broke that: 0.08em on "Make It Easier For You",
+   * title case, no text-transform. A contract a component can quietly opt
+   * out of is a comment, not a contract, so it is checked here.
+   *
+   * The rule enforced: every declaration of `letter-spacing:
+   * var(--tracking-wide)` must sit in a rule that also declares
+   * `text-transform: uppercase`.
+   */
+  const COMPONENT_DIRS = ['src/components', 'src/sections', 'src/layouts']
+
+  function componentFiles(): string[] {
+    const walk = (dir: string): string[] =>
+      readdirSync(dir).flatMap((entry) => {
+        const full = join(dir, entry).split('\\').join('/')
+        return statSync(full).isDirectory() ? walk(full) : [full]
+      })
+    return COMPONENT_DIRS.flatMap(walk).filter((f) => f.endsWith('.astro'))
+  }
+
+  /** Each `selector { ... }` block in a scoped <style>, comments removed. */
+  function ruleBlocks(source: string): string[] {
+    const withoutComments = source.replace(/\/\*[\s\S]*?\*\//g, ' ')
+    return [...withoutComments.matchAll(/\{([^{}]*)\}/g)].map((m) => m[1])
+  }
+
+  it('every --tracking-wide declaration sits on uppercase text', () => {
+    const offenders: string[] = []
+
+    for (const file of componentFiles()) {
+      for (const block of ruleBlocks(readFileSync(file, 'utf8'))) {
+        if (!/letter-spacing:\s*var\(--tracking-wide\)/.test(block)) continue
+        if (!/text-transform:\s*uppercase/.test(block)) offenders.push(file)
+      }
+    }
+
+    expect(offenders).toEqual([])
+  })
+
+  it('finds the declarations it claims to check (guards the scan)', () => {
+    // Four legitimate users today: .footer-heading, .trust-label,
+    // .total-label, .match-kicker. If this ever reads zero, the scan has
+    // broken and the assertion above is vacuous.
+    const count = componentFiles()
+      .flatMap((f) => ruleBlocks(readFileSync(f, 'utf8')))
+      .filter((b) => /letter-spacing:\s*var\(--tracking-wide\)/.test(b)).length
+
+    expect(count).toBeGreaterThanOrEqual(4)
   })
 })
