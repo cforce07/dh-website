@@ -1,12 +1,12 @@
 ---
 title: Medical Examination
 slug: medical-examination
-summary: We arrange the medical examination that's part of the standard placement process, on your behalf.
+summary: The medical examination is one of the components in our fly-in package — we arrange it and coordinate it on your behalf.
 order: 4
 ---
 
-A medical examination is part of the standard placement process. DirectHired arranges this for you, so it's one less step to organise yourself.
+The medical examination is one of the components included in our fly-in package. DirectHired arranges this for you, coordinated alongside the rest of your placement.
 
-- Arranged as part of the placement process
-- Coordinated by your consultant
-- One less step for you to manage
+- Included as a component of the fly-in package
+- Arranged and coordinated on your behalf
+- One less step for you to organise

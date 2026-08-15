@@ -12,4 +12,4 @@ DirectHired places domestic helpers from Myanmar under our fly-in packages. As w
 - Personalised consultation for every family
 - Support through the interview and placement process
 
-Have questions about a specific requirement? [Submit your requirements](/find-your-helper) or [WhatsApp us](https://wa.me/6598556637) and we'll walk you through it.
+Have questions about a specific requirement? Use the "Submit Your Requirements" button or the WhatsApp Us button on this page and we'll walk you through it.
