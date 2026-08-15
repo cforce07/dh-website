@@ -64,7 +64,10 @@ export const packages: readonly Package[] = [
       { label: 'Insurance', amountCents: 42510 },
       { label: 'SIP', amountCents: 7700 },
       { label: 'Medical', amountCents: 6000 },
-      { label: 'Transport', amountCents: 12000 },
+      // "Handling & transport" on both cards, per DirectHired 2026-08-16.
+      // The supplied breakdown said "Transport"; harmonised so the two cards
+      // read as the same line item at the same price, which is what they are.
+      { label: 'Handling & transport', amountCents: 12000 },
     ],
   },
 ]

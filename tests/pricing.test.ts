@@ -50,7 +50,7 @@ describe('fly-in without replacement', () => {
       { label: 'Insurance', amountCents: 42510 },
       { label: 'SIP', amountCents: 7700 },
       { label: 'Medical', amountCents: 6000 },
-      { label: 'Transport', amountCents: 12000 },
+      { label: 'Handling & transport', amountCents: 12000 },
     ])
   })
 
@@ -75,12 +75,16 @@ describe('the two packages', () => {
     expect(formatSgd(difference)).toBe('$500.00')
   })
 
-  it('differ only in the agent fee — every other line item is identical', () => {
+  // Labels as well as amounts. Comparing amounts alone is how the two cards
+  // came to show "Handling & transport" and "Transport" for the same $120 —
+  // identical prices reading as different line items in a side-by-side
+  // comparison.
+  it('differ only in the agent fee — every other line item is identical, label included', () => {
     if (withReplacement.kind !== 'itemised' || withoutReplacement.kind !== 'itemised') {
       throw new Error('unreachable')
     }
     const strip = (p: typeof withReplacement) =>
-      p.lineItems.filter((i) => i.label !== 'Agent fees').map((i) => i.amountCents)
+      p.lineItems.filter((i) => i.label !== 'Agent fees')
     expect(strip(withoutReplacement)).toEqual(strip(withReplacement))
   })
 })
