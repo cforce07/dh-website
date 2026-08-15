@@ -40,3 +40,6 @@ desktop.ini
 # Logs
 *.log
 npm-debug.log*
+
+# Scratch preview dir for logo work
+.tmp-logo-preview/
