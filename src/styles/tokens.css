@@ -176,34 +176,78 @@
   /* components to keep them in sync.                                  */
   /* ---------------------------------------------------------------- */
   --bp-tablet: 48em;   /* 768px  — Container's padding step-up. */
-  --bp-desktop: 96em;  /* 1536px — where the full desktop header (logo +
-                           8 nav items + 2 CTAs) fits on one line without
-                           wrapping or forcing horizontal document scroll;
-                           Header, MobileNav, and MobileCtaBar all switch
-                           here. Deliberately wider than --bp-tablet: the
-                           nav content does not fit in the 48-64em range,
-                           so keeping the mobile nav through that range
-                           (rather than switching at 48em) avoids a
-                           wrapped, two-line desktop nav.
 
-                           Was 64em (1024px) originally, raised after a
-                           real-browser measurement (iframe-harness binary
-                           search across viewport widths, see task-11
-                           fix-round-2 report) found the desktop header —
-                           even after compacting nav-item/CTA spacing in
-                           Header.astro — does not actually fit without
-                           horizontal overflow until ~1430px, because
-                           Container's own max-width (72rem/1152px) caps
-                           the available row width well below what 8 nav
-                           labels + 2 full CTA buttons need. 96em keeps
-                           ~106px of margin above that measured crossover
-                           for cross-browser/OS font-rendering variance.
-                           Do not lower this without re-measuring; do not
-                           trust hand-calculated arithmetic here — the
-                           interaction between flex nowrap overflow and
-                           Container's centering margin does not resolve
-                           the way naive subtraction predicts (verified
-                           empirically, see the fix report for why). */
+  --bp-wide: 64em;     /* 1024px — NOT a nav breakpoint. The third
+                           breakpoint in the system, previously an
+                           undocumented literal that three section files
+                           had each arrived at independently. Its
+                           consumers, all of them content-layout switches
+                           with no shell involvement:
+                             src/sections/Hero.astro         (media query)
+                             src/sections/Process.astro      (media query)
+                             src/sections/TwoSidedMatch.astro(media query)
+                           Recorded here so a fourth file does not invent
+                           a fifth value. Owned by those files' workstream
+                           — this entry documents the literal, it does not
+                           license changing it from here. */
+
+  --bp-desktop: 75em;  /* 1200px — where the desktop header (wordmark +
+                           7 nav items + 1 CTA) fits on one line without
+                           wrapping, overlapping, or forcing horizontal
+                           document scroll. Header, MobileNav and
+                           MobileCtaBar all switch here, and the literal
+                           is repeated in each of those three files plus
+                           tests/header-fit.test.ts, which asserts all
+                           four agree. Change it in all four or a
+                           viewport range opens with NO nav surface at
+                           all.
+
+                           MEASUREMENT (2026-08-16, real Chrome, same
+                           iframe-harness method as the 96em measurement
+                           it replaces). Natural max-content width of
+                           .header-inner, measured after the real wordmark
+                           landed:
+
+                             logo (logo-wordmark.svg @ 26px)  178.01 px
+                             primary-nav (7 items, 12px gaps) 568.76 px
+                             header-ctas (1 primary button)   242.52 px
+                             2 x --space-4 flex gap            32.00 px
+                             --------------------------------------------
+                             natural .header-inner          1021.29 px
+
+                           Container caps content at viewport - 2x32px of
+                           padding, so the header needs a client width of
+                           1021.29 + 64 = 1085.3px; with a 15px classic
+                           Windows scrollbar that is a 1100.3px viewport.
+                           75em (1200px) clears it by 99.7px (9.1%), the
+                           margin covering cross-browser and cross-OS font
+                           rendering of the seven Figtree nav labels.
+
+                           Was 96em (1536px). The old header held 8 nav
+                           items and 2 CTAs and measured 1251.60px natural
+                           against a 1088px content box — it overflowed at
+                           every desktop width, which is why the token had
+                           been pushed out to 1536px and why the 1024-1536
+                           laptop range got a phone layout stretched wide
+                           with a permanent bottom bar. Three cuts fixed
+                           the cause rather than the symptom: 'Home'
+                           removed from navItems (the wordmark links
+                           home), 'Why DirectHired' shortened to 'Why Us'
+                           (D-1), and the header's secondary WhatsApp CTA
+                           removed (it survives on five other surfaces).
+                           Net -230.31px, which paid for the real wordmark
+                           being 19.4px wider than the typeset mark it
+                           replaced AND for restoring the CTA's normal
+                           button padding.
+
+                           Do not lower this without re-measuring in a
+                           real browser, and do not trust hand-calculated
+                           arithmetic: .header-inner's children are
+                           flex: 0 0 auto specifically so that a header
+                           which does not fit overflows visibly instead of
+                           silently squeezing the wordmark through the
+                           nav (see Header.astro). Removing that makes
+                           every width look like it fits. */
 
   /* ---------------------------------------------------------------- */
   /* Radius — restrained per spec §3.3                                */

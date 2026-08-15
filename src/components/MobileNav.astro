@@ -12,13 +12,18 @@
  *   so it is removed from the accessibility tree and tab order when
  *   closed — no CSS-only illusion of hiding.
  *
- * Visible only below --bp-desktop (96em / 1536px, tokens.css — raised
- * from an original 64em after a real-browser measurement found the
- * desktop header overflows and forces horizontal document scroll below
- * that width; see the token's comment for the full writeup) — the same
- * breakpoint Header.astro and MobileCtaBar.astro switch on. Must stay
- * in sync with both (CSS custom properties don't resolve inside @media
- * conditions, so each file repeats the literal value in a comment).
+ * Visible only below --bp-desktop (75em / 1200px, tokens.css — lowered
+ * from 96em/1536px once the header was trimmed to a wordmark, 7 nav
+ * items and 1 CTA and re-measured in a real browser; see the token's
+ * comment for the full writeup) — the same breakpoint Header.astro and
+ * MobileCtaBar.astro switch on. Must stay in sync with both (CSS custom
+ * properties don't resolve inside @media conditions, so each file
+ * repeats the literal value in a comment). tests/header-fit.test.ts
+ * asserts the four copies agree.
+ *
+ * The panel header carries the real wordmark as a link to '/'. That link
+ * is why navItems no longer has a 'Home' entry — do not turn it back
+ * into a span.
  *
  * While open, the script adds `mobile-nav-open` to `<body>`, which locks
  * body scroll (see the `:global(body.mobile-nav-open)` rule below). This
@@ -27,6 +32,7 @@
  * scroll lock.
  */
 import Button from './Button.astro'
+import Wordmark from '../assets/logo-wordmark.svg'
 import { navItems } from '../lib/nav'
 import { company } from '../data/company'
 import { defaultWhatsappUrl } from '../lib/whatsapp'
@@ -50,7 +56,9 @@ const whatsappHref = defaultWhatsappUrl()
 
   <div id="mobile-nav-panel" class="mobile-nav-panel" data-mobile-nav-panel hidden>
     <div class="panel-header">
-      <span class="panel-brand">{company.name}</span>
+      <a class="panel-brand" href="/" aria-label={`${company.name} home`}>
+        <Wordmark class="panel-wordmark" aria-hidden="true" />
+      </a>
       <button type="button" class="panel-close" data-mobile-nav-close>
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
           <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
@@ -242,10 +250,30 @@ const whatsappHref = defaultWhatsappUrl()
     margin-bottom: var(--space-8);
   }
 
+  /*
+   * The real wordmark, on --color-surface (the panel ground), so the
+   * header, this panel and the footer are finally the same mark rather
+   * than three disagreeing lockups. Standard variant, not -on-deep:
+   * charcoal #4d4d4d on cream reads; the light variant would not.
+   *
+   * It is a LINK, not the span it replaced. 'Home' was removed from
+   * navItems (see src/lib/nav.ts) on the grounds that the wordmark
+   * already links home — which is only true on this surface if the
+   * wordmark here is clickable. It joins the focus trap as its first
+   * stop, which is a sensible place for focus to land when the panel
+   * opens; the trap, Escape handling and scroll lock are otherwise
+   * untouched.
+   */
   .panel-brand {
-    font-family: var(--font-display);
-    font-size: var(--size-h3);
-    color: var(--color-ink);
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+  }
+
+  .panel-brand :global(.panel-wordmark) {
+    display: block;
+    height: 26px;
+    width: auto;
   }
 
   .panel-close {
@@ -291,9 +319,9 @@ const whatsappHref = defaultWhatsappUrl()
     width: 100%;
   }
 
-  /* 96em — must match --bp-desktop (tokens.css), and the literal in
+  /* 75em — must match --bp-desktop (tokens.css), and the literal in
      Header.astro / MobileCtaBar.astro. */
-  @media (min-width: 96em) {
+  @media (min-width: 75em) {
     .mobile-nav {
       display: none;
     }
