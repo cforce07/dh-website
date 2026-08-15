@@ -195,6 +195,20 @@ describe('internal link resolution', () => {
 // information" (§78: no fabricated helper profiles, no invented
 // testimonials), this is the check that would have caught the actual
 // shipped defect — a collection-only test could not have.
+//
+// Coupling warning: the two class-string checks below (meet-helpers /
+// reviews and their child classes) are coupled to those literal class
+// names. If a future refactor renames .meet-helpers, .helper-card,
+// .helpers-grid, .reviews, .review-card, or .reviews-grid, these two
+// checks will silently pass even if a stale-cache section is still
+// shipping under the new name — a quiet false negative on a safety
+// test, which is worse than a loud failure, since green means nobody
+// looks. The section-count check further below is deliberately
+// name-independent for exactly this reason: keep both, don't replace
+// the string checks with the count, since a class-name match still
+// catches things a bare count cannot (e.g. a renamed section that
+// coincidentally keeps the total at 11 by also removing an unrelated
+// section elsewhere on the same build).
 describe('conditional block content-cache guard', () => {
   it('helper-profiles and reviews collections are currently empty (precondition for the checks below)', () => {
     const helperProfileFiles = readdirSync('src/content/helper-profiles').filter((f) => f !== '.gitkeep')
@@ -215,5 +229,36 @@ describe('conditional block content-cache guard', () => {
     expect(html).not.toMatch(/<section[^>]*class="reviews"/)
     expect(html).not.toMatch(/class="review-card"/)
     expect(html).not.toMatch(/class="reviews-grid"/)
+  })
+
+  // Rename-proof backstop for the two class-string checks above. Those
+  // checks are load-bearing (a class-name match catches things a bare
+  // count can't), but they are coupled to literal class names — see the
+  // coupling warning in this describe block's docblock. This check does
+  // not depend on any class name at all: while both conditional
+  // collections are empty, the homepage must render exactly the 11
+  // <section> elements from the 11 always-on section components (Hero,
+  // TrustBar, Problem, Difference, Process, PricingSection, TwoSidedMatch,
+  // HelperSources, Services, Faq, FinalCta — see src/pages/index.astro).
+  // MeetHelpers and Reviews render zero <section> elements each when
+  // their collection is empty (asserted separately by
+  // tests/conditional-blocks.test.ts), so 11 is also the total page
+  // count today. A stale-cache leak renders a 12th (or 13th) <section>
+  // regardless of what its class is called, so this catches the same
+  // failure mode as the two checks above even if MeetHelpers/Reviews (or
+  // their child elements) are ever renamed and those checks stop firing.
+  //
+  // Update this number if an always-on section is added/removed from
+  // src/pages/index.astro, or if a section component starts rendering
+  // more than one top-level <section> — it is not derived automatically
+  // because a static source count would have to distinguish real JSX
+  // from the word "<section>" appearing in a docblock comment (both
+  // MeetHelpers.astro and Reviews.astro currently have exactly that in
+  // their header comments), which is more fragile than a reviewed
+  // literal with this explanation attached.
+  it('the BUILT homepage renders exactly 11 <section> elements while both conditional collections are empty', () => {
+    const html = readFileSync('dist/index.html', 'utf8')
+    const sectionOpenTags = html.match(/<section[\s>]/g) ?? []
+    expect(sectionOpenTags).toHaveLength(11)
   })
 })
