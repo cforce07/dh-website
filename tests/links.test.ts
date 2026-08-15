@@ -1,0 +1,136 @@
+import { describe, it, expect, beforeAll } from 'vitest'
+import { execSync } from 'node:child_process'
+import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs'
+import { join } from 'node:path'
+import { company } from '../src/data/company'
+import { navItems, legalItems } from '../src/lib/nav'
+
+// npm run build:dev (not `npm run build`) deliberately: `build` pipes through
+// scripts/check-tbd.mjs, which fails the build on the MOM licence <Tbd> by
+// design (see TrustBar.astro). That gate protects production, but it would
+// also block this suite from ever inspecting dist/ at all. build:dev is the
+// same astro build without the gate.
+beforeAll(() => {
+  execSync('npm run build:dev', { stdio: 'inherit' })
+}, 180_000)
+
+function sources(dir = 'src'): string[] {
+  return readdirSync(dir).flatMap((entry) => {
+    const full = join(dir, entry)
+    return statSync(full).isDirectory() ? sources(full) : [full]
+  })
+}
+
+describe('CTA integrity', () => {
+  it('no component hardcodes the requirement-form URL', () => {
+    const offenders = sources()
+      .filter((f) => !f.endsWith('company.ts'))
+      .filter((f) => readFileSync(f, 'utf8').includes('/employer-requirement'))
+    expect(offenders).toEqual([])
+  })
+
+  it('the built homepage links to the configured form URL', () => {
+    const html = readFileSync('dist/index.html', 'utf8')
+    expect(html).toContain(company.requirementFormUrl)
+  })
+
+  it('the built homepage links to the official WhatsApp number', () => {
+    expect(readFileSync('dist/index.html', 'utf8')).toContain('wa.me/6598556637')
+  })
+
+  it('never uses "Contact Us" as a primary CTA', () => {
+    const html = readFileSync('dist/index.html', 'utf8')
+    expect(html).not.toMatch(/class="btn primary"[^>]*>\s*Contact Us/)
+  })
+
+  it('never promises a perfect match', () => {
+    expect(readFileSync('dist/index.html', 'utf8')).not.toMatch(/perfect match/i)
+  })
+
+  it('has exactly one h1', () => {
+    const matches = readFileSync('dist/index.html', 'utf8').match(/<h1[\s>]/g) ?? []
+    expect(matches).toHaveLength(1)
+  })
+})
+
+// --- internal link resolution -----------------------------------------
+//
+// This sub-project ships exactly one page (src/pages/index.astro). Nav,
+// footer, and a couple of homepage sections (HelperSources, Services)
+// legitimately link to routes that don't exist as pages yet:
+//   - /pricing, /faq, /about, /helpers, /services, /find-your-helper,
+//     /why-directhired, and the four legal pages, from src/lib/nav.ts
+//   - /helpers/<slug> and /services/<slug> detail pages, generated per
+//     content-collection entry by HelperSources.astro / Services.astro
+// Those belong to later sub-projects (see src/lib/nav.ts's own comment).
+//
+// Approach chosen: an EXPLICIT ALLOWLIST, not "scope the check to pages
+// that exist in this sub-project". Scoping would only ever verify "/"
+// resolves, which is checked elsewhere anyway and would leave this test
+// unable to catch anything (a vacuous pass by construction, no matter
+// what breaks). Building the allowlist from the same data the site uses
+// to generate its own links — navItems, legalItems, and the real
+// helpers/services collection slugs — means a genuine typo or a stray
+// link this task didn't account for still fails the test, while intended
+// future routes don't. The "sanity check" test below proves the allowlist
+// is doing real work rather than papering over a check that always passes.
+
+function resolvesInDist(hrefPath: string): boolean {
+  const target = join('dist', hrefPath)
+  if (existsSync(target) && statSync(target).isFile()) return true
+  if (existsSync(join(target, 'index.html'))) return true
+  if (existsSync(`${target}.html`)) return true
+  return false
+}
+
+function slugsIn(contentDir: string): string[] {
+  return readdirSync(contentDir)
+    .filter((f) => f !== '.gitkeep')
+    .map((f) => {
+      const content = readFileSync(join(contentDir, f), 'utf8')
+      const match = content.match(/^slug:\s*(.+)$/m)
+      if (!match) throw new Error(`${contentDir}/${f} has no frontmatter "slug:" field`)
+      return match[1].trim()
+    })
+}
+
+function internalHrefsIn(html: string): string[] {
+  const hrefs = [...html.matchAll(/href="(\/[^"]*)"/g)].map((m) => m[1].split(/[?#]/)[0])
+  return [...new Set(hrefs)]
+}
+
+function knownFutureRoutes(): Set<string> {
+  return new Set([
+    ...navItems.map((item) => item.href),
+    ...legalItems.map((item) => item.href),
+    ...slugsIn('src/content/helpers').map((slug) => `/helpers/${slug}`),
+    ...slugsIn('src/content/services').map((slug) => `/services/${slug}`),
+  ])
+}
+
+describe('internal link resolution', () => {
+  it('every internal link on the built homepage resolves to a real file or a known future route', () => {
+    const html = readFileSync('dist/index.html', 'utf8')
+    const allowlist = knownFutureRoutes()
+
+    const unresolved = internalHrefsIn(html).filter(
+      (href) => !resolvesInDist(href) && !allowlist.has(href),
+    )
+
+    expect(unresolved).toEqual([])
+  })
+
+  // Proves the allowlist is load-bearing, not decorative: if this fails,
+  // the test above would trivially pass with an empty allowlist too,
+  // meaning it isn't actually exercising the not-yet-built-pages case.
+  it('the homepage really does link to not-yet-built routes covered only by the allowlist (sanity check)', () => {
+    const html = readFileSync('dist/index.html', 'utf8')
+    const allowlist = knownFutureRoutes()
+
+    const coveredOnlyByAllowlist = internalHrefsIn(html).filter(
+      (href) => allowlist.has(href) && !resolvesInDist(href),
+    )
+
+    expect(coveredOnlyByAllowlist.length).toBeGreaterThan(0)
+  })
+})
