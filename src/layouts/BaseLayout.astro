@@ -10,11 +10,13 @@
  * <head> existed anywhere before this layout. Preloading it here keeps
  * the LCP budget (< 2.5s) intact.
  */
+import { getImage } from 'astro:assets'
 import '../styles/tokens.css'
 import '../styles/global.css'
 import Header from '../components/Header.astro'
 import Footer from '../components/Footer.astro'
 import MobileCtaBar from '../components/MobileCtaBar.astro'
+import ogSource from '../assets/og-share.png'
 
 interface Props {
   title: string
@@ -23,6 +25,27 @@ interface Props {
 
 const { title, description } = Astro.props
 const canonical = new URL(Astro.url.pathname, Astro.site).href
+
+/*
+ * The share card. Two things about it are not negotiable:
+ *
+ * 1. Exactly 1200x630. src/assets/og-share.png is already cut to that size,
+ *    so nothing here resizes — `getImage` only transcodes. The registry
+ *    (src/data/images.json) records the crop that produced it.
+ * 2. JPEG, not WebP or AVIF. This asset is not read by a browser, it is read
+ *    by WhatsApp, Facebook, Slack, iMessage and Twitter, several of which
+ *    still refuse anything but JPEG/PNG. Modern formats are the right answer
+ *    for the hero and the wrong one here. JPEG over PNG because a 1200x630
+ *    illustration is ~57KB as JPEG and ~1.1MB as PNG, and some consumers cap
+ *    the file size they will fetch.
+ *
+ * Absolute URL, built the same way `canonical` above is — og:image is
+ * resolved by a crawler that has no page context, so a root-relative path is
+ * not enough.
+ */
+const ogImage = await getImage({ src: ogSource, format: 'jpeg', quality: 78 })
+const ogImageUrl = new URL(ogImage.src, Astro.site).href
+const ogImageAlt = 'Illustration of two people working side by side at one kitchen counter'
 ---
 
 <!doctype html>
@@ -31,8 +54,37 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="preload" href="/fonts/fraunces-variable.woff2" as="font" type="font/woff2" crossorigin />
+    {/*
+      public/favicon.svg is DirectHired's mark — the H from the wordmark,
+      the same asset as src/assets/logo-mark.svg. It replaced the
+      unmodified Astro starter favicon, which meant the browser tab of a
+      licensed Singapore employment agency displayed a JavaScript
+      framework's logo.
+
+      There is deliberately NO <link rel="icon" href="/favicon.ico">, and
+      no favicon.ico in public/. The one that shipped was also Astro's,
+      and a stale framework .ico sitting behind DirectHired's SVG is
+      worse than no .ico at all: every browser that reads .ico at all
+      prefers it in some surface (Windows shortcuts, bookmark bars,
+      legacy tabs), so the wrong mark would keep surfacing. Rasterising a
+      correct multi-size .ico needs an image toolchain this repo does not
+      have and will not add for a 2.5s LCP budget. SVG favicons are
+      supported by every browser this site targets. When DirectHired's
+      brand assets are next revisited, generate a 16/32/48 .ico from
+      logo-mark.svg (teal H on #FAF8F5, so it survives both light and
+      dark tab bars) and restore the <link> — do not restore the <link>
+      without the file, and do not restore a file that is not the H.
+    */}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" href="/favicon.ico" />
+    {/*
+      --color-surface (#FAF8F5), not --color-deep. Android Chrome paints
+      the URL bar with this, and the sticky header directly beneath it is
+      --color-surface — so the chrome reads as continuous with the page
+      instead of stacking a dark band on top of a cream header. Kept as a
+      literal because <meta> content cannot read a CSS custom property;
+      if --color-surface changes in tokens.css, change it here too.
+    */}
+    <meta name="theme-color" content="#FAF8F5" />
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
@@ -41,28 +93,40 @@ const canonical = new URL(Astro.url.pathname, Astro.site).href
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonical} />
     {/*
-      "summary", not "summary_large_image".
-
-      A large-image card with no og:image renders WORSE than declaring
-      nothing: the consumer reserves a hero slot and then fills it with a
-      blank or a cropped favicon. WhatsApp — this agency's own secondary
-      conversion channel, and the single most likely place a link to this
-      site gets pasted — reads og:image directly, so a missing image is
-      visible to exactly the audience that matters most.
-
-      No image is shipped because there is no honest one to ship yet.
-      Brief §79 Reminders 01/02 leave the official brand assets and
-      photography outstanding, §55 forbids presenting placeholder people
-      as DirectHired staff or helpers, and no image tooling is available
-      here without adding a dependency. A "summary" card is correct and
-      complete with title + description alone, which this page has.
-
-      When DirectHired supplies the approved asset, this becomes a
-      three-line change: restore summary_large_image, add og:image /
-      og:image:width / og:image:height / twitter:image. It is tracked as a
-      declared item in docs/INFORMATION-REQUIRED-BEFORE-PRODUCTION.md.
+      og:image, with width and height declared. Several consumers —
+      WhatsApp among them — lay the card out before the image finishes
+      downloading, and without the dimensions they either guess or show
+      nothing until it lands. Both must match the file exactly (1200x630);
+      a wrong pair is worse than none.
     */}
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:alt" content={ogImageAlt} />
+    {/*
+      "summary_large_image", restored now that there is an image.
+
+      It was deliberately "summary" while none existed: a large-image card
+      with no og:image renders WORSE than declaring nothing, because the
+      consumer reserves a hero slot and then fills it with a blank or a
+      cropped favicon. That reasoning has expired, not been overruled —
+      the moment this page stops shipping an og:image, this must go back
+      to "summary" in the same commit.
+
+      What is shipped is an AI-generated illustration (DALL·E, prompt B1
+      in docs/design/image-prompts-2026-08-16.md), not DirectHired's own
+      photography, so §79 Reminders 01/02 are not closed by it — see
+      Category D of docs/INFORMATION-REQUIRED-BEFORE-PRODUCTION.md. It is
+      compliant with §55 because it is visibly a drawing and every figure
+      in it is faceless: it depicts a situation and claims no person. It
+      is captioned nowhere as a DirectHired family, helper or staff
+      member, and og:image:alt says "illustration" for the same reason the
+      hero's alt text does.
+    */}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={ogImageUrl} />
+    <meta name="twitter:image:alt" content={ogImageAlt} />
     <slot name="head" />
   </head>
   <body>

@@ -1,10 +1,36 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, writeFileSync, rmSync, mkdirSync, readFileSync, existsSync } from 'node:fs'
+import {
+  mkdtempSync,
+  writeFileSync,
+  rmSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  existsSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { experimental_AstroContainer as AstroContainer } from 'astro/container'
 import Tbd from '../src/components/Tbd.astro'
+
+/** Every source file under `dir`, as forward-slashed repo-relative paths. */
+function sourceFiles(dir: string): string[] {
+  return readdirSync(dir).flatMap((entry) => {
+    const full = join(dir, entry).split('\\').join('/')
+    return statSync(full).isDirectory() ? sourceFiles(full) : [full]
+  })
+}
+
+/** Comments removed, so a comment ABOUT <Tbd> does not read as a call site. */
+function stripComments(source: string): string {
+  return source
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/^\s*\/\/[^\n]*/gm, ' ')
+}
 
 let dir: string
 
@@ -167,13 +193,36 @@ describe('the TBD gate is wired into the release command', () => {
   })
 
   it('build:dev does NOT invoke the gate', () => {
-    // CI depends on this distinction (see .github/workflows/ci.yml): the
-    // gate is expected to fail while the MOM licence number is outstanding,
-    // so CI builds with build:dev. Someone "fixing" a red pipeline by
-    // adding the gate here would break it in the confusing direction —
-    // permanently red for a reason that is working as designed, inviting
-    // deletion of the placeholder or the gate to make it go away.
+    // CI depends on this distinction (see .github/workflows/ci.yml). The
+    // gate currently passes — the MOM licence <Tbd> was resolved on
+    // 2026-08-15 and there is no other call site — so `npm run build`
+    // succeeds today; the separation is kept for the NEXT outstanding
+    // value, not for this one. Someone "fixing" a red pipeline by adding
+    // the gate here would break it in the confusing direction: permanently
+    // red for a reason that is working as designed, inviting deletion of
+    // the placeholder or the gate to make it go away.
     expect(resolve('build:dev')).not.toMatch(GATE_PATTERN)
+  })
+
+  it('the gate currently has nothing to find, and is kept anyway', () => {
+    // Records the state the comments above depend on, so that it is checked
+    // rather than remembered: <Tbd> has ZERO call sites since the licence
+    // was supplied, which means Category A of the generated checklist cannot
+    // fire and this whole gate is dormant.
+    //
+    // That is correct and expected. It is asserted because three comments in
+    // this repository went on describing a gate that "fails the build on the
+    // MOM licence <Tbd>" for weeks after it stopped doing so. If a <Tbd>
+    // ever lands, this test fails and those comments get re-read — which is
+    // the point.
+    const callSites = sourceFiles('src')
+      .filter((f) => f !== 'src/components/Tbd.astro')
+      .filter((f) => /<Tbd[\s/>]/.test(stripComments(readFileSync(f, 'utf8'))))
+
+    expect(callSites).toEqual([])
+    // ...and the component and gate are still here for the next one.
+    expect(existsSync('src/components/Tbd.astro')).toBe(true)
+    expect(existsSync(GATE_SCRIPT)).toBe(true)
   })
 })
 

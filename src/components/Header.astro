@@ -1,32 +1,38 @@
 ---
 /**
- * Header — logo left, primary nav centre, CTAs right. Above the desktop
- * breakpoint (96em / 1536px — see --bp-desktop in tokens.css for why it's
- * this wide) this is the only nav surface; below it, the centre nav and
- * CTA pair are hidden in favour of <MobileNav>, which renders its own
- * toggle button here and a full-screen panel.
+ * Header — wordmark left, primary nav centre, primary CTA right. Above
+ * the desktop breakpoint (75em / 1200px — see --bp-desktop in tokens.css
+ * for the measurement behind that value) this is the only nav surface;
+ * below it, the centre nav and CTA are hidden in favour of <MobileNav>,
+ * which renders its own toggle button here and a full-screen panel.
  *
- * Conversion hierarchy (spec §6.4, controller ruling): primary "Submit
- * Your Requirements" always precedes secondary "WhatsApp Us", on every
- * surface. The primary href comes from `company.requirementFormUrl`
- * only — never hardcode it, a later test asserts that.
+ * The header carries ONE CTA, the primary. That is not a hierarchy
+ * violation: the conversion rule (spec §6.4) orders the pair on surfaces
+ * that carry BOTH — it does not require every surface to carry both.
+ * "WhatsApp Us" is still permanently on screen below the breakpoint (the
+ * fixed <MobileCtaBar>), and above it, in the mobile nav panel, the
+ * hero, pricing, the final CTA and the footer. The header's job here is
+ * to fit in one line beside seven nav labels; see the width writeup on
+ * --bp-desktop. The primary href comes from `company.requirementFormUrl`
+ * only — never hardcode it, tests/links.test.ts asserts that.
+ *
+ * The wordmark is DirectHired's real mark (src/assets/logo-wordmark.svg),
+ * inlined by Astro so it costs no request in the LCP path. It is
+ * aria-hidden; the <a> owns the accessible name.
  */
 import Container from './Container.astro'
 import Button from './Button.astro'
 import MobileNav from './MobileNav.astro'
+import Wordmark from '../assets/logo-wordmark.svg'
 import { navItems } from '../lib/nav'
 import { company } from '../data/company'
-import { defaultWhatsappUrl } from '../lib/whatsapp'
-
-const whatsappHref = defaultWhatsappUrl()
 ---
 
 <header class="site-header">
   <Container>
     <div class="header-inner">
       <a class="logo" href="/" aria-label={`${company.name} home`}>
-        <span class="logo-mark" aria-hidden="true"></span>
-        {company.name}
+        <Wordmark class="logo-wordmark" aria-hidden="true" />
       </a>
 
       <nav class="primary-nav" aria-label="Primary">
@@ -43,7 +49,6 @@ const whatsappHref = defaultWhatsappUrl()
 
       <div class="header-ctas">
         <Button variant="primary" href={company.requirementFormUrl}>Submit Your Requirements</Button>
-        <Button variant="secondary" href={whatsappHref} external>WhatsApp Us</Button>
       </div>
 
       <MobileNav />
@@ -64,30 +69,64 @@ const whatsappHref = defaultWhatsappUrl()
     display: flex;
     align-items: center;
     justify-content: space-between;
-    /* --space-4, not --space-6: part of the width-compaction fix (see
-       --bp-desktop's comment in tokens.css) — every px matters here. */
+    /* --space-4, not --space-6. Retained after the width-compaction fix
+       was otherwise unwound (see the note where the CTA padding override
+       used to be): 16px is the right optical separation between a
+       wordmark and a nav rail, and the 16px it saves is 16px of margin
+       against --bp-desktop. */
     gap: var(--space-4);
     min-height: 4.5rem;
+  }
+
+  /*
+   * flex: 0 0 auto on all three children, and this is load-bearing, not
+   * tidiness. With the default flex-shrink: 1 the flex line always "fits"
+   * by squeezing its items, so .header-inner.scrollWidth never exceeds
+   * its clientWidth — the overflow metric reads clean at every width and
+   * the header looks fine to every automated check. What actually
+   * happened when measured: at a 1040px viewport the .logo BOX shrank
+   * from 178px to 117px while the <svg> inside it, sized off its own
+   * viewBox ratio, kept painting to 178px — the wordmark rendered
+   * straight through the first nav item, with scrollWidth == clientWidth
+   * the whole time.
+   *
+   * Refusing to shrink converts that silent overlap into real overflow,
+   * which document.scrollWidth and tests/header-fit.test.ts can both
+   * see. A header that does not fit should fail loudly.
+   */
+  .logo,
+  .primary-nav,
+  .header-ctas {
+    flex: 0 0 auto;
   }
 
   .logo {
     display: inline-flex;
     align-items: center;
-    gap: var(--space-2);
-    font-family: var(--font-display);
-    font-size: var(--size-h3);
-    font-weight: var(--font-weight-medium);
-    color: var(--color-ink);
+    /* No font-family/size/colour: the wordmark is artwork now, not type.
+       It replaced a Fraunces (serif) re-typesetting of "DirectHired"
+       beside a plain teal square — the real mark is a geometric sans and
+       the square was not derived from it. */
     text-decoration: none;
-    white-space: nowrap;
   }
 
-  .logo-mark {
-    display: inline-block;
-    width: 0.6em;
-    height: 0.6em;
-    border-radius: var(--radius-sm);
-    background: var(--color-brand-teal);
+  /*
+   * 26px, not the 24px cap-equivalent of the old --size-h3 typesetting.
+   * The asset's viewBox (849 × 124) is a tight crop whose height runs
+   * from the top of the H's two dots to the wordmark baseline, so cap
+   * height is only ~0.747 of the rendered height — matching the old mark
+   * on cap height alone would have shrunk its optical presence. 26px
+   * renders 178px wide; every px here is spent against the header width
+   * budget on --bp-desktop, so re-measure if you change it.
+   *
+   * `display: block` kills the inline-baseline gap under the svg;
+   * `width: auto` lets the intrinsic viewBox ratio drive width so the
+   * mark can never be stretched.
+   */
+  .logo :global(.logo-wordmark) {
+    display: block;
+    height: 26px;
+    width: auto;
   }
 
   .primary-nav {
@@ -97,8 +136,8 @@ const whatsappHref = defaultWhatsappUrl()
   .primary-nav ul {
     display: flex;
     align-items: center;
-    /* --space-3, not --space-6: same width-compaction fix as .header-inner
-       above — 7 gaps across 8 items adds up fast. */
+    /* --space-3, not --space-6: 6 gaps across 7 items adds up fast, and
+       12px still reads as separate items at --size-body. */
     gap: var(--space-3);
   }
 
@@ -123,29 +162,24 @@ const whatsappHref = defaultWhatsappUrl()
   }
 
   /*
-   * Button.astro's default horizontal padding (--space-6, 24px/side) is
-   * generous enough that, combined with 8 nav labels, the header simply
-   * does not fit in one line until a very wide viewport (measured: without
-   * this, natural crossover is ~1695px; with it, ~1430px — see
-   * --bp-desktop in tokens.css for the full measurement writeup).
-   * Tightening just the inline padding here (not font-size, so the CTAs
-   * stay visually consistent with every other surface) buys back real
-   * width without touching Button.astro itself, which is outside this
-   * fix's scope. This alone does not make the header fit at any
-   * reasonable breakpoint — see the gap reductions below and the raised
-   * --bp-desktop — it only narrows the gap.
+   * There is deliberately NO padding-inline override on the header CTA.
+   * One used to sit here, compacting Button.astro's --space-6 (24px/side)
+   * down to --space-4 purely so a header carrying 8 nav labels and 2
+   * buttons could fit. Dropping "Home", shortening "Why DirectHired" to
+   * "Why Us" and removing the secondary CTA freed enough width that the
+   * header now fits at its normal padding, so the header's button
+   * matches every other button on the site again. Do not re-add a
+   * compaction override — if the header stops fitting, the honest fix is
+   * fewer things in it or a wider --bp-desktop.
    */
-  .header-ctas :global(.btn) {
-    padding-inline: var(--space-4);
-  }
 
-  /* 96em matches --bp-desktop in tokens.css (kept in sync by hand — see
+  /* 75em matches --bp-desktop in tokens.css (kept in sync by hand — see
      that token's long comment for the measurement behind this specific
      value; it is not a round guess). Below this, MobileNav owns
      navigation. Must match MobileNav.astro and MobileCtaBar.astro
      exactly, or a viewport range opens where neither nav surface is
-     present. */
-  @media (min-width: 96em) {
+     present. tests/header-fit.test.ts asserts all four stay in sync. */
+  @media (min-width: 75em) {
     .primary-nav {
       display: block;
     }

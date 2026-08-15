@@ -1,0 +1,174 @@
+[
+  {
+    "id": "hero-together",
+    "title": "Hero — one frame, both people in it",
+    "assetPath": "src/assets/hero-together.png",
+    "usedBy": [
+      { "file": "src/sections/Hero.astro", "line": 60, "what": "import heroTogether from '../assets/hero-together.png'" },
+      { "file": "src/sections/Hero.astro", "line": 84, "what": "<Picture — the page's LCP element; its src, widths, sizes and alt follow on the lines below" },
+      { "file": "src/sections/Hero.astro", "line": 88, "what": "widths={[440, 620, 780, 960, 1280]} — the responsive srcset Astro emits" },
+      { "file": "src/sections/Hero.astro", "line": 89, "what": "sizes=\"(min-width: 80em) calc(50vw - 24px), …\" — mirrors the four layout states in this file's own CSS; change one and you must change the other" },
+      { "file": "src/sections/Hero.astro", "line": 90, "what": "alt=\"Illustration of two adults at one kitchen counter, …\" — the alt text; must be rewritten with the asset" }
+    ],
+    "provenance": "ai-generated",
+    "sourcePrompt": "Prompt A1 (\"warm editorial illustration\", recommended) under \"Slot A — hero-together\" in docs/design/image-prompts-2026-08-16.md. Generated with DALL·E and supplied by DirectHired on 2026-08-16 as images/image_slota_prompt1.png (1402x1122 PNG, 2.2MB), which is kept as the untouched master. src/assets/hero-together.png is a byte-for-byte copy of that master, placed under src/ so astro:assets can process it; no crop or resample was applied, because 1402x1122 is 1.2496 against the 1.25 the layout wants.",
+    "renderedAt": "520x416 CSS px in the two-column grid at 64em (container 1152px, 2rem padding each side, --space-12 gap). Widens with the >=80em bleed (Hero.astro:213-219): 616x493 at a 1280px viewport, 936x749 at 1920px, 1256x1005 at 2560px. aspect-ratio is 5/4 at >=64em and 4/3 below, both CSS crops (object-fit: cover, never a squash) of one 5:4 source. Served as AVIF with a WebP fallback at 440/620/780/960/1280 CSS px: 7.4/11.3/14.9/19.5/29.1 KB as AVIF, 12.7/21.2/32.0/44.3/72.8 KB as WebP. A 1280px browser window at 1x fetches the 620w AVIF, 11,566 bytes. The 2.2MB PNG source is a build input and is never sent to a browser.",
+    "depicts": "Two adults at the same scale on the same plane, facing each other across one kitchen counter with their hands meeting over a single shared bowl, and a child standing between them with one hand raised to the counter edge. A tall grilled window on the left is the only light source. One thin bright-teal line runs along the front of the counter from frame edge to frame edge and passes behind all three figures — the logo's H crossbar restated as a room. Every figure is faceless: no eyes, no mouths, no rendered expression. Warm off-white ground, matte paper texture, no photographic cues.",
+    "replaceWith": "The Priority 1 hero frame from the shot brief (docs/design/brand-assessment-2026-08-15.md §7): one landscape frame, one room, one window light, a helper and a family member in the same ordinary domestic task, both at the same scale, both in focus, shot at eye level in a real Singapore HDB or condo interior. This illustration is a better placeholder, not the answer.",
+    "aiPermitted": true,
+    "aiForbiddenReason": null,
+    "promptSection": "Slot A — hero-together",
+    "notes": "Replaced src/assets/hero-placeholder.svg, a 4KB hand-drawn vector that cost the LCP budget almost nothing — so this swap was a real performance trade and was measured as one. Median of 3 Lighthouse runs (npx lhci autorun, the same config CI uses): LCP 1515ms before and 1663ms after, performance 1.00 and CLS 0 in both, page weight 107KB before and 121KB after, against a 2500ms LCP budget asserted in lighthouserc.json. The margin comes from AVIF plus a srcset, not from luck: shipping this PNG unprocessed would be 2.2MB. Anything that removes the <Picture>, the widths/sizes pair, loading=\"eager\" or fetchpriority=\"high\" gives that margin back."
+  },
+  {
+    "id": "og-share",
+    "title": "Social share image (Open Graph / Twitter)",
+    "assetPath": "src/assets/og-share.png",
+    "usedBy": [
+      { "file": "src/layouts/BaseLayout.astro", "line": 19, "what": "import ogSource from '../assets/og-share.png'" },
+      { "file": "src/layouts/BaseLayout.astro", "line": 46, "what": "getImage({ src: ogSource, format: 'jpeg', quality: 78 }) — JPEG on purpose; several share consumers still refuse WebP and AVIF" },
+      { "file": "src/layouts/BaseLayout.astro", "line": 47, "what": "new URL(ogImage.src, Astro.site).href — the absolute URL, built exactly the way `canonical` is" },
+      { "file": "src/layouts/BaseLayout.astro", "line": 102, "what": "<meta property=\"og:image\" content={ogImageUrl} /> — :width, :height, :type and :alt follow on the four lines below" },
+      { "file": "src/layouts/BaseLayout.astro", "line": 127, "what": "<meta name=\"twitter:card\" content=\"summary_large_image\" /> — valid only while an og:image ships; back to \"summary\" in the same commit if this image is ever removed" },
+      { "file": "src/layouts/BaseLayout.astro", "line": 128, "what": "<meta name=\"twitter:image\" content={ogImageUrl} /> — twitter:image:alt follows on the next line" }
+    ],
+    "provenance": "ai-generated",
+    "sourcePrompt": "Prompt B1 (\"the shared counter, at share-card scale\", recommended) under \"Slot B — og-share\" in docs/design/image-prompts-2026-08-16.md. Generated with DALL·E and supplied by DirectHired on 2026-08-16 as images/image_slotb_promp1.png (1730x909 PNG, 2.0MB), which is kept as the untouched master. src/assets/og-share.png is that master centre-cropped and downscaled to exactly 1200x630 (Lanczos 3): 1730x909 is 1.9032 against the 1.9048 Open Graph wants, so the crop discards about half a pixel of height and nothing else — in particular it does not touch the clear right-hand third the wordmark is meant to sit in.",
+    "renderedAt": "1200x630 (1.91:1), shipped as a ~57KB JPEG transcoded at build time by astro:assets. WhatsApp, the live conversion channel for this business, reads og:image directly and renders it at roughly 300x157 in a chat bubble. Not fetched by the page itself, so it costs the LCP budget nothing.",
+    "depicts": "One long kitchen counter seen straight on, running unbroken from edge to edge with a thin bright-teal line along its front. Two adults of the same height stand at it, leaning in over a single shared bowl with their hands together; both are faceless and neither wears a uniform. The right third is deliberately calm and near-empty — clear space left for the wordmark to be set over later in a design tool, which has not been done. Warm off-white ground so the card reads on both light and dark chat backgrounds.",
+    "replaceWith": "A DirectHired-owned share card: either a crop of the commissioned hero photograph with the wordmark set over a clear area, or a purely typographic card built from the brand assets. The current card carries no wordmark at all, which is the most visible thing it is still missing.",
+    "aiPermitted": true,
+    "aiForbiddenReason": null,
+    "promptSection": "Slot B — og-share",
+    "notes": "Shipping this restored twitter:card=\"summary_large_image\" in BaseLayout.astro, which had been held at \"summary\" precisely because no image existed. That reasoning expired rather than being overruled — the two must move together in both directions. JPEG rather than WebP/AVIF is not an oversight: this asset is fetched by crawlers, not by the browser, and the modern-format argument that governs the hero does not apply. Still tracked as a Category C declared input in scripts/generate-info-required.mjs, because an AI illustration is not DirectHired's approved brand asset."
+  },
+  {
+    "id": "helper-profile-portrait",
+    "title": "Helper profile portraits (block 10a)",
+    "assetPath": null,
+    "usedBy": [
+      { "file": "src/sections/MeetHelpers.astro", "line": 54, "what": "<section class=\"meet-helpers\"> — renders only when the helper-profiles collection is non-empty" },
+      { "file": "src/sections/MeetHelpers.astro", "line": 64, "what": "<div class=\"helper-card\"> — the profile card body, where a portrait would sit" },
+      { "file": "src/content/config.ts", "line": 87, "what": "const helperProfiles = defineCollection({ — the helper-profiles schema, which has no portrait field and must not gain one before signed releases exist" }
+    ],
+    "provenance": "none-yet",
+    "renderedAt": "Not rendered. The section is absent from the page while src/content/helper-profiles/ is empty, and the card schema has no image field.",
+    "depicts": "Nothing. No portrait is shipped, referenced, or reserved.",
+    "replaceWith": "Priority 2 of the shot brief: individual portraits of real helpers, eye level, working clothes not uniform, plain background, one consistent crop across all of them, each with a signed release obtained before the shoot in a language the subject reads fluently.",
+    "aiPermitted": false,
+    "aiForbiddenReason": "An AI-generated helper portrait is a fabricated helper. Master brief §78 forbids inventing helper details and §55 forbids presenting placeholder people as actual DirectHired helpers; a face on a profile card asserts that this specific person exists and is available. No prompt is written for this slot. It stays absent until a real, consented photograph exists.",
+    "promptSection": null,
+    "notes": "Do not pair a portrait with a nationality label even once real photographs exist (§7 of the brand assessment) — that turns a person into a category. HelperSources (block 08) already handles nationality as information."
+  },
+  {
+    "id": "review-author-portrait",
+    "title": "Reviewer / testimonial faces (block 10b)",
+    "assetPath": null,
+    "usedBy": [
+      { "file": "src/sections/Reviews.astro", "line": 49, "what": "<section class=\"reviews\"> — renders only when the reviews collection is non-empty" },
+      { "file": "src/sections/Reviews.astro", "line": 65, "what": "<figcaption class=\"review-meta\"> — the author line, where an avatar would sit" }
+    ],
+    "provenance": "none-yet",
+    "renderedAt": "Not rendered. The section is absent from the page while src/content/reviews/ is empty, and the review schema has no image field.",
+    "depicts": "Nothing. The quote wall is deliberately typographic — stars, quote, attribution line, hairline. No avatar.",
+    "replaceWith": "Nothing is required. A Google review does not need a face, and the unboxed quote wall reads as a testimonial precisely because it is not a widget with a headshot in it. If a face is ever added it must be the real reviewer's, with their written permission.",
+    "aiPermitted": false,
+    "aiForbiddenReason": "An AI face attached to a named review manufactures a customer. Master brief §78 forbids inventing testimonials, and a generated portrait beside a real quote is a fabricated attribution even when the quote itself is genuine. No prompt is written for this slot.",
+    "promptSection": null,
+    "notes": "Also do not substitute a generic silhouette, monogram or initial-avatar as a stand-in for a face — the block is already complete without one."
+  },
+  {
+    "id": "team-and-office",
+    "title": "\"Our team\" and \"our office\" imagery",
+    "assetPath": null,
+    "usedBy": [],
+    "provenance": "none-yet",
+    "renderedAt": "Not rendered. No section on the site claims to show DirectHired's staff or premises.",
+    "depicts": "Nothing.",
+    "replaceWith": "Priority 2 of the shot brief: a real corner of the actual office at working temperature, and a real consultation in progress shot from behind or side-on. Not staged, not empty, not wide-angle.",
+    "aiPermitted": false,
+    "aiForbiddenReason": "A generated office or generated staff photograph is a claim about a real, licensed business (MOM 23C1443) that is simply false. §55 and §78 both apply. This slot is registered with no consumer precisely so that the prohibition is on record before anyone adds an About block and reaches for a plausible-looking interior.",
+    "promptSection": null,
+    "notes": "Registered pre-emptively. If an About or Team block is ever built, this entry is the rule it inherits."
+  },
+  {
+    "id": "logo-wordmark",
+    "title": "DirectHired wordmark (on light grounds)",
+    "assetPath": "src/assets/logo-wordmark.svg",
+    "usedBy": [
+      { "file": "src/components/Header.astro", "line": 26, "what": "import Wordmark from '../assets/logo-wordmark.svg'" },
+      { "file": "src/components/Header.astro", "line": 35, "what": "<Wordmark class=\"logo-wordmark\" aria-hidden=\"true\" /> — rendered at 26px tall, width auto" },
+      { "file": "src/components/MobileNav.astro", "line": 35, "what": "import Wordmark from '../assets/logo-wordmark.svg'" },
+      { "file": "src/components/MobileNav.astro", "line": 60, "what": "<Wordmark class=\"panel-wordmark\" aria-hidden=\"true\" /> — rendered at 26px tall, width auto" }
+    ],
+    "provenance": "real-photo",
+    "renderedAt": "26px tall, width auto (Header.astro:126-130, MobileNav.astro:273-277). Vector, so resolution-independent.",
+    "depicts": "DirectHired's own wordmark — charcoal #4d4d4d letterforms with the teal #00a4a6 H.",
+    "replaceWith": "Nothing outstanding. This is DirectHired's asset, cropped from the vector master at logo/Logo-01.svg.",
+    "aiPermitted": false,
+    "aiForbiddenReason": "A brand mark is not a design brief. Regenerating or redrawing it produces a mark that is not DirectHired's. Extract from the vector master; never trace, never approximate, never generate.",
+    "promptSection": null,
+    "notes": "Fills are attributes rather than a <style> block on purpose — an inlined SVG <style> is document-scoped and would repaint the on-deep variant. See the file's own header comment."
+  },
+  {
+    "id": "logo-wordmark-on-deep",
+    "title": "DirectHired wordmark (on the deep teal ground)",
+    "assetPath": "src/assets/logo-wordmark-on-deep.svg",
+    "usedBy": [
+      { "file": "src/components/Footer.astro", "line": 31, "what": "import WordmarkOnDeep from '../assets/logo-wordmark-on-deep.svg'" },
+      { "file": "src/components/Footer.astro", "line": 46, "what": "<WordmarkOnDeep class=\"footer-wordmark\" aria-hidden=\"true\" /> — rendered at 32px tall, width auto" }
+    ],
+    "provenance": "real-photo",
+    "renderedAt": "32px tall, width auto (Footer.astro:151-155). Larger than the header's 26px because the footer's job is identity, not navigation.",
+    "depicts": "The same wordmark recoloured for #0E3A3B. The only variant that may appear on the deep ground.",
+    "replaceWith": "Nothing outstanding. DirectHired's own asset.",
+    "aiPermitted": false,
+    "aiForbiddenReason": "Same as logo-wordmark: a brand mark is extracted, not generated.",
+    "promptSection": null,
+    "notes": "Never use logo-wordmark.svg or logo-lockup.svg on the deep ground — see Footer.astro:138."
+  },
+  {
+    "id": "favicon-mark",
+    "title": "Favicon — the H mark alone",
+    "assetPath": "public/favicon.svg",
+    "usedBy": [
+      { "file": "src/layouts/BaseLayout.astro", "line": 78, "what": "<link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\" />" }
+    ],
+    "provenance": "real-photo",
+    "renderedAt": "Browser tab, typically 16-32px. Vector; byte-identical to src/assets/logo-mark.svg.",
+    "depicts": "The H from the wordmark — two figures joined at a crossbar — in teal #00a4a6.",
+    "replaceWith": "Nothing outstanding for the SVG. A rasterised 16/32/48 .ico is still missing and deliberately not faked; see the comment at BaseLayout.astro:57-77.",
+    "aiPermitted": false,
+    "aiForbiddenReason": "Same as logo-wordmark. The .ico, when it is made, must be rasterised from this vector — not redrawn and not generated.",
+    "promptSection": null,
+    "notes": "There is deliberately no favicon.ico and no <link> to one. A stale framework .ico behind a correct SVG is worse than no .ico at all."
+  },
+  {
+    "id": "logo-mark",
+    "title": "Mark-only lockup (source asset)",
+    "assetPath": "src/assets/logo-mark.svg",
+    "usedBy": [],
+    "provenance": "real-photo",
+    "renderedAt": "Not rendered from src/. Shipped to the browser as public/favicon.svg, which is byte-identical.",
+    "depicts": "The H mark alone, with <title> and role=\"img\" retained for standalone use.",
+    "replaceWith": "Nothing outstanding.",
+    "aiPermitted": false,
+    "aiForbiddenReason": "Brand mark — extracted from the vector master, never generated.",
+    "promptSection": null,
+    "notes": "Registered even though nothing in src/ imports it, so that a future consumer (app icon, WhatsApp display picture) reaches for this file rather than redrawing the H."
+  },
+  {
+    "id": "logo-lockup",
+    "title": "Full lockup with tagline (reference asset)",
+    "assetPath": "src/assets/logo-lockup.svg",
+    "usedBy": [],
+    "provenance": "real-photo",
+    "renderedAt": "Not rendered anywhere. The footer typesets the tagline in CSS instead — see Footer.astro:165-175 for why.",
+    "depicts": "Wordmark plus the \"Make It Easier For You\" tagline, as cropped from logo/Logo-01.svg.",
+    "replaceWith": "Nothing outstanding.",
+    "aiPermitted": false,
+    "aiForbiddenReason": "Brand mark — extracted from the vector master, never generated.",
+    "promptSection": null,
+    "notes": "Kept as the reference for the tagline's official letterforms and spacing. Do not put it on the deep ground; its fills are the light-ground charcoal."
+  }
+]

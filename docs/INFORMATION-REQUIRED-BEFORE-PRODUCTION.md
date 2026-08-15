@@ -6,15 +6,17 @@
 > npm run build:dev && node scripts/generate-info-required.mjs
 > ```
 
-Three categories, which behave differently and are tracked separately (master brief §79):
+Four categories, which behave differently and are tracked separately (master brief §79):
 
-Categories A and B are **derived** from the codebase and cannot fall out of sync with it. Category C is **declared** — see that section for why those items cannot be derived.
+Categories A, B and D are **derived** from the codebase and cannot fall out of sync with it. Category C is **declared** — see that section for why those items cannot be derived.
 
 ## Category A — Inline gaps (block the production build)
 
 A missing value on a block that still renders. Each is marked with `<Tbd>` in the source and shows up as a `data-tbd` attribute in the built HTML. `npm run build` runs `scripts/check-tbd.mjs` against `dist/` and **fails** while any of these remain — publishing a rendered block with a hole in it is a broken claim.
 
 _None found — every inline value in the current build is verified._
+
+**Read that carefully:** there are currently **0 `<Tbd>` call sites** anywhere in `src/`. The last one, the MOM licence number, was resolved on 2026-08-15. So this category is not reporting that nothing is missing — it is reporting that nothing is *marked*, which is a weaker statement. `npm run build` passes the gate today. The gate and the `<Tbd>` component are deliberately kept for the next unverified value; until one is marked, Category A cannot detect anything and Categories B, C and D carry the whole checklist.
 
 ## Category B — Whole-block omissions (do not block the production build)
 
@@ -29,21 +31,77 @@ An entire section has no backing data, so the section is absent from the page �
 
 ## Category C — Declared inputs (not derivable from the codebase)
 
-Information DirectHired still owes that leaves **no detectable trace** in the code. Categories A and B are found by scanning: A looks for `<Tbd>` markers in the built HTML, B looks for gated sections whose collection is empty. These items have neither, because the honest response to not having the information was to render *nothing* — an omitted itemisation, an unwritten paragraph, a `summary` card instead of an empty large-image one. There is no artefact left to detect.
+Information DirectHired still owes that leaves **no detectable trace** in the code. Categories A and B are found by scanning: A looks for `<Tbd>` markers in the built HTML, B looks for gated sections whose collection is empty. These items have neither, because the honest response to not having the information was to render *nothing* — an omitted itemisation, an unwritten paragraph — or, where something had to render, to render a placeholder that works. There is no artefact left to detect either way: a page that says nothing and a page carrying a stand-in both look complete to a scanner. That is precisely why these are declared by hand.
 
 They are therefore **declared** in `DECLARED_INPUTS` in `scripts/generate-info-required.mjs` — the only hand-maintained list in this document. The alternative would be sprinkling cosmetic `<Tbd>` markers onto pages purely so this script could find them, which would trade a correct page for a broken one. `npm run build` **succeeds** with these outstanding; nothing false is published.
 
-Design spec §5 names three Category A items — the MOM licence number, detailed replacement terms, and the without-replacement inclusion list. Only the first has a live `<Tbd>`; the other two appear here.
+Design spec §5 names three Category A items — the MOM licence number, detailed replacement terms, and the without-replacement inclusion list. The first was supplied on 2026-08-15 and its `<Tbd>` removed; the other two never had one and appear here.
 
 - **Detailed replacement terms and conditions**
   - Source: Brief §18 / §79 Reminder 04; design spec §5 Category A
   - Blocks: publishing any replacement language beyond the single confirmed line "1 replacement within 6 months". A replacement policy page, and any FAQ answer about what a replacement covers, cannot be written without it.
   - Handled meanwhile by: the confirmed line is the only replacement text on the site (`replacementTerm` in `src/data/pricing.ts`, rendered by `src/components/PricingCard.astro`); no conditions are stated.
-- **Without-replacement package inclusion list**
-  - Source: Brief §17; design spec §5 Category A
-  - Blocks: itemising the Fly-In Without Replacement package. The brief publishes its total ($1,252.10) but not its breakdown, so the card can show what the package costs but not what it contains.
-  - Handled meanwhile by: `TotalOnlyPackage` in `src/data/pricing.ts` has no `lineItems` property at all, which makes an invented itemisation a type error rather than an oversight. `src/components/PricingCard.astro` renders the total alone — no inclusion list, no placeholder rows.
 - **Approved social share image (Open Graph)**
   - Source: Brief §79 Reminders 01/02; §55
-  - Blocks: `og:image` / `twitter:image`, and with them the image in link previews — including WhatsApp, a secondary conversion channel for this business.
-  - Handled meanwhile by: `src/layouts/BaseLayout.astro` declares `twitter:card="summary"` rather than `summary_large_image`, so the preview is correct and complete without an image instead of reserving a hero slot it cannot fill. No placeholder imagery of people is used (§55).
+  - Blocks: nothing from rendering — a share card ships and link previews work, including in WhatsApp, a secondary conversion channel for this business. What is still outstanding is DirectHired’s **own approved** card: the one in place is an AI-generated illustration carrying no wordmark, so every link to this site currently previews unbranded.
+  - Handled meanwhile by: `src/layouts/BaseLayout.astro` ships `og:image` / `twitter:image` (with width, height, type and alt) pointing at `src/assets/og-share.png`, cropped to exactly 1200x630 and transcoded to JPEG by `astro:assets`, and declares `twitter:card="summary_large_image"` now that there is an image to fill it. The image is compliant with §55 because it is visibly a drawing and every figure in it is faceless — it depicts a situation and claims no person — and nothing captions it as a DirectHired family, helper or staff member. Its provenance is recorded as `ai-generated` in the registry and it appears in Category D below. If the image is ever removed, `twitter:card` must go back to `"summary"` in the same commit.
+
+## Category D — Images that are not DirectHired’s own
+
+Every image on the site, minus the ones that are already DirectHired’s own asset. Derived from the image provenance registry (`src/data/images.json`, typed by `src/data/images.ts`), which `tests/image-registry.test.ts` holds against the codebase: every image asset referenced under `src/` must appear in it, and no slot marked real-photo-only may carry AI provenance. `npm run build` **succeeds** with all of these outstanding — a faceless illustration and an absent block are both honest.
+
+This is the production decision list: for each entry, either supply your own photograph or keep what is there. **Usage sites** is where the swap happens. Entries marked **real photo only** are not a choice — an AI or placeholder image there would fabricate a person or a fact about the business (master brief §55 / §78), so the block stays absent until a real, consented photograph exists.
+
+- **Helper profile portraits (block 10a)** (`helper-profile-portrait`) — **real photo only**
+  - Currently: nothing shipped — the slot renders no image
+  - Depicts: Nothing. No portrait is shipped, referenced, or reserved.
+  - Rendered at: Not rendered. The section is absent from the page while src/content/helper-profiles/ is empty, and the card schema has no image field.
+  - Usage sites:
+    - `src/sections/MeetHelpers.astro:54` — <section class="meet-helpers"> — renders only when the helper-profiles collection is non-empty
+    - `src/sections/MeetHelpers.astro:64` — <div class="helper-card"> — the profile card body, where a portrait would sit
+    - `src/content/config.ts:87` — const helperProfiles = defineCollection({ — the helper-profiles schema, which has no portrait field and must not gain one before signed releases exist
+  - Should become: Priority 2 of the shot brief: individual portraits of real helpers, eye level, working clothes not uniform, plain background, one consistent crop across all of them, each with a signed release obtained before the shoot in a language the subject reads fluently.
+  - AI generation **not permitted**: An AI-generated helper portrait is a fabricated helper. Master brief §78 forbids inventing helper details and §55 forbids presenting placeholder people as actual DirectHired helpers; a face on a profile card asserts that this specific person exists and is available. No prompt is written for this slot. It stays absent until a real, consented photograph exists.
+- **Hero — one frame, both people in it** (`hero-together`)
+  - Currently: AI-generated from a prompt in `docs/design/image-prompts-2026-08-16.md` (`src/assets/hero-together.png`)
+  - Depicts: Two adults at the same scale on the same plane, facing each other across one kitchen counter with their hands meeting over a single shared bowl, and a child standing between them with one hand raised to the counter edge. A tall grilled window on the left is the only light source. One thin bright-teal line runs along the front of the counter from frame edge to frame edge and passes behind all three figures — the logo's H crossbar restated as a room. Every figure is faceless: no eyes, no mouths, no rendered expression. Warm off-white ground, matte paper texture, no photographic cues.
+  - Generated from: Prompt A1 ("warm editorial illustration", recommended) under "Slot A — hero-together" in docs/design/image-prompts-2026-08-16.md. Generated with DALL·E and supplied by DirectHired on 2026-08-16 as images/image_slota_prompt1.png (1402x1122 PNG, 2.2MB), which is kept as the untouched master. src/assets/hero-together.png is a byte-for-byte copy of that master, placed under src/ so astro:assets can process it; no crop or resample was applied, because 1402x1122 is 1.2496 against the 1.25 the layout wants.
+  - Rendered at: 520x416 CSS px in the two-column grid at 64em (container 1152px, 2rem padding each side, --space-12 gap). Widens with the >=80em bleed (Hero.astro:213-219): 616x493 at a 1280px viewport, 936x749 at 1920px, 1256x1005 at 2560px. aspect-ratio is 5/4 at >=64em and 4/3 below, both CSS crops (object-fit: cover, never a squash) of one 5:4 source. Served as AVIF with a WebP fallback at 440/620/780/960/1280 CSS px: 7.4/11.3/14.9/19.5/29.1 KB as AVIF, 12.7/21.2/32.0/44.3/72.8 KB as WebP. A 1280px browser window at 1x fetches the 620w AVIF, 11,566 bytes. The 2.2MB PNG source is a build input and is never sent to a browser.
+  - Usage sites:
+    - `src/sections/Hero.astro:60` — import heroTogether from '../assets/hero-together.png'
+    - `src/sections/Hero.astro:84` — <Picture — the page's LCP element; its src, widths, sizes and alt follow on the lines below
+    - `src/sections/Hero.astro:88` — widths={[440, 620, 780, 960, 1280]} — the responsive srcset Astro emits
+    - `src/sections/Hero.astro:89` — sizes="(min-width: 80em) calc(50vw - 24px), …" — mirrors the four layout states in this file's own CSS; change one and you must change the other
+    - `src/sections/Hero.astro:90` — alt="Illustration of two adults at one kitchen counter, …" — the alt text; must be rewritten with the asset
+  - Should become: The Priority 1 hero frame from the shot brief (docs/design/brand-assessment-2026-08-15.md §7): one landscape frame, one room, one window light, a helper and a family member in the same ordinary domestic task, both at the same scale, both in focus, shot at eye level in a real Singapore HDB or condo interior. This illustration is a better placeholder, not the answer.
+  - AI generation permitted. Prompt: **Slot A — hero-together** in `docs/design/image-prompts-2026-08-16.md`
+- **Social share image (Open Graph / Twitter)** (`og-share`)
+  - Currently: AI-generated from a prompt in `docs/design/image-prompts-2026-08-16.md` (`src/assets/og-share.png`)
+  - Depicts: One long kitchen counter seen straight on, running unbroken from edge to edge with a thin bright-teal line along its front. Two adults of the same height stand at it, leaning in over a single shared bowl with their hands together; both are faceless and neither wears a uniform. The right third is deliberately calm and near-empty — clear space left for the wordmark to be set over later in a design tool, which has not been done. Warm off-white ground so the card reads on both light and dark chat backgrounds.
+  - Generated from: Prompt B1 ("the shared counter, at share-card scale", recommended) under "Slot B — og-share" in docs/design/image-prompts-2026-08-16.md. Generated with DALL·E and supplied by DirectHired on 2026-08-16 as images/image_slotb_promp1.png (1730x909 PNG, 2.0MB), which is kept as the untouched master. src/assets/og-share.png is that master centre-cropped and downscaled to exactly 1200x630 (Lanczos 3): 1730x909 is 1.9032 against the 1.9048 Open Graph wants, so the crop discards about half a pixel of height and nothing else — in particular it does not touch the clear right-hand third the wordmark is meant to sit in.
+  - Rendered at: 1200x630 (1.91:1), shipped as a ~57KB JPEG transcoded at build time by astro:assets. WhatsApp, the live conversion channel for this business, reads og:image directly and renders it at roughly 300x157 in a chat bubble. Not fetched by the page itself, so it costs the LCP budget nothing.
+  - Usage sites:
+    - `src/layouts/BaseLayout.astro:19` — import ogSource from '../assets/og-share.png'
+    - `src/layouts/BaseLayout.astro:46` — getImage({ src: ogSource, format: 'jpeg', quality: 78 }) — JPEG on purpose; several share consumers still refuse WebP and AVIF
+    - `src/layouts/BaseLayout.astro:47` — new URL(ogImage.src, Astro.site).href — the absolute URL, built exactly the way `canonical` is
+    - `src/layouts/BaseLayout.astro:102` — <meta property="og:image" content={ogImageUrl} /> — :width, :height, :type and :alt follow on the four lines below
+    - `src/layouts/BaseLayout.astro:127` — <meta name="twitter:card" content="summary_large_image" /> — valid only while an og:image ships; back to "summary" in the same commit if this image is ever removed
+    - `src/layouts/BaseLayout.astro:128` — <meta name="twitter:image" content={ogImageUrl} /> — twitter:image:alt follows on the next line
+  - Should become: A DirectHired-owned share card: either a crop of the commissioned hero photograph with the wordmark set over a clear area, or a purely typographic card built from the brand assets. The current card carries no wordmark at all, which is the most visible thing it is still missing.
+  - AI generation permitted. Prompt: **Slot B — og-share** in `docs/design/image-prompts-2026-08-16.md`
+- **Reviewer / testimonial faces (block 10b)** (`review-author-portrait`) — **real photo only**
+  - Currently: nothing shipped — the slot renders no image
+  - Depicts: Nothing. The quote wall is deliberately typographic — stars, quote, attribution line, hairline. No avatar.
+  - Rendered at: Not rendered. The section is absent from the page while src/content/reviews/ is empty, and the review schema has no image field.
+  - Usage sites:
+    - `src/sections/Reviews.astro:49` — <section class="reviews"> — renders only when the reviews collection is non-empty
+    - `src/sections/Reviews.astro:65` — <figcaption class="review-meta"> — the author line, where an avatar would sit
+  - Should become: Nothing is required. A Google review does not need a face, and the unboxed quote wall reads as a testimonial precisely because it is not a widget with a headshot in it. If a face is ever added it must be the real reviewer's, with their written permission.
+  - AI generation **not permitted**: An AI face attached to a named review manufactures a customer. Master brief §78 forbids inventing testimonials, and a generated portrait beside a real quote is a fabricated attribution even when the quote itself is genuine. No prompt is written for this slot.
+- **"Our team" and "our office" imagery** (`team-and-office`) — **real photo only**
+  - Currently: nothing shipped — the slot renders no image
+  - Depicts: Nothing.
+  - Rendered at: Not rendered. No section on the site claims to show DirectHired's staff or premises.
+  - Usage sites: none yet — registered ahead of any consumer
+  - Should become: Priority 2 of the shot brief: a real corner of the actual office at working temperature, and a real consultation in progress shot from behind or side-on. Not staged, not empty, not wide-angle.
+  - AI generation **not permitted**: A generated office or generated staff photograph is a claim about a real, licensed business (MOM 23C1443) that is simply false. §55 and §78 both apply. This slot is registered with no consumer precisely so that the prohibition is on record before anyone adds an About block and reaches for a plausible-looking interior.

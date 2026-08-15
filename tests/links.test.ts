@@ -6,10 +6,19 @@ import { company } from '../src/data/company'
 import { navItems, legalItems } from '../src/lib/nav'
 
 // npm run build:dev (not `npm run build`) deliberately: `build` pipes through
-// scripts/check-tbd.mjs, which fails the build on the MOM licence <Tbd> by
-// design (see TrustBar.astro). That gate protects production, but it would
-// also block this suite from ever inspecting dist/ at all. build:dev is the
-// same astro build without the gate.
+// scripts/check-tbd.mjs, which fails the build while any <Tbd> placeholder is
+// still in the rendered output.
+//
+// As of 2026-08-15 the gate PASSES: DirectHired supplied the MOM licence
+// number, that <Tbd> was removed, and there is no other call site in src/, so
+// `npm run build` currently succeeds. This comment used to say the gate fails
+// on the licence <Tbd> "by design"; that stopped being true when the value
+// landed, and the sentence survived the change.
+//
+// build:dev is still the right command here, and the reason is unchanged in
+// substance: this suite must be able to inspect dist/ whether or not a future
+// <Tbd> is outstanding. Pinning it to `build` would couple the whole test
+// suite to the client's outstanding-information state.
 beforeAll(() => {
   execSync('npm run build:dev', { stdio: 'inherit' })
 }, 180_000)

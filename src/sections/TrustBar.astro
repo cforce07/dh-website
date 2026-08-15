@@ -8,6 +8,39 @@
  * brief §70 still applies to the value itself: never invent, modify or
  * substitute it, and verify against the official MOM source before
  * publication.
+ *
+ * Of the three, the licence number is the only one a visitor can check:
+ * it resolves against MOM's public register, and for a Singapore maid
+ * agency it is the credential that separates a licensed agency from the
+ * operators families are warned about. So it alone gets TrustBadge's
+ * `plate` treatment — a bordered plate around the number. The other two
+ * facts are descriptive and stay plain; giving all three a plate would
+ * make the distinction mean nothing.
+ *
+ * Deliberately NO MOM crest, seal or other government mark. Whether
+ * DirectHired may display one is a legal permission nobody in this
+ * repository holds (implementation plan D-7); a plain bordered plate
+ * around a number the agency owns is safe, an official-looking seal is
+ * not. Do not add one without MOM's usage terms in writing.
+ *
+ * "Placements", not "Helpers Placed". The number's BASIS, recorded on
+ * company.placementCount, is "500+ placements across all services since
+ * 2022" — and DirectHired's own note says that explicitly includes
+ * transfers, replacements and direct-hire processing. "Helpers Placed"
+ * reads as new placements only, which is a smaller and different claim,
+ * so putting 500+ behind it overstates the figure against its own source.
+ * Footer.astro already said "500+ placements since 2022"; the same fact
+ * was being published two ways, and this is the one that survives. Master
+ * brief §68: a number is published with the period and scope it was
+ * measured over, or not at all. The neighbouring "Established / Since
+ * 2022" badge carries the period.
+ *
+ * This bar carries the licence rather than the hero. The alternative —
+ * an eyebrow above the <h1> — was considered and dropped (D-2): the two
+ * would have put the same credential on screen twice within 600px, and
+ * the hero eyebrow would compete with a headline and lede that both
+ * work. The bar sits directly under the fold, which is where a visitor
+ * looks for exactly this.
  */
 import Container from '../components/Container.astro'
 import TrustBadge from '../components/TrustBadge.astro'
@@ -17,23 +50,47 @@ import { company } from '../data/company'
 <section class="trust-bar">
   <Container>
     <div class="trust-grid">
-      <TrustBadge label="MOM Licensed">{company.momLicence}</TrustBadge>
+      <TrustBadge label="MOM Licensed" plate>{company.momLicence}</TrustBadge>
       <TrustBadge label="Established">Since {company.foundedYear}</TrustBadge>
-      <TrustBadge label="Track Record">{company.placementCount} Helpers Placed</TrustBadge>
+      <TrustBadge label="Track Record">{company.placementCount} Placements</TrustBadge>
     </div>
   </Container>
 </section>
 
 <style>
   .trust-bar {
-    padding-block: var(--space-8);
+    /* More vertical room than the 113px strip this used to be. At
+       --space-8 the bar read as a divider that happened to have text in
+       it; the page's best asset was being set at the size of the copy it
+       sat among and in a band designed to be scrolled past. */
+    padding-block: var(--space-12);
     background: var(--color-surface-raised);
     border-block: 1px solid var(--color-border);
   }
 
   .trust-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    /*
+     * Stacked below --bp-tablet, three abreast from it up.
+     *
+     * `repeat(3, 1fr)` at every width overflowed the document below
+     * ~360px: a 1fr track is minmax(auto, 1fr), so its floor is the
+     * item's min-content width, and at 320px each column had ~75px
+     * against a "Helpers" set at --size-h3 that cannot hyphenate or
+     * wrap. The grid could not shrink to fit, so document.scrollWidth
+     * exceeded clientWidth and the whole page scrolled sideways. The
+     * fix is a column count the content actually fits into, not a
+     * smaller type size — this is the one band on the page where the
+     * type is supposed to be large.
+     */
+    grid-template-columns: 1fr;
     gap: var(--space-6);
+  }
+
+  /* 48em is --bp-tablet (tokens.css). */
+  @media (min-width: 48em) {
+    .trust-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
   }
 </style>

@@ -1,24 +1,63 @@
 ---
 /**
- * Hero — block 01. The page's only <h1>. Split composition per brief §54:
- * family on one side, helper on the other, sharing one visual language so
- * the pairing itself reads as "a better match" without saying so.
+ * Hero — block 01. The page's only <h1>.
  *
- * Imagery is placeholder abstract illustration, not photography of real
- * people — see the alt text and src/assets/hero-*.svg for why. Swap both
- * <Image> sources for real photography before launch; nothing else in
- * this section needs to change when that happens, since width/height are
- * fixed independently of the source file.
+ * ONE frame, both people in it. This replaced a split diptych — two 4:5
+ * portraits divided by a 2px --color-brand-teal seam — which both the taste
+ * audit and the brand assessment independently named as the page's loudest
+ * contradiction: the logo's H is two figures JOINED at a crossbar, and the
+ * hero took those same two figures and drew a wall between them. On a page
+ * whose proposition is "a good match works both ways", the most prominent
+ * graphic element must not mean separation. See C-22/C-23/C-24 in
+ * docs/design/implementation-plan-2026-08-16.md.
+ *
+ * Do not re-split this visual. If a second image is ever wanted here, it
+ * belongs somewhere else on the page.
+ *
+ * Imagery is a placeholder illustration, never photography of real people,
+ * and it must never be captioned or described as an actual DirectHired
+ * family, helper or staff member (master brief §55). The current file is an
+ * AI-generated editorial illustration (DALL·E, prompt A1 in
+ * docs/design/image-prompts-2026-08-16.md), supplied by DirectHired: two
+ * adults of the same size facing each other over one bowl, a child at the
+ * counter edge between them, one unbroken counter with a single thin teal
+ * line along its front running the full width of the frame. Every figure is
+ * FACELESS — no eyes, no mouths, no rendered expression — which is what keeps
+ * it a drawing of a situation rather than a claim about people. Do not
+ * replace it with anything that has faces short of a real, released
+ * photograph. Swap the <Picture> source for the commissioned photograph when
+ * it lands (shot brief: docs/design/brand-assessment-2026-08-15.md §7; this
+ * slot is `hero-together` in the image registry, src/data/images.json) and
+ * rewrite the alt text to describe that frame; nothing else here needs to
+ * change, because width/height are fixed independently of the source file
+ * and the aspect ratios are CSS.
+ *
+ * This image is the page's LCP element, and it is now a raster rather than
+ * the 4KB vector it replaced — so its weight is a budget item, not a detail:
+ *
+ *   - <Picture> so the browser gets AVIF and falls back to WebP. The 2.2MB
+ *     PNG master in src/assets/ is a build input and is never served; the
+ *     largest thing that actually ships is the 1280w AVIF at ~29KB.
+ *   - `widths` + `sizes` so a phone downloads a phone-sized file. `sizes`
+ *     mirrors the four layout states below EXACTLY — full container width,
+ *     the wider container padding at 48em, half the grid at 64em, and the
+ *     bleed formula at 80em (50vw - 24px, derived in the 80em block). If any
+ *     of those rules change, `sizes` has to change with them or the browser
+ *     silently picks the wrong file.
+ *   - 1280 is the top width on purpose: the widest real render is 1256 CSS px
+ *     at a 2560px viewport, and the source is only 1402px across, so there is
+ *     no 2x asset to be had. Asking for more would upscale, not sharpen.
+ *
+ * Keep loading="eager", fetchpriority="high" and the explicit width/height —
+ * eager and fetchpriority because this is the LCP element (it regressed to
+ * lazy once already), and the width/height pair plus the CSS aspect-ratio are
+ * what hold CLS at 0.
  */
-import { Image } from 'astro:assets'
+import { Picture } from 'astro:assets'
 import Container from '../components/Container.astro'
 import Button from '../components/Button.astro'
 import { company } from '../data/company'
-import { defaultWhatsappUrl } from '../lib/whatsapp'
-import heroFamily from '../assets/hero-family.svg'
-import heroHelper from '../assets/hero-helper.svg'
-
-const whatsappHref = defaultWhatsappUrl()
+import heroTogether from '../assets/hero-together.png'
 ---
 
 <section class="hero">
@@ -29,28 +68,28 @@ const whatsappHref = defaultWhatsappUrl()
         <p class="hero-lede">
           Every family is different. We take the time to understand your needs before recommending a helper.
         </p>
+        {/*
+          One CTA only (D-12). On a phone the hero's buttons sit directly above
+          the fixed bottom bar's two full-width buttons — four buttons, two
+          labels, one screen, and none of them reading as the decision point.
+          WhatsApp is not lost: it is permanently on screen in MobileCtaBar,
+          and also in the mobile nav panel, pricing, final CTA and footer.
+        */}
         <div class="hero-ctas">
           <Button variant="primary" href={company.requirementFormUrl}>Submit Your Requirements</Button>
-          <Button variant="secondary" href={whatsappHref} external>WhatsApp Us</Button>
         </div>
       </div>
 
       <div class="hero-visual">
-        <Image
-          src={heroFamily}
-          alt="Illustration representing a family"
-          width={640}
-          height={800}
-          class="hero-image"
-          loading="eager"
-          decoding="async"
-          fetchpriority="high"
-        />
-        <Image
-          src={heroHelper}
-          alt="Illustration representing a helper"
-          width={640}
-          height={800}
+        <Picture
+          src={heroTogether}
+          formats={['avif']}
+          fallbackFormat="webp"
+          widths={[440, 620, 780, 960, 1280]}
+          sizes="(min-width: 80em) calc(50vw - 24px), (min-width: 64em) calc((min(100vw, 72rem) - 7rem) / 2), (min-width: 48em) calc(min(100vw, 72rem) - 4rem), calc(100vw - 3rem)"
+          alt="Illustration of two adults at one kitchen counter, facing each other with their hands meeting over the same bowl, and a child reaching up to the counter between them"
+          width={1280}
+          height={1024}
           class="hero-image"
           loading="eager"
           decoding="async"
@@ -64,6 +103,15 @@ const whatsappHref = defaultWhatsappUrl()
 <style>
   .hero {
     padding-block: var(--space-12) var(--space-section);
+    /*
+     * Contains the ≥80em bleed below. `clip`, not `hidden`: `hidden` would
+     * make this a scroll container, and it would also force overflow-y to
+     * auto. `clip` leaves the vertical axis visible and, crucially, means the
+     * bleed can never produce horizontal document scroll — which is why the
+     * bleed is expressed as a negative margin rather than a bare 100vw width
+     * (100vw includes the scrollbar on Windows Chrome).
+     */
+    overflow-x: clip;
   }
 
   .hero-grid {
@@ -98,33 +146,75 @@ const whatsappHref = defaultWhatsappUrl()
     gap: var(--space-3);
   }
 
-  /*
-   * The 2px gap between the two images shows through as a seam in
-   * --color-brand-teal. This is the logo's real teal, which fails WCAG AA
-   * for text and button fills (see the token's comment in tokens.css) —
-   * legitimate here only because it is a graphic seam, not text. Never
-   * repurpose this rule as a text colour, and never widen it into a fill.
-   */
   .hero-visual {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2px;
-    background: var(--color-brand-teal);
     border-radius: var(--radius-lg);
     overflow: hidden;
     box-shadow: var(--shadow-md);
   }
 
+  /*
+   * Nothing styles the <picture> that <Picture> wraps the <img> in, on
+   * purpose: the reset in global.css gives `img, picture, svg, video`
+   * display: block, and that is what stops an inline <picture> leaving a
+   * text-baseline gap under the image — a hairline strip of page ground
+   * inside the rounded, shadowed frame above. If that reset ever loses
+   * `picture`, this frame is one of the places it will show.
+   *
+   * Landscape, because one room holding two people is a landscape problem.
+   * 4:3 while the visual is full-container-width, 5:4 once it sits in a
+   * half-width column (64em, the same breakpoint the grid splits at). The
+   * source is drawn 5:4, so the mobile ratio is a ~3% crop top and bottom —
+   * the illustration keeps everything meaningful clear of that band: the
+   * counter line, both sets of hands and the bowl all sit near the vertical
+   * centre, and object-fit: cover crops rather than squashes, so neither
+   * ratio distorts the drawing.
+   */
   .hero-image {
+    display: block;
     width: 100%;
     height: auto;
-    aspect-ratio: 4 / 5;
+    aspect-ratio: 4 / 3;
     object-fit: cover;
   }
 
+  /* 64em is --bp-wide in tokens.css (named there, with this file listed as
+     one of its three consumers alongside Process and TwoSidedMatch). Kept
+     in sync by hand — custom properties do not resolve inside an @media
+     condition. */
   @media (min-width: 64em) {
     .hero-grid {
       grid-template-columns: 1fr 1fr;
+    }
+
+    .hero-image {
+      aspect-ratio: 5 / 4;
+    }
+  }
+
+  /*
+   * 80em is --bp-xwide in tokens.css, which names this file and
+   * Process.astro as its two consumers. Hand-synced, and note that THIS
+   * FILE carries the literal twice: here, and in the first clause of the
+   * <Picture> `sizes` attribute above. Change one and you must change the
+   * other or the browser silently picks the wrong file.
+   *
+   * From here up the frame breaks the container's right edge and
+   * runs to the viewport edge, giving the page its one asymmetric axis —
+   * at 1920px every other element on the site obeys the same 1152px box with
+   * 384px of dead margin each side.
+   *
+   * The margin resolves to (viewport − container) / 2 + the container's own
+   * inline padding. 100vw counts the scrollbar, so this overshoots the true
+   * edge by roughly half a scrollbar width; `overflow-x: clip` on .hero
+   * absorbs that overshoot instead of opening a horizontal document scroll.
+   * 72rem is Container's `default` max-width; --space-8 is its padding-inline
+   * at ≥48em. Both are in Container.astro — keep in sync by hand.
+   */
+  @media (min-width: 80em) {
+    .hero-visual {
+      margin-inline-end: calc(((100vw - 72rem) / -2) - var(--space-8));
+      border-start-end-radius: 0;
+      border-end-end-radius: 0;
     }
   }
 </style>

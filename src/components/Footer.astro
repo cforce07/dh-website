@@ -18,10 +18,17 @@
  * this surface; see tokens.css for the measured contrast of each.
  *
  * Conversion hierarchy: primary "Submit Your Requirements" precedes
- * secondary "WhatsApp Us" here too, matching header/mobile nav/mobile bar.
+ * secondary "WhatsApp Us" here too, matching the mobile nav panel and
+ * the mobile bar. (The header now carries the primary alone — see its
+ * docblock.)
+ *
+ * Carries the LIGHT wordmark variant and the tagline's single appearance
+ * on the site. Both rules are load-bearing; see the comments on
+ * .footer-logo and .footer-tagline before changing either.
  */
 import Container from './Container.astro'
 import Button from './Button.astro'
+import WordmarkOnDeep from '../assets/logo-wordmark-on-deep.svg'
 import { navItems, legalItems } from '../lib/nav'
 import { company } from '../data/company'
 import { defaultWhatsappUrl } from '../lib/whatsapp'
@@ -35,7 +42,10 @@ const addressLine = `${company.address.street}, ${company.address.locality} ${co
   <Container>
     <div class="footer-top">
       <div class="footer-brand">
-        <p class="footer-logo">{company.name}</p>
+        <a class="footer-logo" href="/" aria-label={`${company.name} home`}>
+          <WordmarkOnDeep class="footer-wordmark" aria-hidden="true" />
+        </a>
+        <p class="footer-tagline">Make It Easier For You</p>
         <p class="footer-blurb">
           {company.legalDescription}. {company.placementCount} placements since {company.foundedYear}, matching
           families in Singapore with helpers they can trust.
@@ -121,9 +131,75 @@ const addressLine = `${company.address.street}, ${company.address.locality} ${co
     max-width: 32rem;
   }
 
+  /*
+   * The LIGHT wordmark variant, and this is not a preference. The
+   * standard wordmark's charcoal is #4d4d4d, which measures 1.47:1 on
+   * --color-deep (#0E3A3B) — the company's own name would be invisible
+   * here. Never use logo-wordmark.svg or logo-lockup.svg on this
+   * surface; the lockup's tagline is charcoal too.
+   */
   .footer-logo {
-    font-family: var(--font-display);
-    font-size: var(--size-h3);
+    /* Block-level flex with an intrinsic width: block so the tagline's
+       negative margin-top resolves against the wordmark itself rather
+       than an anonymous line box, max-content so the link's hit area
+       stops at the mark instead of spanning the whole column. */
+    display: flex;
+    width: max-content;
+    text-decoration: none;
+  }
+
+  .footer-logo :global(.footer-wordmark) {
+    /* 32px here, 26px in the header. The footer's job is identity, not
+       navigation, and it has the room; the header's is to fit. */
+    display: block;
+    height: 32px;
+    width: auto;
+  }
+
+  /*
+   * The tagline appears exactly ONCE on the whole site, here, and that
+   * scarcity is what makes it read as a signature rather than a slogan
+   * bolted onto every block. Do not also put it in the hero, the header
+   * or the final CTA.
+   *
+   * Typeset in CSS rather than shipped as logo-lockup.svg: that asset's
+   * tagline is charcoal (1.47:1 on this ground) and it is a fixed
+   * raster-of-vector that cannot take a colour token. --color-on-deep-muted
+   * measures 5.28:1 here — AA-clear.
+   *
+   * The string is literal because src/data/company.ts has no `tagline`
+   * field and belongs to another workstream. It is client-supplied, not
+   * invented: it is set in DirectHired's own master logo artwork
+   * (logo/Logo-01.svg, cropped to src/assets/logo-lockup.svg). When
+   * company.ts gains the field, read it from there instead.
+   */
+  .footer-tagline {
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    /*
+     * No --tracking-wide here, deliberately. That token's own contract in
+     * tokens.css scopes it to "small UPPERCASE labels (eyebrows, badges)…
+     * not body copy or headings", because 0.08em only reads correctly on
+     * caps. "Make It Easier For You" is title case, and every other user
+     * of the token on this site (.footer-heading below, .trust-label,
+     * .total-label, .match-kicker) pairs it with text-transform:
+     * uppercase. This one was tracked without being uppercased, which is
+     * the case the token says not to do. Uppercasing it instead was
+     * rejected: the tagline's setting is DirectHired's, taken from their
+     * own logo artwork, and title case is how they set it.
+     */
+    color: var(--color-on-deep-muted);
+    /*
+     * --space-1 (4px), NOT the negative margin this was first written
+     * with. A negative top margin is the normal way to tighten a tagline
+     * under a wordmark, and it is wrong here: logo-wordmark-on-deep.svg
+     * is a TIGHT CROP whose box bottom IS the wordmark's baseline, with
+     * no descender slack to pull into. Rendered, -8px put the tagline's
+     * line box 8px above the mark's bottom edge and the two collided —
+     * caught by looking at the page, not by any metric. Keep this
+     * positive, and re-check visually if the wordmark's height changes.
+     */
+    margin-top: var(--space-1);
     margin-bottom: var(--space-4);
   }
 

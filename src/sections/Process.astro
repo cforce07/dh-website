@@ -1,11 +1,14 @@
 ---
 /**
- * Process — block 05. Five steps of a personalised human consultation,
- * never framed as automated or AI-driven. Rendered as an <ol> (the steps
+ * Process — block 05. A personalised human consultation, never framed as
+ * automated or AI-driven. Rendered as an <ol> (the steps
  * are genuinely sequential, so screen reader users get that order for
  * free) with a connecting rule drawn by this section around ProcessStep's
  * typographic index markers — vertical rail on narrow viewports,
- * horizontal rule above the row from --bp-desktop up.
+ * horizontal rule above the row from --bp-xwide (80em) up. NOT
+ * --bp-desktop (75em), which is where the shell switches: this rail needs
+ * more room than the header does, and the arithmetic for why is on that
+ * media query below.
  *
  * Two wording constraints: brief §23 notes the process may still be
  * refined, so the lede says "typically" rather than asserting that EVERY
@@ -18,13 +21,13 @@ import SectionHeader from '../components/SectionHeader.astro'
 import ProcessStep from '../components/ProcessStep.astro'
 
 const steps = [
+  // Steps 1 and 2 of the brief's five ("Understand your family" /
+  // "Understand your needs") were merged into one on DirectHired's
+  // instruction, 2026-08-16. They described the same conversation, and
+  // brief §23 anticipates the process being refined.
   {
-    label: 'Understand your family',
-    description: "We start with a conversation about your household, routines, and what a helper's day-to-day would look like.",
-  },
-  {
-    label: 'Understand your needs',
-    description: 'We go deeper into the specific tasks, schedule, and expectations that matter most to you.',
+    label: 'Understand your household needs',
+    description: 'We start with a conversation about your household, your routines, and the specific tasks, schedule and expectations a helper would take on.',
   },
   {
     label: 'Recommend suitable helpers',
@@ -39,13 +42,19 @@ const steps = [
     description: 'We stay involved after the placement starts, so early questions or adjustments do not fall through the cracks.',
   },
 ]
+
+// Spelled out rather than a numeral, and derived rather than typed: the lede
+// used to say "five steps" as a literal, which is precisely what went stale
+// when two steps merged.
+const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'] as const
+const stepCount = NUMBER_WORDS[steps.length] ?? String(steps.length)
 ---
 
 <section class="process">
   <Container>
     <SectionHeader
       title="A better match starts with understanding."
-      lede="A placement typically follows five steps, built around your family rather than a shortlist."
+      lede={`A placement typically follows ${stepCount} steps, built around your family rather than a shortlist.`}
     />
 
     <ol class="process-rail">
@@ -63,6 +72,18 @@ const steps = [
 <style>
   .process {
     padding-block: var(--space-section);
+    /*
+     * The one section on the page grounded in --color-surface-teal
+     * (tokens.css): --color-brand-teal washed to 8% over --color-surface.
+     * It is here rather than anywhere else because Process is already the
+     * only block using brand teal as a graphic (the rail below), it hosts
+     * no Card, and a ground change between 05 and 06 breaks up what was
+     * otherwise a long unbroken cream run. Measured on this wash:
+     * ink 12.87:1, ink-muted 7.32:1, accent 5.54:1 — all clear AA, and
+     * asserted in tests/tokens.test.ts. One section only: a second teal
+     * ground turns a register into wallpaper.
+     */
+    background: var(--color-surface-teal);
   }
 
   .process-rail {
@@ -74,7 +95,30 @@ const steps = [
     border-left: 1.5px solid var(--color-brand-teal);
   }
 
-  @media (min-width: 64em) {
+  /*
+   * 80em (1280px), NOT --bp-wide's 64em. Re-measured after steps 1 and 2
+   * merged (`steps` above), because the original figures were taken with
+   * five: the count is derived now, but this threshold is not, so it has
+   * to be re-justified rather than assumed. At 1024px the container is
+   * 1024 - 2x--space-8 = 960px, and four steps with three --space-6 gaps
+   * take (960 - 72) / 4 = 222px each — up from 173px at five, and still
+   * only ~28 characters per line, so a 30-word description runs five
+   * lines of four words. That is not a rail, it is four narrow gutters.
+   * At 1280px each step gets (1088 - 72) / 4 = 254px and the rail reads
+   * as intended. So 80em survives the merge; it is just no longer the
+   * emphatic call it was. If a step is ever added or removed, redo this
+   * arithmetic rather than trusting the number.
+   *
+   * 80em IS a token now: --bp-xwide in tokens.css. This comment used to
+   * end "80em has no token... if a second file ever needs 80em, name it
+   * there first" — and that condition was already true as it was written.
+   * Hero.astro's image bleed had landed in a sibling workstream the same
+   * day, with its own copy of the literal and its own note saying the
+   * same thing. Neither could see the other. The token now records both
+   * consumers; the literal below is still hand-synced to it, because
+   * custom properties do not resolve inside an @media condition.
+   */
+  @media (min-width: 80em) {
     .process-rail {
       flex-direction: row;
       gap: var(--space-6);

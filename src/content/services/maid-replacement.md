@@ -1,7 +1,7 @@
 ---
 title: Maid Replacement
 slug: maid-replacement
-summary: If your placement doesn't work out, our replacement package includes 1 replacement within 6 months.
+summary: If your placement doesn’t work out, our replacement package includes 1 replacement within 6 months.
 order: 6
 ---
 

@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
+import { experimental_AstroContainer as AstroContainer } from 'astro/container'
+import type { TotalOnlyPackage } from '../src/data/pricing'
 import { packages, packageTotalCents } from '../src/data/pricing'
 import { formatSgd } from '../src/lib/money'
+import PricingCard from '../src/components/PricingCard.astro'
 
 const withReplacement = packages.find((p) => p.id === 'fly-in-with-replacement')!
 const withoutReplacement = packages.find((p) => p.id === 'fly-in-without-replacement')!
@@ -30,21 +33,129 @@ describe('fly-in with replacement', () => {
 
 describe('fly-in without replacement', () => {
   it('reports the published total', () => {
-    expect(formatSgd(packageTotalCents(withoutReplacement))).toBe('$1,252.10')
+    expect(formatSgd(packageTotalCents(withoutReplacement))).toBe('$1,140.10')
   })
 
-  it('is total-only, because the brief does not state its breakdown', () => {
-    expect(withoutReplacement.kind).toBe('total-only')
+  // Was 'total-only' while the breakdown was unknown. DirectHired supplied
+  // the real line items on 2026-08-16, so this package is now honestly
+  // itemisable and the total-only guard is no longer needed for it.
+  it('is itemised, from the breakdown DirectHired supplied', () => {
+    expect(withoutReplacement.kind).toBe('itemised')
   })
 
-  it('has no replacement term', () => {
-    expect(withoutReplacement.replacementTerm).toBeNull()
+  // Label/amount pairs, not labels alone: a transposition would preserve the
+  // total and the label order while publishing wrong per-item amounts.
+  it('carries the supplied line items exactly', () => {
+    if (withoutReplacement.kind !== 'itemised') throw new Error('unreachable')
+    expect(withoutReplacement.lineItems).toEqual([
+      { label: 'Agent fees', amountCents: 38800 },
+      { label: 'MOM', amountCents: 7000 },
+      { label: 'Insurance', amountCents: 42510 },
+      { label: 'SIP', amountCents: 7700 },
+      { label: 'Medical', amountCents: 6000 },
+      { label: 'Handling & transport', amountCents: 12000 },
+    ])
+  })
+
+  // States the absence rather than leaving it null. A null rendered nothing,
+  // so the one difference a visitor is comparing was communicated by a gap
+  // where the other card has a line.
+  it('states that no replacement is included, rather than saying nothing', () => {
+    expect(withoutReplacement.replacementTerm).toBe('No replacement')
+  })
+
+  it('does not promise a replacement it excludes', () => {
+    expect(withoutReplacement.replacementTerm).not.toMatch(/within|\d+\s*month/i)
   })
 })
 
 describe('the two packages', () => {
-  it('differ by the documented $388', () => {
+  // $500, not the $388 the master brief describes: the brief's
+  // without-replacement total ($1,252.10) was stale. The real gap is the
+  // agent fee, $888 against $388.
+  it('differ by $500 — the agent fee, and nothing else', () => {
     const difference = packageTotalCents(withReplacement) - packageTotalCents(withoutReplacement)
-    expect(formatSgd(difference)).toBe('$388.00')
+    expect(formatSgd(difference)).toBe('$500.00')
+  })
+
+  // Labels as well as amounts. Comparing amounts alone is how the two cards
+  // came to show "Handling & transport" and "Transport" for the same $120 —
+  // identical prices reading as different line items in a side-by-side
+  // comparison.
+  it('differ only in the agent fee — every other line item is identical, label included', () => {
+    if (withReplacement.kind !== 'itemised' || withoutReplacement.kind !== 'itemised') {
+      throw new Error('unreachable')
+    }
+    const strip = (p: typeof withReplacement) =>
+      p.lineItems.filter((i) => i.label !== 'Agent fees')
+    expect(strip(withoutReplacement)).toEqual(strip(withReplacement))
+  })
+})
+
+describe('TotalOnlyPackage — the guard against an invented breakdown', () => {
+  /*
+   * Both shipped packages are itemised as of 2026-08-16, so `TotalOnlyPackage`
+   * has ZERO instances in src/. That left the whole mechanism unexercised:
+   * `packageTotalCents`'s non-itemised branch, PricingCard's total-only
+   * branch, and the `.total-only` CSS rule were all dead, and both files
+   * describe that mechanism as the thing making a fabricated breakdown "a
+   * type error". A guarantee nothing runs is a guarantee nobody has checked.
+   *
+   * This fixture is the missing instance. It is a TEST fixture and must never
+   * be added to `packages` — it is not DirectHired's pricing, and inventing a
+   * package is exactly the master brief §78 violation the type exists to make
+   * impossible. It is here so that the next real package with an unpublished
+   * breakdown finds the path already working.
+   */
+  const totalOnly: TotalOnlyPackage = {
+    kind: 'total-only',
+    id: 'fixture-total-only',
+    name: 'Fixture Package',
+    totalCents: 123456,
+    replacementTerm: null,
+  }
+
+  it('has no lineItems property at all — the structural reason a guess cannot be written', () => {
+    // Not `lineItems: undefined`, not an empty array. The property is absent
+    // from the type, so `pkg.lineItems` outside the `kind === 'itemised'`
+    // narrowing does not compile.
+    expect('lineItems' in totalOnly).toBe(false)
+    // @ts-expect-error `lineItems` does not exist on TotalOnlyPackage. This
+    // line is the compile-time half of the claim both src/data/pricing.ts and
+    // src/components/PricingCard.astro make in prose; if the union is ever
+    // flattened so that a total-only package silently accepts line items,
+    // this stops being an error and a typecheck fails here.
+    expect(totalOnly.lineItems).toBeUndefined()
+  })
+
+  it('reports its stated total rather than summing anything', () => {
+    // packageTotalCents' second branch, which no shipped package reaches.
+    expect(packageTotalCents(totalOnly)).toBe(123456)
+    expect(formatSgd(packageTotalCents(totalOnly))).toBe('$1,234.56')
+  })
+
+  it('renders as a total with no breakdown, and nothing invented in its place', async () => {
+    const container = await AstroContainer.create()
+    const html = await container.renderToString(PricingCard, { props: { pkg: totalOnly } })
+
+    expect(html).toContain('$1,234.56')
+    // The empty space where a breakdown would be stays empty. No <ul> of
+    // line items, and no "breakdown unavailable" copy standing in for one.
+    expect(html).not.toMatch(/<ul[^>]*class="[^"]*line-items/)
+    expect(html).not.toContain('Agent fees')
+    // ...and the branch that draws it is the total-only one, so the
+    // `.total-only` rule in PricingCard.astro has an element to match.
+    expect(html).toMatch(/class="[^"]*\btotal-only\b/)
+  })
+
+  it('still renders every line item when the package IS itemised (the other branch)', async () => {
+    const container = await AstroContainer.create()
+    const html = await container.renderToString(PricingCard, {
+      props: { pkg: packages.find((p) => p.id === 'fly-in-with-replacement') },
+    })
+
+    expect(html).toContain('Agent fees')
+    expect(html).toContain('$1,640.10')
+    expect(html).not.toMatch(/class="[^"]*\btotal-only\b/)
   })
 })

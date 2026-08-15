@@ -7,10 +7,21 @@
  * Same slug caveat as HelperSources: read `service.slug`, not
  * `service.data.slug` (src/content/config.ts:35-42).
  *
- * Deliberately not a repeat of HelperSources' card composition (flag +
- * body + "Learn more" link) — the whole title is the link here, and there
- * is no secondary link element, so two consecutive card grids don't read
- * as the same block twice.
+ * The whole title is the link, and there is no secondary "Learn more"
+ * element — six links reading "Learn more" would give a screen reader six
+ * identical accessible names pointing at six different pages. The same
+ * reasoning, with the Lighthouse `link-text` measurement behind it, is
+ * written out in HelperSources.astro.
+ *
+ * This used to be justified instead as "deliberately not a repeat of
+ * HelperSources' card composition (flag + body + 'Learn more' link)".
+ * There is no such composition to differ from any more: HelperSources
+ * (block 08) stopped being a card grid on 2026-08-16 and is now a divided
+ * row of linked names, with `flag` and `summary` deleted from its schema.
+ * The "two consecutive card grids reading as the same block twice" risk
+ * that sentence was written against is gone with it, so the title-as-link
+ * now stands on the accessibility reason above rather than on contrast
+ * with a neighbour.
  */
 import { getCollection } from 'astro:content'
 import Container from '../components/Container.astro'
@@ -54,7 +65,14 @@ const services = (await getCollection('services')).sort((a, b) => a.data.order -
 
   .services-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    /* Explicit counts, not `repeat(auto-fit, minmax(15rem, 1fr))`.
+       auto-fit derives its column count from available width with no
+       knowledge of how many items there are: at >=1280px it resolved to
+       four columns, so six services rendered 4 + 2 with two visibly
+       empty cells, and each card's content box fell to ~205px — five to
+       seven line wraps of three or four words. 2-up then 3-up divides
+       six exactly and holds the measure. */
+    grid-template-columns: 1fr;
     gap: var(--space-6);
     margin-top: var(--space-12);
   }
@@ -82,5 +100,19 @@ const services = (await getCollection('services')).sort((a, b) => a.data.order -
 
   .service-card:hover .service-title {
     color: var(--color-accent);
+  }
+
+  /* 48em is --bp-tablet, 64em is --bp-wide (tokens.css). Six services
+     divide exactly by both, so no row ever ends in an empty cell. */
+  @media (min-width: 48em) {
+    .services-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (min-width: 64em) {
+    .services-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
   }
 </style>

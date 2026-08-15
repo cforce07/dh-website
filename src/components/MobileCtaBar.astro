@@ -1,11 +1,15 @@
 ---
 /**
  * MobileCtaBar — fixed bottom bar, visible only below --bp-desktop
- * (96em / 1536px, tokens.css — raised from an original 64em; see the
- * token's comment for the real-browser measurement behind that change)
+ * (75em / 1200px, tokens.css — lowered from 96em/1536px after the header
+ * was trimmed and re-measured; see the token's comment for the writeup)
  * — the same breakpoint Header.astro and MobileNav.astro switch on; the
  * max-width query below must keep using the literal in sync with theirs.
- * Carries both CTAs, primary given visual weight via flex-grow.
+ * Carries both CTAs, primary given visual weight via flex-grow. Below
+ * the breakpoint this bar is the ONLY place "WhatsApp Us" is
+ * permanently on screen — the header's secondary CTA was removed — so
+ * do not remove a button from it to reclaim height (see the stacked
+ * layout note at the bottom of this file).
  *
  * It must never occlude content: `--mobile-bar-height` is the single
  * source both this bar's min-height and the global `body` bottom padding
@@ -41,10 +45,22 @@ const whatsappHref = defaultWhatsappUrl()
   .mobile-cta-bar :global(.btn) {
     flex: 1;
     /*
-     * Compaction, same technique as Header.astro's CTA override: default
-     * padding (--space-6, 24px/side) makes both buttons wider than they
-     * need to be. Reduces how narrow the row layout below needs to get
-     * before falling back to the stacked layout at --bp-cta-bar-stack.
+     * Compaction: Button.astro's default padding (--space-6, 24px/side)
+     * makes both buttons wider than they need to be here. Reduces how
+     * narrow the row layout has to get before falling back to the stacked
+     * layout at 26em below (there is no --bp-cta-bar-stack token; the
+     * literal lives in this file only).
+     *
+     * This is now the ONLY compaction override on the site. It used to say
+     * "same technique as Header.astro's CTA override" — Header's override
+     * was deleted when the nav trim freed enough width, and Header.astro
+     * now carries a comment expressly forbidding its return ("if the
+     * header stops fitting, the honest fix is fewer things in it or a
+     * wider --bp-desktop"). That reasoning is about the header, not about
+     * this bar: this bar has two full-width buttons in a fixed strip on a
+     * phone, where there is no "fewer things" left to cut — R-7 already
+     * rejected dropping WhatsApp below 416px. So the override stays here
+     * and must not be read as licence to re-add one there.
      */
     padding-inline: var(--space-4);
   }
@@ -53,10 +69,10 @@ const whatsappHref = defaultWhatsappUrl()
     flex: 1.4;
   }
 
-  /* 95.99em, one hair below --bp-desktop (96em), so this query and
-     Header/MobileNav's `min-width: 96em` never both match at once.
+  /* 74.99em, one hair below --bp-desktop (75em), so this query and
+     Header/MobileNav's `min-width: 75em` never both match at once.
      Must match Header.astro and MobileNav.astro exactly. */
-  @media (max-width: 95.99em) {
+  @media (max-width: 74.99em) {
     :global(body) {
       padding-bottom: calc(var(--mobile-bar-height) + env(safe-area-inset-bottom));
     }
@@ -105,14 +121,46 @@ const whatsappHref = defaultWhatsappUrl()
    */
   @media (max-width: 26em) {
     :global(:root) {
-      /* Measured natural height at 320/375px: 136px (8.5rem) exactly.
-         9rem (144px) keeps the same deliberate buffer as the default
-         value above, rather than shipping a floor with zero margin. */
-      --mobile-bar-height: 9rem;
+      /* 7rem (112px), was 9rem (144px). 144px was ~22% of an iPhone SE's
+         667px viewport, permanently occluded, on the cheapest and
+         narrowest devices this site serves; 112px is ~17%.
+
+         Measured natural height (min-height forced to 0, real Chrome,
+         320px and 375px): 106px — two buttons at 40px and 42px, one
+         8px gap, 8px of padding top and bottom. 112px keeps a 6px
+         buffer, the same deliberate margin as the 4.75rem default above
+         (measured natural 66px). Do not set this to the measured height:
+         a floor with zero margin is how this bar starts occluding the
+         content it sits over.
+
+         env(safe-area-inset-bottom) is added on top of this value by
+         BOTH the bar's padding-bottom and body's padding-bottom, so
+         home-indicator devices stay in sync automatically. */
+      --mobile-bar-height: 7rem;
     }
 
     .mobile-cta-bar {
       flex-direction: column;
+      /*
+       * Height is reclaimed from the bar's own chrome, not from the
+       * buttons' hit areas and not by removing a button. Both of those
+       * were considered and rejected: WhatsApp is this business's live
+       * conversion channel and sub-416px is precisely the segment least
+       * likely to complete a web form (the header's secondary CTA is
+       * already gone, so this bar is the only place it stays on screen);
+       * and the buttons are 40/42px tall, already under the 44px
+       * comfortable touch target, so shrinking them to buy pixels makes
+       * the narrowest devices worse in exchange for the pixels.
+       *
+       * --space-2 (8px) instead of --space-3 (12px) on the bar's own
+       * padding-block and on the gap between the stacked buttons: 4px
+       * top + 4px bottom + 4px between = 12px, with the buttons
+       * untouched. Measured natural height at 320 and 375px after this:
+       * 106px; --mobile-bar-height above is set to 112px over it.
+       */
+      gap: var(--space-2);
+      padding-block: var(--space-2);
+      padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom));
     }
   }
 </style>

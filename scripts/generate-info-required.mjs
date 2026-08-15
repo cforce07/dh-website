@@ -21,13 +21,31 @@
  *   Information DirectHired still owes that leaves NO trace to detect:
  *   the code's honest response to not having it was to render nothing at
  *   all (PricingCard omits the without-replacement itemisation entirely;
- *   BaseLayout ships a "summary" card rather than an empty large-image
- *   one; no page writes replacement terms beyond the one confirmed line).
+ *   no page writes replacement terms beyond the one confirmed line) — or,
+ *   where something had to render, to render a working placeholder (the
+ *   share card is an AI illustration, not DirectHired's approved asset).
  *   Absence of an artefact is exactly what makes these undetectable —
  *   deriving them would require adding cosmetic <Tbd>s to pages purely so
  *   this script could find them, which would trade a correct page for a
  *   broken one. So they are declared in DECLARED_INPUTS below, and the
  *   generated document labels them as declared rather than derived.
+ *
+ *   Category D — images whose provenance is not `real-photo`, derived from
+ *   the image provenance registry (`src/data/images.json`, typed by
+ *   `src/data/images.ts`). Images are their own category because the
+ *   decision they need is different in kind: A, B and C are missing
+ *   *information*, while every entry here is a rendered thing that already
+ *   works — an illustration standing in for a photograph, or a slot
+ *   deliberately left empty.
+ *   Nothing here blocks the build. What the client needs at production is
+ *   not "what is missing" but "which pictures are not mine, and where does
+ *   each one live", which is why every entry prints its usage sites.
+ *
+ *   Derived, not declared: the registry is asserted against the codebase by
+ *   tests/image-registry.test.ts (every image asset referenced under src/
+ *   must appear in it, and no real-photo-only slot may carry AI
+ *   provenance), so it cannot quietly fall out of step the way a
+ *   hand-written list would.
  *
  *   Without this category the checklist under-reported: design spec §5
  *   names three Category A items (MOM licence number, detailed
@@ -48,9 +66,11 @@
  *   npm run build:dev && node scripts/generate-info-required.mjs
  *
  * (build:dev, not build — Category A's own source data is the *build
- * output*, and `npm run build` would refuse to produce one while the MOM
- * licence <Tbd> is unresolved. build:dev is the same astro build without
- * that gate.)
+ * output*, and `npm run build` refuses to produce one while any <Tbd> is
+ * unresolved. build:dev is the same astro build without that gate. The
+ * MOM licence <Tbd> that used to trigger this was resolved on 2026-08-15
+ * and `npm run build` succeeds today; the distinction is kept because
+ * this script must be runnable whether or not a <Tbd> is outstanding.)
  */
 import { readdirSync, readFileSync, statSync, writeFileSync, existsSync } from 'node:fs'
 import { join, relative } from 'node:path'
@@ -58,6 +78,7 @@ import { join, relative } from 'node:path'
 const DIST_DIR = 'dist'
 const SECTIONS_DIR = 'src/sections'
 const CONTENT_DIR = 'src/content'
+const IMAGE_REGISTRY_PATH = 'src/data/images.json'
 const OUTPUT_PATH = 'docs/INFORMATION-REQUIRED-BEFORE-PRODUCTION.md'
 
 // Same two patterns as scripts/check-tbd.mjs (kept in sync deliberately —
@@ -88,30 +109,59 @@ const DECLARED_INPUTS = [
       'in `src/data/pricing.ts`, rendered by `src/components/PricingCard.astro`); ' +
       'no conditions are stated.',
   },
-  {
-    item: 'Without-replacement package inclusion list',
-    source: 'Brief §17; design spec §5 Category A',
-    blocks:
-      'itemising the Fly-In Without Replacement package. The brief publishes its ' +
-      'total ($1,252.10) but not its breakdown, so the card can show what the ' +
-      'package costs but not what it contains.',
-    handledBy:
-      '`TotalOnlyPackage` in `src/data/pricing.ts` has no `lineItems` property at ' +
-      'all, which makes an invented itemisation a type error rather than an ' +
-      'oversight. `src/components/PricingCard.astro` renders the total alone — no ' +
-      'inclusion list, no placeholder rows.',
-  },
+  // RESOLVED 2026-08-16 — DirectHired supplied the breakdown, which also
+  // corrected the total from $1,252.10 to $1,140.10. The package is now
+  // `itemised` in src/data/pricing.ts and renders its six line items.
+  //
+  // `TotalOnlyPackage` is deliberately kept in the type union even though
+  // nothing uses it: it is what makes an invented itemisation a type error
+  // rather than an oversight, and the next package with an unknown
+  // breakdown should reach for it rather than guessing.
+  //
+  // NOT AN ENTRY, and deliberately so: "one distinguishing fact per helper
+  // source" (implementation plan D-5, C-62) was going to be added here.
+  // DirectHired answered it on 2026-08-16 before it ever landed — there is
+  // no real difference between Indonesia, Myanmar and Mizoram. Same
+  // service, same package, same matching process; only the source country
+  // differs. There is therefore nothing outstanding to declare: the three
+  // `summary` fields are gone for good (src/content/config.ts) and
+  // HelperSources.astro states the equivalence once instead. Recorded here
+  // so nobody re-opens a question that has an answer.
+  //
+  // NOT resolved as of 2026-08-16, and deliberately not deleted.
+  //
+  // A share image now ships, so the *mechanism* is done: BaseLayout.astro
+  // declares og:image with dimensions and carries twitter:card back up to
+  // summary_large_image. But what it ships is an AI-generated illustration,
+  // and the input this entry has always asked for is an *approved* card —
+  // DirectHired's own asset, with their wordmark on it. Those are not the
+  // same thing, and closing the item because a placeholder renders would be
+  // exactly the quiet drift the generated checklist exists to prevent.
+  //
+  // What changed is the consequence, not the status: while nothing shipped,
+  // the gap cost the business a blank link preview in WhatsApp. Now it costs
+  // an unbranded one. Resolve this only when the file at
+  // `src/assets/og-share.png` is replaced by DirectHired's own card.
   {
     item: 'Approved social share image (Open Graph)',
     source: 'Brief §79 Reminders 01/02; §55',
     blocks:
-      '`og:image` / `twitter:image`, and with them the image in link previews — ' +
-      'including WhatsApp, a secondary conversion channel for this business.',
+      'nothing from rendering — a share card ships and link previews work, including ' +
+      'in WhatsApp, a secondary conversion channel for this business. What is still ' +
+      'outstanding is DirectHired’s **own approved** card: the one in place is an ' +
+      'AI-generated illustration carrying no wordmark, so every link to this site ' +
+      'currently previews unbranded.',
     handledBy:
-      '`src/layouts/BaseLayout.astro` declares `twitter:card="summary"` rather than ' +
-      '`summary_large_image`, so the preview is correct and complete without an ' +
-      'image instead of reserving a hero slot it cannot fill. No placeholder ' +
-      'imagery of people is used (§55).',
+      '`src/layouts/BaseLayout.astro` ships `og:image` / `twitter:image` (with width, ' +
+      'height, type and alt) pointing at `src/assets/og-share.png`, cropped to exactly ' +
+      '1200x630 and transcoded to JPEG by `astro:assets`, and declares ' +
+      '`twitter:card="summary_large_image"` now that there is an image to fill it. ' +
+      'The image is compliant with §55 because it is visibly a drawing and every ' +
+      'figure in it is faceless — it depicts a situation and claims no person — and ' +
+      'nothing captions it as a DirectHired family, helper or staff member. Its ' +
+      'provenance is recorded as `ai-generated` in the registry and it appears in ' +
+      'Category D below. If the image is ever removed, `twitter:card` must go back ' +
+      'to `"summary"` in the same commit.',
   },
 ]
 
@@ -121,6 +171,36 @@ function htmlFiles(dir) {
     if (statSync(full).isDirectory()) return htmlFiles(full)
     return full.endsWith('.html') ? [full] : []
   })
+}
+
+/**
+ * Every place in src/ that actually renders a <Tbd>, excluding the component
+ * itself and any comment that merely mentions it.
+ *
+ * Derived rather than stated: Category A's "none found" line is only honest
+ * if the reader is told whether that means "nothing missing" or "nothing
+ * marked". Since the MOM licence number landed it has meant the latter, and a
+ * hand-written sentence saying so would go stale the moment a <Tbd> returns.
+ */
+function tbdCallSites() {
+  const walk = (dir) =>
+    readdirSync(dir).flatMap((entry) => {
+      const full = join(dir, entry)
+      if (statSync(full).isDirectory()) return walk(full)
+      return [full]
+    })
+
+  const stripComments = (source) =>
+    source
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/<!--[\s\S]*?-->/g, ' ')
+      .replace(/^\s*\/\/[^\n]*/gm, ' ')
+
+  return walk('src')
+    .map((f) => f.split('\\').join('/'))
+    .filter((f) => f !== 'src/components/Tbd.astro')
+    .filter((f) => /<Tbd[\s/>]/.test(stripComments(readFileSync(f, 'utf8'))))
 }
 
 function findCategoryA() {
@@ -203,7 +283,38 @@ function findCategoryB() {
   return empty.sort((a, b) => a.collection.localeCompare(b.collection))
 }
 
-function renderMarkdown(categoryA, categoryB, categoryC) {
+/**
+ * Category D. Read straight from the registry JSON rather than the typed
+ * module beside it: this script is plain Node (CI runs Node 20, which cannot
+ * strip TypeScript), so the JSON is the file both readers share.
+ * `src/data/images.ts` is the typed view for everything inside the Astro
+ * project; the shapes are asserted together in tests/image-registry.test.ts.
+ */
+function findCategoryD() {
+  if (!existsSync(IMAGE_REGISTRY_PATH)) {
+    console.error(
+      `\nNo "${IMAGE_REGISTRY_PATH}" found. The image registry is a required input —\n` +
+        'restore it rather than removing this category, or the checklist silently\n' +
+        'stops reporting which images are not DirectHired’s own.\n',
+    )
+    process.exit(1)
+  }
+
+  const slots = JSON.parse(readFileSync(IMAGE_REGISTRY_PATH, 'utf8'))
+
+  return slots
+    .filter((slot) => slot.provenance !== 'real-photo')
+    .sort((a, b) => a.id.localeCompare(b.id))
+}
+
+const PROVENANCE_LABEL = {
+  'hand-svg': 'hand-drawn SVG placeholder in this repo',
+  'ai-generated': 'AI-generated from a prompt in `docs/design/image-prompts-2026-08-16.md`',
+  'real-photo': 'DirectHired’s own verified asset',
+  'none-yet': 'nothing shipped — the slot renders no image',
+}
+
+function renderMarkdown(categoryA, categoryB, categoryC, categoryD) {
   const lines = []
 
   lines.push('# DirectHired — Information Required Before Production')
@@ -218,11 +329,11 @@ function renderMarkdown(categoryA, categoryB, categoryC) {
   lines.push('> ```')
   lines.push('')
   lines.push(
-    'Three categories, which behave differently and are tracked separately (master brief §79):',
+    'Four categories, which behave differently and are tracked separately (master brief §79):',
   )
   lines.push('')
   lines.push(
-    'Categories A and B are **derived** from the codebase and cannot fall out of sync with it. ' +
+    'Categories A, B and D are **derived** from the codebase and cannot fall out of sync with it. ' +
       'Category C is **declared** — see that section for why those items cannot be derived.',
   )
   lines.push('')
@@ -239,6 +350,16 @@ function renderMarkdown(categoryA, categoryB, categoryC) {
 
   if (categoryA.length === 0) {
     lines.push('_None found — every inline value in the current build is verified._')
+    lines.push('')
+    lines.push(
+      `**Read that carefully:** there are currently **${tbdCallSites().length} \`<Tbd>\` call sites** ` +
+        'anywhere in `src/`. The last one, the MOM licence number, was resolved on 2026-08-15. ' +
+        'So this category is not reporting that nothing is missing — it is reporting that ' +
+        'nothing is *marked*, which is a weaker statement. `npm run build` passes the gate ' +
+        'today. The gate and the `<Tbd>` component are deliberately kept for the next ' +
+        'unverified value; until one is marked, Category A cannot detect anything and ' +
+        'Categories B, C and D carry the whole checklist.',
+    )
   } else {
     for (const { item, files } of categoryA) {
       lines.push(`- **${item}**`)
@@ -279,8 +400,10 @@ function renderMarkdown(categoryA, categoryB, categoryC) {
       'Categories A and B are found by scanning: A looks for `<Tbd>` markers in the built ' +
       'HTML, B looks for gated sections whose collection is empty. These items have neither, ' +
       'because the honest response to not having the information was to render *nothing* — ' +
-      'an omitted itemisation, an unwritten paragraph, a `summary` card instead of an empty ' +
-      'large-image one. There is no artefact left to detect.',
+      'an omitted itemisation, an unwritten paragraph — or, where something had to render, ' +
+      'to render a placeholder that works. There is no artefact left to detect either way: ' +
+      'a page that says nothing and a page carrying a stand-in both look complete to a ' +
+      'scanner. That is precisely why these are declared by hand.',
   )
   lines.push('')
   lines.push(
@@ -293,8 +416,8 @@ function renderMarkdown(categoryA, categoryB, categoryC) {
   lines.push('')
   lines.push(
     'Design spec §5 names three Category A items — the MOM licence number, detailed ' +
-      'replacement terms, and the without-replacement inclusion list. Only the first has a ' +
-      'live `<Tbd>`; the other two appear here.',
+      'replacement terms, and the without-replacement inclusion list. The first was supplied ' +
+      'on 2026-08-15 and its `<Tbd>` removed; the other two never had one and appear here.',
   )
   lines.push('')
 
@@ -310,13 +433,70 @@ function renderMarkdown(categoryA, categoryB, categoryC) {
   }
   lines.push('')
 
+  lines.push('## Category D — Images that are not DirectHired’s own')
+  lines.push('')
+  lines.push(
+    'Every image on the site, minus the ones that are already DirectHired’s own asset. Derived ' +
+      'from the image provenance registry (`src/data/images.json`, typed by `src/data/images.ts`), ' +
+      'which `tests/image-registry.test.ts` holds against the codebase: every image asset ' +
+      'referenced under `src/` must appear in it, and no slot marked real-photo-only may carry AI ' +
+      'provenance. `npm run build` **succeeds** with all of these outstanding — a faceless ' +
+      'illustration and an absent block are both honest.',
+  )
+  lines.push('')
+  lines.push(
+    'This is the production decision list: for each entry, either supply your own photograph or ' +
+      'keep what is there. **Usage sites** is where the swap happens. Entries marked ' +
+      '**real photo only** are not a choice — an AI or placeholder image there would fabricate a ' +
+      'person or a fact about the business (master brief §55 / §78), so the block stays absent ' +
+      'until a real, consented photograph exists.',
+  )
+  lines.push('')
+
+  if (categoryD.length === 0) {
+    lines.push('_None — every registered image is DirectHired’s own asset._')
+  } else {
+    for (const slot of categoryD) {
+      const flag = slot.aiPermitted ? '' : ' — **real photo only**'
+      lines.push(`- **${slot.title}** (\`${slot.id}\`)${flag}`)
+      lines.push(
+        `  - Currently: ${PROVENANCE_LABEL[slot.provenance] ?? slot.provenance}` +
+          (slot.assetPath ? ` (\`${slot.assetPath}\`)` : ''),
+      )
+      lines.push(`  - Depicts: ${slot.depicts}`)
+      if (slot.sourcePrompt) {
+        lines.push(`  - Generated from: ${slot.sourcePrompt}`)
+      }
+      lines.push(`  - Rendered at: ${slot.renderedAt}`)
+      if (slot.usedBy.length === 0) {
+        lines.push('  - Usage sites: none yet — registered ahead of any consumer')
+      } else {
+        lines.push('  - Usage sites:')
+        for (const use of slot.usedBy) {
+          lines.push(`    - \`${use.file}:${use.line}\` — ${use.what}`)
+        }
+      }
+      lines.push(`  - Should become: ${slot.replaceWith}`)
+      if (slot.aiPermitted) {
+        lines.push(
+          `  - AI generation permitted. Prompt: **${slot.promptSection}** in ` +
+            '`docs/design/image-prompts-2026-08-16.md`',
+        )
+      } else {
+        lines.push(`  - AI generation **not permitted**: ${slot.aiForbiddenReason}`)
+      }
+    }
+  }
+  lines.push('')
+
   return lines.join('\n')
 }
 
 const categoryA = findCategoryA()
 const categoryB = findCategoryB()
 const categoryC = DECLARED_INPUTS
-const markdown = renderMarkdown(categoryA, categoryB, categoryC)
+const categoryD = findCategoryD()
+const markdown = renderMarkdown(categoryA, categoryB, categoryC, categoryD)
 
 writeFileSync(OUTPUT_PATH, markdown)
 
@@ -324,3 +504,4 @@ console.log(`Wrote ${OUTPUT_PATH}`)
 console.log(`  Category A (inline gaps, block the build): ${categoryA.length}`)
 console.log(`  Category B (whole-block omissions, do not block the build): ${categoryB.length}`)
 console.log(`  Category C (declared, not derivable): ${categoryC.length}`)
+console.log(`  Category D (images not yet DirectHired's own): ${categoryD.length}`)

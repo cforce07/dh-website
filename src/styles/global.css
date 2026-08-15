@@ -34,6 +34,20 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
   line-height: 1.15;
   text-wrap: balance;
+
+  /*
+   * Explicit even though it is the CSS default — documents intent. The
+   * shipped Fraunces subset's fvar table carries only `opsz` (9-144) and
+   * `wght` (100-900); `SOFT` and `WONK` were instanced out during
+   * subsetting and are pinned at Google Fonts' defaults, so
+   * font-variation-settings referencing them would be a silent no-op.
+   * Do NOT add a font-variation-settings declaration here: setting that
+   * property at all (even just for 'opsz') disables font-optical-sizing:
+   * auto, which would lock every heading — including 24px h3s and the
+   * FAQ's 18px summary — at display optical size. See
+   * docs/design/implementation-plan-2026-08-16.md §2.3.
+   */
+  font-optical-sizing: auto;
 }
 
 h1 {

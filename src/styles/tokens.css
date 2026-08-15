@@ -36,8 +36,32 @@
   --color-ink-muted: #4d4d4d;
   --color-surface: #FAF8F5;
   --color-surface-raised: #FFFFFF;
+
+  /*
+   * --color-surface-teal: --color-brand-teal (#00a4a6) washed to 8% over
+   * --color-surface. Gives the brand colour real graphic AREA (a section
+   * ground) instead of only hairlines and icon fills, without ever putting
+   * it behind text or inside a button fill — --color-brand-teal itself
+   * stays exactly as constrained below. Text placed on this wash still
+   * has to clear AA on its own merits; see tests/tokens.test.ts. Flattened
+   * to a hex literal (not left as an alpha overlay) for the same reason as
+   * the --color-*-on-deep ramp: the token's value is what the eye actually
+   * receives, so its contrast is directly assertable.
+   */
+  --color-surface-teal: #E6F1EF;
+
   --color-accent: #046A6C;
-  --color-accent-hover: #005F61;
+
+  /*
+   * --color-accent-hover: darkened from the original #005F61. That value
+   * sat only 1.0 contrast-step from --color-accent (7.05:1 vs 6.03:1 on
+   * --color-surface) — close enough that the hover state read as a
+   * rendering artefact rather than a deliberate darkening, and it was a
+   * fourth distinct teal in a palette that otherwise has exactly three
+   * jobs (brand ground, interactive, on-dark). #00494B measures 9.64:1 on
+   * --color-surface, a clearly perceptible step down from --color-accent.
+   */
+  --color-accent-hover: #00494B;
 
   /*
    * --color-brand-teal is the real teal from the logo (#00a4a6). It
@@ -152,34 +176,123 @@
   /* components to keep them in sync.                                  */
   /* ---------------------------------------------------------------- */
   --bp-tablet: 48em;   /* 768px  — Container's padding step-up. */
-  --bp-desktop: 96em;  /* 1536px — where the full desktop header (logo +
-                           8 nav items + 2 CTAs) fits on one line without
-                           wrapping or forcing horizontal document scroll;
-                           Header, MobileNav, and MobileCtaBar all switch
-                           here. Deliberately wider than --bp-tablet: the
-                           nav content does not fit in the 48-64em range,
-                           so keeping the mobile nav through that range
-                           (rather than switching at 48em) avoids a
-                           wrapped, two-line desktop nav.
 
-                           Was 64em (1024px) originally, raised after a
-                           real-browser measurement (iframe-harness binary
-                           search across viewport widths, see task-11
-                           fix-round-2 report) found the desktop header —
-                           even after compacting nav-item/CTA spacing in
-                           Header.astro — does not actually fit without
-                           horizontal overflow until ~1430px, because
-                           Container's own max-width (72rem/1152px) caps
-                           the available row width well below what 8 nav
-                           labels + 2 full CTA buttons need. 96em keeps
-                           ~106px of margin above that measured crossover
-                           for cross-browser/OS font-rendering variance.
-                           Do not lower this without re-measuring; do not
-                           trust hand-calculated arithmetic here — the
-                           interaction between flex nowrap overflow and
-                           Container's centering margin does not resolve
-                           the way naive subtraction predicts (verified
-                           empirically, see the fix report for why). */
+  --bp-wide: 64em;     /* 1024px — NOT a nav breakpoint. The third
+                           breakpoint in the system, previously an
+                           undocumented literal that three section files
+                           had each arrived at independently. Its
+                           consumers, all of them content-layout switches
+                           with no shell involvement:
+                             src/sections/Hero.astro         (media query)
+                             src/sections/Process.astro      (media query)
+                             src/sections/TwoSidedMatch.astro(media query)
+                           Recorded here so a fourth file does not invent
+                           a fifth value. Owned by those files' workstream
+                           — this entry documents the literal, it does not
+                           license changing it from here. */
+
+  --bp-desktop: 75em;  /* 1200px — where the desktop header (wordmark +
+                           7 nav items + 1 CTA) fits on one line without
+                           wrapping, overlapping, or forcing horizontal
+                           document scroll. Header, MobileNav and
+                           MobileCtaBar all switch here, and the literal
+                           is repeated in each of those three files plus
+                           tests/header-fit.test.ts, which asserts all
+                           four agree. Change it in all four or a
+                           viewport range opens with NO nav surface at
+                           all.
+
+                           MEASUREMENT (2026-08-16, real Chrome, same
+                           iframe-harness method as the 96em measurement
+                           it replaces). Natural max-content width of
+                           .header-inner, measured after the real wordmark
+                           landed:
+
+                             logo (logo-wordmark.svg @ 26px)  178.01 px
+                             primary-nav (7 items, 12px gaps) 568.76 px
+                             header-ctas (1 primary button)   242.52 px
+                             2 x --space-4 flex gap            32.00 px
+                             --------------------------------------------
+                             natural .header-inner          1021.29 px
+
+                           Container caps content at viewport - 2x32px of
+                           padding, so the header needs a client width of
+                           1021.29 + 64 = 1085.3px; with a 15px classic
+                           Windows scrollbar that is a 1100.3px viewport.
+                           75em (1200px) clears it by 99.7px (9.1%), the
+                           margin covering cross-browser and cross-OS font
+                           rendering of the seven Figtree nav labels.
+
+                           Was 96em (1536px). The old header held 8 nav
+                           items and 2 CTAs and measured 1251.60px natural
+                           against a 1088px content box — it overflowed at
+                           every desktop width, which is why the token had
+                           been pushed out to 1536px and why the 1024-1536
+                           laptop range got a phone layout stretched wide
+                           with a permanent bottom bar. Three cuts fixed
+                           the cause rather than the symptom: 'Home'
+                           removed from navItems (the wordmark links
+                           home), 'Why DirectHired' shortened to 'Why Us'
+                           (D-1), and the header's secondary WhatsApp CTA
+                           removed (it survives on five other surfaces).
+                           Net -230.31px, which paid for the real wordmark
+                           being 19.4px wider than the typeset mark it
+                           replaced AND for restoring the CTA's normal
+                           button padding.
+
+                           Do not lower this without re-measuring in a
+                           real browser, and do not trust hand-calculated
+                           arithmetic: .header-inner's children are
+                           flex: 0 0 auto specifically so that a header
+                           which does not fit overflows visibly instead of
+                           silently squeezing the wordmark through the
+                           nav (see Header.astro). Removing that makes
+                           every width look like it fits. */
+
+  --bp-xwide: 80em;    /* 1280px — the FOURTH breakpoint, and the second
+                           one this file has had to adopt after two
+                           workstreams arrived at the same literal
+                           independently. Above --bp-desktop and unrelated
+                           to it: nothing in the shell switches here, and
+                           the nav is long settled by this width. It marks
+                           the point where the page has surplus horizontal
+                           room and a layout can spend it.
+
+                           Its consumers, both content-layout only:
+
+                             src/sections/Hero.astro    (media query, and
+                                 the first clause of the <Picture> `sizes`
+                                 attribute — those two must agree)
+                             src/sections/Process.astro (media query)
+
+                           Hero breaks the image out of the container's
+                           right edge to the viewport edge here, giving the
+                           page its one asymmetric axis; at 1920px every
+                           other element obeys the same 1152px box with
+                           384px of dead margin each side.
+
+                           Process turns its four-step rail horizontal
+                           here rather than at --bp-wide: at 1024px each
+                           step gets (960 - 72) / 4 = 222px, about 28
+                           characters, so a description runs five lines of
+                           four words. At 1280px each gets (1088 - 72) / 4
+                           = 254px and the rail reads as intended. Redo
+                           that arithmetic if a step is added or removed.
+
+                           The two landed in separate workstreams within a
+                           day of each other, and each file's comment said
+                           "there is no token for 80em; if a second file
+                           ever needs it, name it there first" — a
+                           condition that was already true as each was
+                           written, because neither workstream could see
+                           the other. Named here now so a third consumer
+                           does not repeat that.
+
+                           Same hand-sync rule as every breakpoint above:
+                           custom properties do not resolve inside @media
+                           conditions, so changing this means changing the
+                           literal in both files (three places — Hero has
+                           two). */
 
   /* ---------------------------------------------------------------- */
   /* Radius — restrained per spec §3.3                                */

@@ -18,12 +18,52 @@ const services = defineCollection({
   }),
 })
 
+// `flag` and `summary` were both removed on 2026-08-16; both removals are
+// deliberate and neither should be restored without the reason below being
+// answered first.
+//
+// `flag` held a regional-indicator emoji pair (🇮🇩 / 🇲🇲 / 🇮🇳). Chrome and
+// Edge on Windows ship no emoji-flag glyphs, so on the most common desktop
+// OS the three cards rendered as the bare letters "ID", "MM" and "IN" at
+// 32px in Fraunces — a block whose entire visual vocabulary was three
+// glyphs, showing three grey letter-pairs, and invisible to anyone
+// reviewing on a Mac. "IN" was worse than broken: Mizoram is a state of
+// India, and both the master brief (§13) and tests/content.test.ts forbid
+// this site labelling it as India. Replacing the emoji with SVG national
+// flags was considered and rejected (implementation plan R-6) — a
+// "Mizoram" card carrying India's flag in crisp vector is the same error
+// at higher fidelity.
+//
+// `summary` held one sentence per source, identical across all three but
+// for the source name ("We work with helpers from X and match them to
+// your family..."). Repeated boilerplate with one word swapped is the
+// clearest generated-content tell on the page, and the section lede
+// already says that sentence once.
+//
+// The field is gone for good, and this is now a settled question rather
+// than an open one. DirectHired was asked for one distinguishing fact per
+// source (implementation plan D-5) and answered on 2026-08-16: there is no
+// real difference. Same service, same package, same matching process; the
+// source is the only variable. So there is no fact to wait for, and the
+// three summaries could never have been written truthfully.
+//
+// HelperSources.astro states that equivalence once, above the three names,
+// instead — which is the whole of what is true. Do not reintroduce this
+// field. Writing three different sentences means asserting something about
+// each source that nobody here knows, which is a master brief §78
+// violation, and asserting it about a nationality is a §42 one.
+//
+// The display field is `source`, NOT `country`. Two of the three sources
+// are countries and the third, Mizoram, is a state of India — the exact
+// error the deleted `flag` field made in emoji, restated in a field name
+// and then in every sentence built from it. `source` is true of all three
+// and stays true of a fourth, and it is the word the block, its CSS and
+// the FAQ all use. tests/content.test.ts asserts the rendered copy never
+// calls the set "countries".
 const helpers = defineCollection({
   type: 'content',
   schema: z.object({
-    country: z.string(),
-    flag: z.string(),
-    summary: z.string().max(200),
+    source: z.string(),
     order: z.number(),
   }),
 })
