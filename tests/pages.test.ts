@@ -104,13 +104,44 @@ describe('the page sweep', () => {
     }
   })
 
-  it('covers every page under src/pages (nothing built is missing, nothing extra)', () => {
+  it('built a page for every static route file in src/pages', () => {
     // The other half of "derive the list from dist/": dist/ is only the
-    // right source of truth if it actually contains a page per route. A
-    // build that silently dropped a page would otherwise shrink this whole
+    // right source of truth if the build actually emitted a page per route.
+    // A build that silently dropped one would otherwise shrink this whole
     // suite's coverage without failing anything.
-    const routeFiles = walk('src/pages').filter((f) => f.endsWith('.astro'))
-    expect(pages.length).toBe(routeFiles.length)
+    //
+    // Fix round 1, F-6. This was `pages.length === routeFiles.length`, a
+    // 1:1 assumption the roadmap already breaks: sub-project 3 ships the 6
+    // service and 3 helper detail pages from two `[slug].astro` files, so a
+    // count comparison would have failed with a bare "expected 15 to be 4".
+    // It now asserts the property actually wanted — every STATIC route file
+    // produced its page — and treats dynamic route files as contributing an
+    // unknown number of extra pages rather than one each.
+    const routeFiles = walk('src/pages')
+      .filter((f) => f.endsWith('.astro'))
+      // Astro does not route files or directories prefixed with "_".
+      .filter((f) => !f.split('/').some((segment) => segment.startsWith('_')))
+
+    const isDynamic = (file: string) => /\[.+\]/.test(file)
+    const staticFiles = routeFiles.filter((f) => !isDynamic(f))
+    const dynamicFiles = routeFiles.filter(isDynamic)
+
+    /** src/pages/index.astro → "/", src/pages/a/b.astro → "/a/b/". */
+    const expectedRoute = (file: string) =>
+      file.replace(/^src\/pages/, '').replace(/index\.astro$/, '').replace(/\.astro$/, '/')
+
+    const built = new Set(pages.map((p) => p.route))
+    const missing = staticFiles.map(expectedRoute).filter((route) => !built.has(route))
+    expect(missing).toEqual([])
+
+    // Dynamic route files emit one page per entry, so the total can only be
+    // greater. With none present it must be exact — which keeps the check
+    // as tight as it is today and loosens it only when it has to.
+    if (dynamicFiles.length === 0) {
+      expect(pages.length).toBe(staticFiles.length)
+    } else {
+      expect(pages.length).toBeGreaterThan(staticFiles.length)
+    }
   })
 })
 
@@ -125,10 +156,20 @@ describe.each(pages)('$route', (page) => {
   })
 
   it('starts at <h1> and never skips a heading level', () => {
-    // axe's heading-order rule fires on a skip (h1 → h3), and it is the
-    // defect that a section component moved between pages produces most
-    // often: /pricing needed its "The two fly-in packages" <h2> for exactly
-    // this reason, because PricingCard sets each package name as an <h3>.
+    // NOTHING ELSE IN THIS PROJECT CATCHES THIS. The first version of this
+    // comment said "axe's heading-order rule fires on a skip", implying the
+    // assertion was a convenience duplicate of the a11y run. It is not:
+    // scripts/run-axe.mjs filters to wcag2a,wcag2aa,wcag21a,wcag21aa, and
+    // `heading-order` is an axe BEST-PRACTICE rule, outside every one of
+    // those tags. Verified in fix round 1 — a page carrying two <h1>s AND
+    // an h1 → h3 skip scores zero axe violations under our invocation. So
+    // this assertion and the one above it are the only thing standing
+    // between the site and a broken document outline.
+    //
+    // It is also the defect that a section component moved between pages
+    // produces most often: /pricing needed its "The two fly-in packages"
+    // <h2> for exactly this reason, because PricingCard sets each package
+    // name as an <h3>.
     const levels = [...page.html.matchAll(/<h([1-6])[\s>]/g)].map((m) => Number(m[1]))
     expect(levels.length, 'page has no headings at all').toBeGreaterThan(0)
     expect(levels[0], 'first heading on the page is not the <h1>').toBe(1)
@@ -271,7 +312,9 @@ describe.each(pages)('$route publishes no invented information', (page) => {
 
 /**
  * Every duration the site is permitted to state, and where it comes from.
- * Normalised: lowercased, separators collapsed, plural "s" dropped.
+ * Keys are in normal form: lowercased, separators collapsed, the UNIT word
+ * singularised and nothing else (see normaliseDuration, and F-1 for what
+ * happens when "nothing else" is not enforced).
  *
  * This is an ALLOWLIST rather than a list of banned phrasings, and that is
  * the point. Design spec §7 forbids "a timeline beyond §2.2's figures" —
@@ -286,16 +329,58 @@ const APPROVED_DURATIONS = new Map<string, string>([
   ['1 week', 'spec §2.2 — a transfer helper already in Singapore'],
   ['one month', "spec §2.3 — the placement fee, fixed at one month's salary"],
   ['24 hour', 'src/data/company.ts openingHours — the footer, not a timeline'],
-  ['1 business day', 'src/content/faq/response-time.md — the supplied response commitment'],
+  [
+    '1 business day',
+    'faq/response-time.md and faq/submit-requirements.md — the supplied response commitment. Renders on /faq, not on the two pages built so far.',
+  ],
 ])
 
-/** "6-months", "Two Weeks" → "6 month", "two week". */
-function normaliseDuration(raw: string): string {
-  return raw.toLowerCase().replace(/[\s-]+/g, ' ').replace(/s\b/, '').trim()
-}
+/*
+ * "2 business days" is deliberately NOT here. The only response figure
+ * DirectHired supplied is one business day; a second is a timeline nobody
+ * gave us, and spec §7 forbids stating one. normaliseDuration handles the
+ * plural correctly (asserted below) — it produces "2 business day", which
+ * then fails this allowlist, which is the designed behaviour. If the client
+ * ever revises the commitment, the guard fires and the entry gets added
+ * here with its source, which is the moment to check that a source exists.
+ */
 
 const DURATION_PATTERN =
   /\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|a few|several)[\s-]+(?:business[\s-]+)?(?:hour|day|week|month|year)s?\b/gi
+
+/**
+ * The same shape DURATION_PATTERN matches, anchored and captured, so
+ * normalisation can act on the UNIT WORD specifically.
+ *
+ * Fix round 1, F-1. The first version was
+ * `.replace(/[\s-]+/g, ' ').replace(/s\b/, '')` — strip the first
+ * word-final "s" anywhere in the string. On "1 business day" that "s" is
+ * the one in "business": the phrase normalised to "1 busines day", which
+ * matched no allowlist key, so the `'1 business day'` entry was unreachable
+ * dead code and any page carrying that phrase would have failed. Two FAQ
+ * entries publish it today (response-time.md, submit-requirements.md);
+ * neither renders on the two pages that exist, so the suite was green by
+ * accident and /faq — the next task — would have turned it red on
+ * client-approved copy. A false positive on real copy is what teaches the
+ * next person to loosen the guard, which is the one thing this allowlist
+ * must not invite.
+ */
+const DURATION_SHAPE = /^(.+?) ((?:business )?)(hour|day|week|month|year)s?$/
+
+/** "6-months" → "6 month"; "2 Business Days" → "2 business day". */
+function normaliseDuration(raw: string): string {
+  const collapsed = raw.toLowerCase().replace(/[\s-]+/g, ' ').trim()
+  const match = collapsed.match(DURATION_SHAPE)
+  // DURATION_PATTERN only ever yields strings of this shape, so a miss means
+  // the pattern and the shape have drifted apart. Throw rather than return
+  // something that silently matches no allowlist key — a silent mismatch is
+  // exactly the bug this function is being fixed for.
+  if (!match) {
+    throw new Error(`normaliseDuration: "${raw}" is not a duration shape this guard understands`)
+  }
+  const [, count, qualifier, unit] = match
+  return `${count} ${qualifier}${unit}`
+}
 
 describe.each(pages)('$route states no timeline it was not given', (page) => {
   it('every duration on the page is one of the approved figures', () => {
@@ -304,6 +389,41 @@ describe.each(pages)('$route states no timeline it was not given', (page) => {
       (d) => !APPROVED_DURATIONS.has(d),
     )
     expect(unapproved).toEqual([])
+  })
+})
+
+describe('the duration normaliser', () => {
+  // Fix round 1, F-1. These run against the function directly rather than
+  // against a page, because the bug they exist for was invisible from the
+  // page side: the guard was green on the two pages that happen not to
+  // carry the phrase, and would have gone red the moment /faq shipped.
+  it('normalises the unit word, not the first "s" in the string', () => {
+    expect(normaliseDuration('1 business day')).toBe('1 business day')
+    expect(normaliseDuration('2 business days')).toBe('2 business day')
+    expect(normaliseDuration('6 months')).toBe('6 month')
+    expect(normaliseDuration('6-Month')).toBe('6 month')
+    expect(normaliseDuration('Two Weeks')).toBe('two week')
+    expect(normaliseDuration('24 hours')).toBe('24 hour')
+  })
+
+  it('every allowlist key is reachable — none is dead code', () => {
+    // The general form of F-1. An allowlist entry that is not its own
+    // normal form can never be produced by normaliseDuration, so it
+    // permits nothing while looking as though it permits something. This
+    // catches that for every entry, present and future, without anyone
+    // having to notice it on a page first.
+    for (const key of APPROVED_DURATIONS.keys()) {
+      expect(normaliseDuration(key), `"${key}" is unreachable: it permits nothing`).toBe(key)
+    }
+  })
+
+  it('every allowlist key is a phrase DURATION_PATTERN would actually find', () => {
+    // The other half: an entry the scanner can never emit is equally dead,
+    // even if it is its own normal form.
+    for (const key of APPROVED_DURATIONS.keys()) {
+      const found = key.match(new RegExp(DURATION_PATTERN.source, 'i'))
+      expect(found?.[0], `"${key}" is not a phrase the duration scanner matches`).toBe(key)
+    }
   })
 })
 

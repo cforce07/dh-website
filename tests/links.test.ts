@@ -222,8 +222,11 @@ describe('internal link resolution', () => {
 // collection-level check alone cannot catch it.
 //
 // This guard closes that gap by asserting against dist/index.html itself,
-// the same artifact a real deploy would ship. It reuses the build from
-// this file's beforeAll rather than triggering a second one.
+// the same artifact a real deploy would ship. It reuses the single build
+// made by tests/global-setup.ts rather than triggering one of its own.
+// (This sentence used to say "this file's beforeAll"; that beforeAll was
+// deleted when the build moved to globalSetup, and the sentence survived
+// the change for one commit.)
 //
 // On a site whose master brief's central rule is "never invent business
 // information" (§78: no fabricated helper profiles, no invented

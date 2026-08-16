@@ -35,18 +35,43 @@
  * fails the CI job. Usage:
  *
  *   npm run build:dev && npm run axe
+ *
+ * WHY THERE IS A PREFLIGHT BEFORE AXE RUNS (fix round 1, F-3).
+ *
+ * `@axe-core/cli` cannot distinguish "this page is clean" from "there was
+ * nothing to audit". Pointed at a URL nothing is serving, it prints
+ * `0 violations found!` and exits 0 — verified. So the audit's green is
+ * only worth what the URL is worth, and two things could make the URL
+ * wrong:
+ *
+ *   1. Astro's `preview()` falls back to another port when the requested
+ *      one is taken ("Port 4321 is in use, trying another one..."), and the
+ *      returned server object was observed still reporting 4321. So the
+ *      port cannot simply be assumed, and cannot be fully trusted even when
+ *      read back off the server.
+ *   2. Anything else already on that port — a stale dev server, a proxy
+ *      answering 404 — would be audited instead, cleanly and silently, and
+ *      the whole of spec §6 would report green against someone else's page.
+ *
+ * So each URL is fetched first and must answer 200 with the exact <title>
+ * of the dist/ file it is supposed to be serving. That is a marker only our
+ * build of that specific route can produce: it catches a squatter, a
+ * fallback port, and a route that resolves to the wrong page. This is the
+ * same class of defect as the compliance gate reading a stale build — a
+ * check reporting on something other than what it claims to check.
  */
 import { spawn } from 'node:child_process'
-import { existsSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { createRequire } from 'node:module'
 import { preview } from 'astro'
 
 const require = createRequire(import.meta.url)
 
-// Fixed port: the audited URLs are echoed into CI logs, and a random port
-// would make that output non-reproducible for no benefit.
-const PORT = 4321
+// Preferred port: the audited URLs are echoed into CI logs, and a random
+// port would make that output non-reproducible for no benefit. It is a
+// PREFERENCE, not an assumption — see the preflight below.
+const PREFERRED_PORT = 4321
 
 if (!existsSync('dist/index.html')) {
   console.error('\nNo dist/index.html found. Run "npm run build:dev" first.\n')
@@ -60,9 +85,11 @@ if (!existsSync('dist/index.html')) {
  *
  * dist/index.html → "/", dist/pricing/index.html → "/pricing/". Astro's
  * default `directory` build format emits one index.html per route, so
- * dropping the filename gives the served path.
+ * dropping the filename gives the served path. Each route carries the
+ * <title> of the file it came from, which the preflight uses as the marker
+ * proving the server is serving OUR build of THAT page.
  */
-function builtRoutes() {
+function builtPages() {
   const walk = (dir) =>
     readdirSync(dir).flatMap((entry) => {
       const full = join(dir, entry).split('\\').join('/')
@@ -71,27 +98,103 @@ function builtRoutes() {
 
   return walk('dist')
     .filter((file) => file.endsWith('.html'))
-    .map((file) => file.replace(/^dist/, '').replace(/index\.html$/, ''))
-    .sort()
+    .map((file) => {
+      const html = readFileSync(file, 'utf8')
+      const title = html.match(/<title>([\s\S]*?)<\/title>/)?.[1] ?? null
+      return {
+        file,
+        route: file.replace(/^dist/, '').replace(/index\.html$/, ''),
+        title,
+      }
+    })
+    .sort((a, b) => a.route.localeCompare(b.route))
 }
 
-const routes = builtRoutes()
+const pages = builtPages()
 
 // A zero-page audit exits 0 and reports nothing — green for the worst
 // possible reason on a step whose whole job is to find violations.
-if (routes.length === 0) {
+if (pages.length === 0) {
   console.error('\naxe: no HTML pages found under dist/. Nothing was audited.\n')
+  process.exit(1)
+}
+
+// A page with no <title> gives the preflight no marker to check, so the
+// audit of that page would be back to trusting the URL. Fail loudly rather
+// than quietly downgrading the guarantee for one page.
+const untitled = pages.filter((page) => !page.title?.trim())
+if (untitled.length > 0) {
+  console.error(
+    `\naxe: no <title> in ${untitled.map((p) => p.file).join(', ')} — nothing to verify the served page against.\n`,
+  )
   process.exit(1)
 }
 
 const server = await preview({
   root: process.cwd(),
-  server: { port: PORT, host: '127.0.0.1' },
+  server: { port: PREFERRED_PORT, host: '127.0.0.1' },
   logLevel: 'error',
 })
 
-const urls = routes.map((route) => `http://127.0.0.1:${PORT}${route}`)
-console.log(`axe: auditing ${urls.length} page(s)`)
+// Read the port back off the server rather than assuming the requested one
+// was granted. Belt and braces: this has been observed to report the
+// REQUESTED port after Astro fell back to a different one, which is exactly
+// why the preflight below does not trust it either.
+const port = server.port ?? PREFERRED_PORT
+const origin = `http://127.0.0.1:${port}`
+
+/**
+ * Prove each URL serves the page we think it does, before axe is told it is
+ * clean. 200 plus the exact <title> from the corresponding dist/ file.
+ */
+async function preflight() {
+  const failures = []
+  for (const page of pages) {
+    const url = `${origin}${page.route}`
+    let response
+    try {
+      response = await fetch(url)
+    } catch (error) {
+      failures.push(`${url} — request failed: ${error.message}`)
+      continue
+    }
+    if (response.status !== 200) {
+      failures.push(`${url} — HTTP ${response.status}, expected 200`)
+      continue
+    }
+    const body = await response.text()
+    if (!body.includes(`<title>${page.title}</title>`)) {
+      // Names the URL, not the `port` variable: when Astro has silently
+      // fallen back to another port, `port` is the misleading value and
+      // repeating it in the error would send the reader to the wrong place.
+      failures.push(
+        `${url} — served page is not ${page.file}; its <title> is missing. ` +
+          `Something else is answering there.`,
+      )
+    }
+  }
+  return failures
+}
+
+// The preview server binds before `preview()` resolves, but a first fetch
+// can still land in the gap on a cold Windows run. One short retry, then
+// treat it as a real failure rather than looping.
+let preflightFailures = await preflight()
+if (preflightFailures.length > 0) {
+  await new Promise((resolve) => setTimeout(resolve, 500))
+  preflightFailures = await preflight()
+}
+
+if (preflightFailures.length > 0) {
+  console.error('\naxe: preflight failed — the audit would have reported on the wrong pages.\n')
+  for (const failure of preflightFailures) console.error(`  ${failure}`)
+  console.error('')
+  await server.stop()
+  process.exit(1)
+}
+
+const urls = pages.map((page) => `${origin}${page.route}`)
+console.log(`axe: auditing ${urls.length} page(s), verified served from this build`)
 for (const url of urls) console.log(`  ${url}`)
 
 const axeBin = require.resolve('@axe-core/cli/dist/src/bin/cli.js')

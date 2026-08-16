@@ -14,10 +14,12 @@
  *
  * WHAT IT BUYS. One build instead of N, and the serialisation flag can go:
  * with nobody writing to dist/ during the run, the suites only read it, so
- * there is no race left to serialise away. Measured on this machine:
+ * there is no race left to serialise away. Measured on the same 15 files:
  *
- *   before — 2 in-suite builds, fileParallelism: false   18.0s
- *   after  — 1 globalSetup build, parallelism restored    9.6s
+ *   before — 2 in-suite builds, fileParallelism: false   18.0s (1 run)
+ *   after  — 1 globalSetup build, parallelism restored   8.6–9.1s (5 runs)
+ *
+ * An independent reviewer measured 8.84s and 8.91s on the same change.
  *
  * build:dev, not build. `npm run build` pipes through scripts/check-tbd.mjs,
  * which fails while any <Tbd> placeholder is still in the rendered output.

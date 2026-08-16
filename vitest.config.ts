@@ -19,8 +19,12 @@ export default getViteConfig({
      *
      * With the build hoisted here, no test process writes to dist/ at all —
      * they only read it — so the race the flag suppressed no longer exists
-     * and file parallelism is back at vitest's default. Measured: 18.0s
-     * before, 9.6s after, on the same 15 files.
+     * and file parallelism is back at vitest's default.
+     *
+     * Measured on the same 15 files: 18.0s before (one run), 8.6–9.1s after
+     * (five runs). An independent reviewer measured 8.84s and 8.91s. Quote
+     * the range, not a single figure — three different numbers appeared in
+     * three places in the first version of this change.
      */
     globalSetup: ['./tests/global-setup.ts'],
   },

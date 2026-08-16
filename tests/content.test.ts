@@ -370,19 +370,47 @@ describe('faq pricing figures stay in sync with pricing.ts', () => {
     expect(matchCount).toBe(10)
   })
 
-  // --- extended to /pricing (design spec §5.3) -------------------------
+  // --- extended to EVERY built page (design spec §5.3) -----------------
   //
   // "That page repeats figures in prose, which is exactly where a stale
-  // number hides." So the same rule now runs against the BUILT page, not
-  // just the FAQ markdown: every dollar figure a visitor can read on
-  // /pricing must be a real amount from pricing.ts.
+  // number hides." So the same rule now runs against the BUILT output, not
+  // just the FAQ markdown: every dollar figure a visitor can read anywhere
+  // on the site must be a real amount from pricing.ts.
   //
-  // Two amounts on that page are not from pricing.ts and must not be: the
-  // loan carry-forward worked sum in ReplacementTerms.astro is illustrative
-  // by design (spec §2.3 forbids publishing any loan figure or range), so
-  // its three values are read from that file's own constants rather than
-  // exempted by pattern. If someone edits the example, this stays correct;
-  // if someone types a fourth figure into the prose beside it, this fails.
+  // Fix round 1, F-2. This read `dist/pricing/index.html` by name — the one
+  // page list in this task that stayed hardcoded, and the one guarding
+  // money. The homepage publishes 14 distinct figures it never looked at,
+  // and a reviewer's scratch /about page carrying two hardcoded totals in
+  // its meta description tripped twelve other assertions while every money
+  // assertion stayed green. Deriving the list was free: the homepage's
+  // figures were already all in the allowed set, so this passes today and
+  // covers every Phase B page the moment it builds.
+  //
+  // Three amounts are not from pricing.ts and must not be: the loan
+  // carry-forward worked sum in ReplacementTerms.astro is illustrative by
+  // design (spec §2.3 forbids publishing any loan figure or range), so its
+  // values are read from that file's own constants rather than exempted by
+  // pattern. If someone edits the example, this stays correct; if someone
+  // types a fourth figure into the prose beside it, this fails.
+
+  /** Every built page, derived from dist/ — never a hardcoded page list. */
+  function builtPages(): { file: string; text: string }[] {
+    const walkDist = (dir: string): string[] =>
+      readdirSync(dir).flatMap((entry) => {
+        const full = join(dir, entry).split('\\').join('/')
+        return statSync(full).isDirectory() ? walkDist(full) : [full]
+      })
+
+    return walkDist('dist')
+      .filter((f) => f.endsWith('.html'))
+      .map((file) => ({
+        file,
+        text: readFileSync(file, 'utf8')
+          .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+          .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+          .replace(/<[^>]+>/g, ' '),
+      }))
+  }
 
   /** The illustrative carry-forward amounts, read from their definitions. */
   function illustrativeAmounts(): string[] {
@@ -409,36 +437,51 @@ describe('faq pricing figures stay in sync with pricing.ts', () => {
     expect(a - b).toBeCloseTo(c, 2)
   })
 
-  it('every dollar figure on the built /pricing page is a real amount', () => {
-    const html = readFileSync('dist/pricing/index.html', 'utf8')
-    const text = html
-      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-      .replace(/<[^>]+>/g, ' ')
-
-    /*
-     * The gap between the two package totals — "the one line that differs
-     * is our agent fee, a gap of $500.00". Derived from the same totals the
-     * cards print, exactly as src/pages/pricing.astro derives it, so a
-     * price change moves both together and neither can go stale against the
-     * other. Every ordered pair, because nothing here should depend on
-     * which package is listed first.
-     */
+  /*
+   * The gap between two package totals — "the one line that differs is our
+   * agent fee, a gap of $500.00". Derived from the same totals the cards
+   * print, exactly as src/pages/pricing.astro derives it, so a price change
+   * moves both together and neither can go stale against the other. Every
+   * ordered pair, because nothing here should depend on which package is
+   * listed first.
+   */
+  function packageDifferences(): string[] {
     const totals = packages.map(packageTotalCents)
-    const differences = totals.flatMap((a) =>
-      totals.filter((b) => b < a).map((b) => formatSgd(a - b)),
+    return totals.flatMap((a) => totals.filter((b) => b < a).map((b) => formatSgd(a - b)))
+  }
+
+  it('walks every built page, not just /pricing (guards the sweep itself)', () => {
+    // F-2's own regression guard. A mis-walked dist/ would make the money
+    // sweep below pass on nothing, which is how the hardcoded version hid
+    // the homepage's 14 figures in the first place.
+    const built = builtPages()
+    expect(built.length).toBeGreaterThanOrEqual(2)
+    expect(built.map((p) => p.file)).toContain('dist/index.html')
+    expect(built.map((p) => p.file)).toContain('dist/pricing/index.html')
+  })
+
+  it('every dollar figure on every built page is a real amount', () => {
+    const allowed = new Set([
+      ...validAmounts,
+      ...packageDifferences(),
+      ...illustrativeAmounts(),
+    ])
+
+    const strays = builtPages().flatMap(({ file, text }) =>
+      [...new Set(text.match(dollarPattern) ?? [])]
+        .filter((amount) => !allowed.has(amount))
+        .map((amount) => `${file}: ${amount}`),
     )
-
-    const allowed = new Set([...validAmounts, ...differences, ...illustrativeAmounts()])
-    const found = text.match(dollarPattern) ?? []
-
-    const strays = [...new Set(found)].filter((amount) => !allowed.has(amount))
     expect(strays).toEqual([])
+  })
 
-    // Non-vacuous: the page really does print figures. It is the pricing
-    // page — if this ever reads zero, the check above means nothing and the
-    // page has a much bigger problem.
-    expect(found.length).toBeGreaterThanOrEqual(10)
+  it('the money sweep really does find figures to check (sanity check)', () => {
+    // Non-vacuous: the site really does print figures. If this ever reads
+    // zero, the check above means nothing. Asserted across the whole build
+    // rather than per page, because a Phase B page with no prices on it is
+    // legitimate — /about and /contact will both be one.
+    const total = builtPages().reduce((n, { text }) => n + (text.match(dollarPattern) ?? []).length, 0)
+    expect(total).toBeGreaterThanOrEqual(20)
   })
 })
 
