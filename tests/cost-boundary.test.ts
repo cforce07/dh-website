@@ -927,7 +927,12 @@ const PUBLISHED_COPY_THAT_MUST_NOT_BE_CAUGHT = [
   'The helper’s loan and placement fee sit outside these packages. You advance both at the start and recover them through the helper’s repayment, so they are ultimately the helper’s cost rather than an extra charge you carry — see how that works.',
   'The package without replacement is $1,140.10 . The helper’s loan and placement fee sit outside both totals — you advance them at the start and recover them through the helper’s repayment, so they are ultimately the helper’s cost rather than an extra charge you carry.',
   'These sit alongside the fly-in package, and they are ultimately the helper’s cost rather than yours.',
-  'As the employer you advance both amounts at the start, and you recover them through the helper’s repayment. The money leaves your account first, but it is not a cost you carry. Our team will go through the exact figures for the helper you choose.',
+  // The trailing "Our team will go through the exact figures for the helper
+  // you choose." was deleted from src/content/faq/helper-loan-placement-fee.md
+  // on 2026-08-17 as an unapproved promise (see
+  // src/sections/LoanAndPlacement.astro's header). This fixture is verbatim
+  // published copy, so it follows the copy rather than preserving it.
+  'As the employer you advance both amounts at the start, and you recover them through the helper’s repayment. The money leaves your account first, but it is not a cost you carry.',
   'You advance both amounts at the start, and you recover them through the helper’s repayment. Both halves matter: the money does leave your account first, and it does come back.',
   'They are ultimately the helper’s cost, not an additional charge you carry on top of the package.',
   'Two further amounts — the helper’s loan and the placement fee — sit outside both totals. They are not an extra charge you carry: you advance them and recover them, and they are explained further down this page.',

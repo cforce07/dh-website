@@ -537,10 +537,30 @@ const COPY_THAT_MUST_NOT_BE_CAUGHT = [
    *
    * That is a worse failure than the clause itself: a compliance suite that
    * lists unauthorised copy as approved will defend it against the next
-   * reviewer. What survives here is the trimmed sentence that actually
-   * ships, which is what this list is for.
+   * reviewer.
+   *
+   * THE TRIMMED SENTENCE IS NOW GONE TOO (2026-08-17), and the same reasoning
+   * finished the job. The entry that survived the removal above was "Our team
+   * goes through the exact amount for the helper you choose." — the same
+   * promise with the unapproved tail cut off, still never approved by anyone,
+   * and still listed here as copy this suite clears for publication. Worse,
+   * it had become the anchor text of the requirement-form link on /pricing,
+   * so the fixture was defending an unapproved promise sitting on the
+   * conversion path.
+   *
+   * The sentence is deleted from src/sections/LoanAndPlacement.astro and its
+   * three further variants are deleted from
+   * src/content/faq/helper-loan-placement-fee.md,
+   * src/content/faq/cost.md and src/pages/pricing.astro. Nothing publishes
+   * it, so nothing here should assert it.
+   *
+   * NOT A WEAKENING. This list says "these sentences must not fire a gated
+   * pattern". Removing an entry removes a claim that a sentence is approved;
+   * it does not remove a pattern, widen an exemption, or let anything through
+   * the gate. Every gated pattern still runs over every built page, and the
+   * inverse sweep further down still runs them over every sentence the site
+   * publishes — including whatever replaced this one.
    */
-  'Our team goes through the exact amount for the helper you choose.',
   'We go through the repayment arrangement in full with you before you commit, and it is set out in the contract.',
 ]
 
@@ -696,6 +716,87 @@ describe('the framing that DOES ship is not caught by the gate', () => {
   it('still states the 6-month replacement window, which is not gated', () => {
     expect(pricing()).toMatch(/6 months/i)
   })
+})
+
+/*
+ * THE PROMISE OF A FIGURE — a rule of its own, and the reason it needs one.
+ *
+ * §2.3 forbids publishing the loan as a range or a number: it is assessed case
+ * by case. A sentence that promises the number will be produced is not caught
+ * by any pattern above, because it discloses no mechanic — it commits
+ * DirectHired to an outcome instead. Nothing ever approved one.
+ *
+ * FOUR COPIES SHIPPED IN ONE BUILD before 2026-08-17, in four registers:
+ *
+ *   "Our team goes through the exact amount for the helper you choose"
+ *      — src/sections/LoanAndPlacement.astro, as the ANCHOR TEXT of the
+ *        requirement-form link, i.e. on the conversion path
+ *   "Our team will go through the exact figures for the helper you choose."
+ *      — src/content/faq/helper-loan-placement-fee.md
+ *   "our team will walk you through the exact figures for your specific
+ *    requirements"                        — src/content/faq/cost.md
+ *   "…and the exact figures for each of them."
+ *      — src/pages/pricing.astro's final CTA
+ *
+ * LoanAndPlacement.astro's own header said the phrasing "was never approved"
+ * and that the approved §2.6.2 sentence is "deliberately NOT attached to the
+ * requirement-form link in the card above… the worst place for an unapproved
+ * promise". The file documented the defect and then committed it. That is why
+ * this is a sweep and not a comment: a comment did not hold.
+ *
+ * THE PATTERN IS THE CLAIM, NOT THE WORDING. It fires on a promise to supply
+ * an exact/specific/precise figure, amount or number — in any of the verbs the
+ * four variants used and the obvious neighbours. It deliberately does NOT fire
+ * on the approved §2.6.2 sentence, which promises to go through the repayment
+ * ARRANGEMENT and names no figure, nor on the page's own true statements that
+ * there is no standard figure to publish. Both are asserted below.
+ */
+const PROMISE_OF_A_FIGURE =
+  /\b(?:go(?:es)?|going|walk(?:s|ed|ing)?|talk(?:s|ed|ing)?|take[sn]?|taking|run(?:s|ning)?|give[sn]?|giving|provide[sd]?|providing|share[sd]?|sharing|send[s]?|sending|come\s+back\s+with|confirm(?:s|ed|ing)?|tell(?:s|ing)?)\b[^.!?]{0,60}?\b(?:exact|specific|precise|actual|individual)\s+(?:amounts?|figures?|numbers?|sums?|costs?|prices?)\b/i
+
+describe('no page promises to produce the exact loan figure', () => {
+  it('publishes no such promise, on any page', () => {
+    const offenders = builtPages()
+      .flatMap(({ file, html }) =>
+        renderedText(html)
+          .split(/(?<=[.!?])\s+/)
+          .map((sentence) => ({ file, sentence: sentence.trim() })),
+      )
+      .filter(({ sentence }) => PROMISE_OF_A_FIGURE.test(sentence))
+      .map(({ file, sentence }) => `${file}: ${sentence}`)
+    expect(offenders).toEqual([])
+  })
+
+  // Written from the four sentences that actually shipped, so the pattern is
+  // measured against the defect rather than against itself.
+  for (const sentence of [
+    'Our team goes through the exact amount for the helper you choose.',
+    'Our team will go through the exact figures for the helper you choose.',
+    'Our team will walk you through the exact figures for your specific requirements.',
+    'Send us what your family needs and we will come back with helpers who fit it — and the exact figures for each of them.',
+    'A consultant will confirm the exact amount before you sign.',
+    'We will give you the specific figure for your helper.',
+  ]) {
+    it(`catches: "${sentence.slice(0, 60)}…"`, () => {
+      expect(PROMISE_OF_A_FIGURE.test(sentence), 'pattern did not fire').toBe(true)
+    })
+  }
+
+  // The other direction, which is the half that keeps this usable. A guard
+  // that ate the approved sentence, or the page's own honest refusal to
+  // publish a figure, would be loosened by the next person to trip it.
+  for (const sentence of [
+    'We go through the repayment arrangement in full with you before you commit, and it is set out in the contract.',
+    'The loan depends on the individual helper, so there is no standard figure to publish — and we would rather publish none than one that turns out not to be yours.',
+    'Submit your requirements and we will come back to you.',
+    'Send us what your family needs and we will come back with helpers who fit it.',
+    'The placement fee is fixed at one month’s salary.',
+    'Both packages cover the same components at the same amounts.',
+  ]) {
+    it(`allows: "${sentence.slice(0, 60)}…"`, () => {
+      expect(PROMISE_OF_A_FIGURE.test(sentence), 'pattern fired on approved copy').toBe(false)
+    })
+  }
 })
 
 describe('the gate is recorded as a declared input, not just enforced here', () => {
