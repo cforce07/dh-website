@@ -150,8 +150,18 @@ const description =
         */}
         <div class="pillar">
           <h3>Better Matching</h3>
+          {/*
+            "in that order" — NOT "in that order, every time". Brief §1 says
+            "Understand first. Recommend second."; "every time" turns a
+            description of how DirectHired works into an absolute guarantee
+            about every placement it has ever run, which is a promise nobody
+            supplied and nobody here can check. The homepage states the same
+            pillar without it (Difference.astro: "We understand first. We
+            recommend second."), and this page should not be the one place
+            that intensifies it.
+          */}
           <p>
-            Understand first, recommend second — in that order, every time. We go through the
+            Understand first, recommend second — in that order. We go through the
             household before we suggest anyone: the family, the routines, the tasks a helper would
             take on, the skills the job calls for, and what you expect day to day.
           </p>
@@ -337,9 +347,19 @@ const description =
     </Container>
   </section>
 
+  {/*
+    The lede read "What we ask you first is the whole of the difference this
+    page describes", which claimed more than the page argues: of the three
+    pillars, only Better Matching is about the first conversation. Transparent
+    Pricing is about what is published on /pricing, and Personalised Service
+    is about the guidance running through the whole placement. "Where it
+    starts" is the true version of the same invitation, and it still points at
+    the one thing a family can test on day one — which is what the heading
+    above asks them to do.
+  */}
   <FinalCta
     heading="Judge it by the first conversation."
-    lede="Send us what your family needs. What we ask you first is the whole of the difference this page describes."
+    lede="Send us what your family needs. The questions we ask first are where the difference this page describes starts."
   />
 </BaseLayout>
 
