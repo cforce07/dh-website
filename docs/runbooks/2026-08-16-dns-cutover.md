@@ -8,7 +8,7 @@ Plan: `docs/superpowers/plans/2026-08-16-dns-route53-cloudfront-production.md`
 
 ## Rollback (read this first)
 
-**Before go-live (Task 10):** set the domain's nameservers at Exabytes back to
+**Before go-live:** set the domain's nameservers at Exabytes back to
 
 ```
 ns135.sgcloudhosting.cloud
@@ -19,52 +19,119 @@ The old zone is intact — nothing at Exabytes is deleted or cancelled by this
 work. Propagation applies in reverse, up to 48h for the `.com` delegation TTL.
 
 **After go-live, the faster rollback is a Route 53 record swap, not a nameserver
-change:** re-point the apex and `www` `A` records at `103.7.9.45`. TTL is 300, so
+change:** re-point the apex `A` and `www` records at `103.7.9.45`. TTL is 300, so
 that takes effect in about five minutes.
 
-**Do not cancel Exabytes DNS or hosting until at least one week after go-live.**
-Under this ordering `103.7.9.45` serves live traffic *through the new zone* until
-Task 10, and resolvers still holding the old delegation reach the domain —
-including its mail — only through the old nameservers.
+**The Exabytes hosting cannot be cancelled at all.** See the finding below: it
+hosts a live application at `dev.directhired.com`.
 
 ---
 
-## Starting state (authoritative, measured 2026-08-16)
+## FINDING 2026-08-16 — the zone was three times larger than a public survey showed
 
-Queried directly against `ns135.sgcloudhosting.cloud`, not through a recursive
-resolver, so none of this is a cache artefact.
+Before the export, the record inventory was built by **guessing record names** and
+querying them, because a zone transfer (`AXFR`) is refused to the public. That
+method found **9 records**. The cPanel Zone Editor export found **49**.
+
+Everything in the 9 was correct. The problem was entirely what it could not see,
+and three of the misses mattered:
+
+| Missed record | What losing it would have done |
+|---|---|
+| **The whole `dev.directhired.com` tree** (22 records) | `dev.directhired.com` is a **live application** — `/login`, `/register`, `/apply`, `/helpers`, `/pricing`, plus legal pages. It would have stopped resolving entirely at the nameserver change. |
+| `3pbwvtl3lfiw` → `gv-3enkjlry7hztmh.dv.googlehosted.com` | Google's domain-verification CNAME. Losing it risks de-verifying the domain with Google. |
+| `default._domainkey` TXT | A **DKIM** key. An earlier note in this project said the domain had no DKIM; that was checked at the `google._domainkey` selector only, and this one sits at `default._domainkey`. |
+
+Also missed: `cpcontacts`, `webdisk`, `cpcalendars`, `whm` on both trees; a
+`googleverification` TXT; the `_cpanel-dcv-test-record` and `_acme-challenge`
+validation TXTs; and ten `_caldav`/`_carddav`/`_autodiscover` `SRV` records with
+their companion `path=/` TXTs.
+
+**The lesson, recorded because it generalises:** an inventory built by guessing
+names can only ever prove what *is* there. It cannot prove nothing else exists,
+and it will systematically miss anything with an unguessable label — which is
+exactly what verification records, DKIM selectors and hashed CNAMEs are. Get the
+export. It cost five minutes.
+
+Still confirmed absent after the export: **no SPF record anywhere** (`v=spf1`
+appears nowhere in the zone), no DMARC, no CAA, no wildcard.
+
+### Consequence: decision D-B is reversed
+
+Spec §3 decision **D-B** recorded "drop all six cPanel names — the hosting is
+being retired", on the answer that nothing else lived on the Exabytes hosting.
+That answer was given in good faith and is **factually wrong**: `103.7.9.45`
+serves a live application.
+
+**The Exabytes hosting is not being retired.** Therefore:
+
+- Every record in this zone stays, except the two the go-live swap replaces.
+- Go-live changes **only** `directhired.com` `A` and `www.directhired.com`
+  `CNAME` → CloudFront ALIAS. The cPanel names, the `dev` tree, the SRV records,
+  DKIM and the Google verification records are all untouched, at go-live and
+  afterwards.
+- The "cancel Exabytes after a week" follow-up is **withdrawn**.
+
+### Open question for DirectHired
+
+`dev.directhired.com` is a full helper-browsing application with `/apply`,
+`/login` and `/register`. `docs/OPEN-DECISIONS.md` records that the employer
+requirement form "lives on a different site" and that
+`company.requirementFormUrl` currently 404s. **Is `dev.directhired.com` that
+site, and is it the intended production home of the form?** Nothing here depends
+on the answer — the records are preserved either way — but the answer decides
+what `company.requirementFormUrl` should point at.
+
+### Watch item: AutoSSL on the Exabytes hosting
+
+cPanel renews TLS certificates for `directhired.com` and `dev.directhired.com`
+via AutoSSL. Once DNS is delegated to Route 53, cPanel can no longer write
+validation records into an authoritative zone, so **DNS-based** validation stops
+working. **HTTP-based validation should continue to work**, because this zone
+keeps every `A` record pointing at `103.7.9.45`, so the server still answers on
+those hostnames and can serve the `/.well-known/acme-challenge/` file.
+
+Not expected to break. Worth checking that `https://dev.directhired.com` still
+has a valid certificate about 60–90 days after the nameserver change.
+
+---
+
+## Starting state (from the cPanel Zone Editor export, 2026-08-16)
+
+49 records. Every value below was read back from the authoritative nameserver
+rather than transcribed from the panel, because the panel line-wraps long values
+and one of them is a cryptographic key.
+
+**Apex tree (27)**
 
 | Name | Type | Value | TTL |
 |---|---|---|---|
-| `directhired.com` | NS | `ns135.sgcloudhosting.cloud`, `ns136.sgcloudhosting.cloud` | 86400 |
-| `directhired.com` | SOA | primary `ns135.sgcloudhosting.cloud`, admin `abuse.mschosting.com`, serial `2026070401` | 86400 |
 | `directhired.com` | A | `103.7.9.45` | 14400 |
-| `directhired.com` | MX | `1 SMTP.GOOGLE.com` | 3600 |
-| `directhired.com` | TXT | **none** | — |
+| `directhired.com` | MX | `1 SMTP.GOOGLE.COM` | 3600 |
 | `www` | CNAME | `directhired.com` | 14400 |
 | `mail` | CNAME | `directhired.com` | 14400 |
-| `webmail`, `cpanel`, `ftp`, `autodiscover`, `autoconfig` | A | `103.7.9.45` | 14400 |
+| `webmail`, `cpanel`, `whm`, `webdisk`, `cpcontacts`, `cpcalendars`, `ftp`, `autodiscover`, `autoconfig` | A | `103.7.9.45` | 14400 |
+| `default._domainkey` | TXT | `v=DKIM1; k=rsa; p=MIIBIjANBg…` (2 chunks, 255 + 156) | 14400 |
+| `googleverification` | TXT | `google-site-verification=PpFPzF9f…` | 14400 |
+| `3pbwvtl3lfiw` | CNAME | `gv-3enkjlry7hztmh.dv.googlehosted.com` | 86400 |
+| `_cpanel-dcv-test-record` | TXT | `_cpanel-dcv-test-record=zEpLps4Y…` | 14400 |
+| `_acme-challenge` | TXT | `0THtbBOVo8Q_zBkav9PGbk8P1ji1UhtTrjVyyVB74bw` | 14400 |
+| `_autodiscover._tcp` | SRV | `0 0 443 cpanelemaildiscovery.cpanel.net` | 14400 |
+| `_carddav._tcp`, `_caldav._tcp` | SRV | `0 0 2079 directhired.com` | 14400 |
+| `_carddavs._tcp`, `_caldavs._tcp` | SRV | `0 0 2080 directhired.com` | 14400 |
+| the four `_*dav*._tcp` names | TXT | `path=/` | 14400 |
 
-No SPF, DKIM (checked at the `google._domainkey` selector), DMARC, CAA or
-wildcard record. **SOA minimum TTL is 86400**, so a name queried before it exists
-can have its `NXDOMAIN` cached for a day.
+**`dev` tree (22)** — `dev`, `www.dev`, `webmail.dev`, `cpanel.dev`, `whm.dev`,
+`webdisk.dev`, `cpcontacts.dev`, `cpcalendars.dev`, `autodiscover.dev`,
+`autoconfig.dev` all `A → 103.7.9.45`; its own `default._domainkey` DKIM;
+`_acme-challenge.dev` and `_acme-challenge.www.dev` TXTs; and the same eight
+`SRV` + `TXT` autodiscovery pairs targeting `dev.directhired.com`.
 
-What the domain served: a 793-byte **"UNDER CONSTRUCTION"** page on LiteSpeed.
+**SOA minimum TTL is 86400**, so a name queried before it exists can have its
+`NXDOMAIN` cached for a day.
+
+What the apex served: a 793-byte **"UNDER CONSTRUCTION"** page on LiteSpeed.
 Apex and `www` both returned `200`; neither redirected to the other.
-
----
-
-## Exabytes zone export (Task 1, Step 1)
-
-```
-PASTE THE EXPORT HERE
-```
-
-> Purpose: a zone transfer is refused to the public, so the table above was built
-> by guessing record names. It is thorough but cannot prove a negative — a
-> verification `TXT` for some third-party service would be invisible to it.
-> **If the export shows any record not in the table above, stop and resolve it
-> before the nameserver change.**
 
 ---
 
@@ -85,34 +152,37 @@ PASTE THE EXPORT HERE
 
 ---
 
-## Task 1 — verbatim zone copy, verified 2026-08-16
+## Task 1 — complete zone copy, verified 2026-08-16
 
-Zone `Z0875849YNMCH1EJIGWA` created and populated from
-`infra/route53-zone-initial.json` (change `C04032321DY79WSQ0KCEN`).
+Zone `Z0875849YNMCH1EJIGWA` populated from `infra/route53-zone-initial.json`
+(49 `UPSERT` changes, so the file is idempotent and re-runnable).
 
-Each nameserver was queried **by name**, comparing the old zone against the new
-one before any delegation change. This is the gate on Task 2.
+Each nameserver was then queried **by name** — the old zone against the new —
+comparing values for all 49 records before any delegation change.
 
-| Record | Exabytes | Route 53 | Verdict |
-|---|---|---|---|
-| `MX directhired.com` | `pref=1 SMTP.GOOGLE.com` ttl 3600 | `pref=1 smtp.google.com` ttl 3600 | **match** (DNS is case-insensitive) |
-| `A directhired.com` | `103.7.9.45` ttl 14400 | `103.7.9.45` ttl **300** | **match** (TTL lowered deliberately) |
-| `www` | `CNAME → directhired.com` ttl 14400 | `CNAME → directhired.com` ttl **300** | **match** (TTL lowered deliberately) |
-| `mail` | `CNAME → directhired.com` | `CNAME → directhired.com` | **match** |
-| `webmail` | `103.7.9.45` | `103.7.9.45` | **match** |
-| `cpanel` | `103.7.9.45` | `103.7.9.45` | **match** |
-| `ftp` | `103.7.9.45` | `103.7.9.45` | **match** |
-| `autodiscover` | `103.7.9.45` | `103.7.9.45` | **match** |
-| `autoconfig` | `103.7.9.45` | `103.7.9.45` | **match** |
+```
+APEX TREE: 27 match, 0 differ
+DEV  TREE: 22 match, 0 differ
+```
 
-**Every value is identical. The only differences are the two lowered TTLs**, so
-the go-live swap in Task 10 propagates in about five minutes rather than four
-hours. A TTL affects how long an answer is cached, never the answer.
+The DKIM comparison is the one worth noting: it is 411 characters, split by DNS
+into a 255-char and a 156-char string. It was reproduced from the DNS chunks
+rather than from the panel's line-wrapped display, and reads back identical.
 
-**Why the six cPanel names are reproduced** even though spec decision D-B retires
-them: dropping them here would make the Task 2 nameserver change a *behaviour*
-change, and the entire safety argument for flipping first is that it is not one.
-They are removed in Task 10, once nothing depends on comparing the two zones.
+**Only two values differ anywhere, both TTLs, both deliberate:** the apex `A` and
+`www` are at 300 instead of 14400, so the go-live swap propagates in about five
+minutes rather than four hours. A TTL changes how long an answer is cached, never
+the answer.
+
+**A verification bug worth recording.** The first comparison script reported
+"6 match, 21 differ" with every value blank. That was a fault in the script, not
+in DNS: PowerShell's `switch` rebinds `$_` to the value being switched on, so
+`$_.IPAddress` was reading a property off the type string. Worse than the false
+failures were the false *passes* — `MX` and `SRV` built their values with string
+interpolation, which produced a non-empty string of spaces that compared equal on
+both sides. **A green line from a broken comparator is the failure mode to fear
+here**, and it is why the rewritten check asserts each value is non-blank before
+it is allowed to count as a match.
 
 ---
 
@@ -120,8 +190,8 @@ They are removed in Task 10, once nothing depends on comparing the two zones.
 
 `infra/cloudfront-directory-index.js` gained a host-guarded 301 from
 `directhired.com` to `https://www.directhired.com`, above the existing rewrite
-logic. Written test-first: 7 failing / 15 passing before, 22/22 after. Full
-suite green at 20 files, 710 tests.
+logic. Written test-first: 7 failing / 15 passing before, 22/22 after. Full suite
+green at 20 files, 710 tests.
 
 **Not yet published.** The live function is unchanged until Task 8 runs
 `scripts/deploy-cloudfront-function.sh`, which re-tests against the real
@@ -129,17 +199,12 @@ published function and refuses to publish on any failure.
 
 ## Task 5 — production bucket (2026-08-16)
 
-`directhired-website-prod` created in `ap-southeast-1`. Verified:
+`directhired-website-prod` created in `ap-southeast-1`. All four public-access
+blocks `true`; S3 website hosting never enabled. Empty until Task 7. The bucket
+policy is applied in Task 6, because it is scoped by `AWS:SourceArn` to a
+distribution that does not exist yet.
 
-| Check | Result |
-|---|---|
-| `BlockPublicAcls` / `IgnorePublicAcls` / `BlockPublicPolicy` / `RestrictPublicBuckets` | all `true` |
-| `LocationConstraint` | `ap-southeast-1` |
-| S3 static website hosting | off (never enabled) |
-
-Empty until Task 7. The bucket policy granting CloudFront read access is applied
-in Task 6, because it is scoped by `AWS:SourceArn` to a distribution that does
-not exist yet.
+---
 
 ## Task 2 — nameserver change
 
@@ -158,7 +223,8 @@ ns-1898.awsdns-45.co.uk
 |---|---|
 | Registry returns the four AWS nameservers | _(pending)_ |
 | `MX` unchanged from 8.8.8.8 and 1.1.1.1 | _(pending)_ |
-| Site still returns 200 | _(pending)_ |
+| Apex still returns 200 | _(pending)_ |
+| **`dev.directhired.com` still returns 200** | _(pending)_ |
 | Test message sent to `hello@directhired.com` and received | _(pending)_ |
 | Reply sent from `hello@directhired.com` and received | _(pending)_ |
 
@@ -166,21 +232,11 @@ ns-1898.awsdns-45.co.uk
 public DNS record; until the domain is delegated to Route 53, a record created
 there is invisible to the internet and validation cannot complete.
 
-| Check | Result |
-|---|---|
-| Registry returns the four AWS nameservers | _(pending)_ |
-| `MX` unchanged from 8.8.8.8 and 1.1.1.1 | _(pending)_ |
-| Site still returns 200 | _(pending)_ |
-| Test message sent to `hello@directhired.com` and received | _(pending)_ |
-| Reply sent from `hello@directhired.com` and received | _(pending)_ |
-
 ---
 
 ## Task 9 — pre-go-live verification
 
 Status: _pending_
-
----
 
 ## Task 10 — go-live
 
@@ -188,17 +244,22 @@ Status: _pending. Deliberately deferred._
 
 **Hold until `docs/OPEN-DECISIONS.md` "Blocks launch" is clear** — compliance
 sign-off on the loan repayment terms, and a production form URL, without which
-every primary CTA 404s. That is a business decision, not a technical one. The
-infrastructure does not care when it is taken.
+every primary CTA 404s. That is a business decision, not a technical one.
+
+**The go-live batch must be rewritten** against the finding above: it may change
+only the apex `A` and the `www` `CNAME`. The version drafted in the plan also
+deleted the six cPanel names, which is now wrong.
 
 ---
 
 ## Dated follow-ups
 
-1. **One week after go-live:** Exabytes hosting and DNS may be cancelled. Not
-   before — `103.7.9.45` serves live traffic through the new zone until go-live,
-   and resolvers on the old delegation still need the old zone.
-2. **Before ~2027-07:** the ACM certificate auto-renews only if Task 3's two
+1. ~~One week after go-live: cancel Exabytes hosting and DNS.~~ **Withdrawn.**
+   The hosting serves a live application at `dev.directhired.com`.
+2. **60–90 days after the nameserver change:** confirm
+   `https://dev.directhired.com` still has a valid TLS certificate. See the
+   AutoSSL watch item above.
+3. **Before ~2027-07:** the ACM certificate auto-renews only if Task 3's two
    validation `CNAME` records are still in the Route 53 zone. Confirm they are.
    If they are missing, renewal fails silently and the first symptom is a browser
    TLS error in production.
