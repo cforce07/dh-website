@@ -1283,3 +1283,166 @@ describe('the response pledge is sourced, not retyped', () => {
     expect(code(raw)).toContain('{responsePledge}')
   })
 })
+
+/**
+ * /find-your-helper CARRIED TWO MORE COPIES OF THE SAME DEFECT.
+ *
+ * F-3 fixed /contact, which retyped the approved response pledge from
+ * src/content/faq/submit-requirements.md. Task 12's sweep of every
+ * content-collection sentence against every .astro and .ts file under src/
+ * found two more on ONE page, from two different entries:
+ *
+ *   1. src/content/faq/response-time.md — "whether you send US your
+ *      requirements". /find-your-helper rendered "whether you send your
+ *      requirements", dropping the "us", under a comment naming that file
+ *      as the source of the wording.
+ *   2. src/content/faq/how-long-does-it-take.md — its closing sentence.
+ *      /find-your-helper reproduced both of its distinctive clauses word
+ *      for word ("depends on your requirements and on the interviews", "we
+ *      would rather find the right person than rush you to a decision")
+ *      and changed only the lead-in.
+ *
+ * Neither inflated a claim. That is precisely the property that let both
+ * survive the page's own task review AND the whole-branch fix round that
+ * caught the /contact one — nothing on the page was untrue, so there was
+ * nothing for a correctness read to catch. The failure is silent and
+ * deferred: DirectHired revises either answer, /faq follows, this page does
+ * not.
+ *
+ * Guarded the way F-3 guarded /contact, because the defect recurs and a
+ * one-off correction of the literals would have left the fifth instance to
+ * the next reviewer.
+ */
+describe('/find-your-helper sources its closing sentences, it does not retype them', () => {
+  const PAGE = 'src/pages/find-your-helper.astro'
+  const BUILT = 'dist/find-your-helper/index.html'
+
+  /**
+   * Each entry pairs the approved source with the clause that IDENTIFIES
+   * which sentence the page takes from it, and a second clause that is
+   * pure substance — the part that must never appear in a source file
+   * alongside the identifier.
+   *
+   * A retype is defined as BOTH clauses in one file, for the same reason
+   * F-3's guard defines it that way: the identifier alone is what the page
+   * legitimately matches with, and the substance alone appears in
+   * unrelated approved copy. Only the two together mean somebody typed the
+   * sentence out.
+   */
+  const SOURCED = [
+    {
+      entry: 'src/content/faq/response-time.md',
+      slug: 'response-time',
+      identifies: /aim to respond within/i,
+      // The half that carries the dropped word. "whether you send YOUR
+      // requirements" is what the page used to say; the approved answer
+      // says "whether you send US your requirements".
+      substance: /whether you send us your requirements/i,
+    },
+    {
+      entry: 'src/content/faq/how-long-does-it-take.md',
+      slug: 'how-long-does-it-take',
+      identifies: /depends on your requirements/i,
+      substance: /rather find the right person than rush you/i,
+    },
+  ] as const
+
+  function entryBody(file: string): string {
+    return readFileSync(file, 'utf8')
+      .split(/^---\s*$/m)
+      .slice(2)
+      .join('---')
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+
+  function builtText(): string {
+    return readFileSync(BUILT, 'utf8')
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
+      .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/\s+/g, ' ')
+  }
+
+  it.each(SOURCED)('$entry still contains the sentence the page reads', ({ entry, identifies }) => {
+    // Named first, because every assertion below is satisfiable by a source
+    // file that has lost the sentence altogether.
+    const sentences = entryBody(entry)
+      .split(/(?<=[.!?])\s+/)
+      .filter((sentence) => identifies.test(sentence))
+    expect(sentences, `${entry} must contain exactly one sentence matching ${identifies}`).toHaveLength(1)
+  })
+
+  it.each(SOURCED)(
+    'the built page states $entry character for character',
+    ({ entry, identifies }) => {
+      const sentence = entryBody(entry)
+        .split(/(?<=[.!?])\s+/)
+        .filter((s) => identifies.test(s))[0]
+        .trim()
+      expect(builtText()).toContain(sentence)
+    },
+  )
+
+  it.each(SOURCED)('no source file under src/ reproduces $entry', ({ identifies, substance }) => {
+    /*
+     * The anti-drift half. The assertion above compares two rendered
+     * strings and would go green again the moment somebody "fixed" a
+     * mismatch by pasting the new wording into the page — which is exactly
+     * how both of these got there.
+     *
+     * The markdown sources are excluded because they ARE the sources.
+     * Comments are stripped, so this file's own explanation of the rule and
+     * the page's docblock describing what it must not do are not
+     * violations of it.
+     */
+    const offenders = walk('src')
+      .filter((file) => file.endsWith('.astro') || file.endsWith('.ts'))
+      .map((file) => ({ file, source: code(readFileSync(file, 'utf8')) }))
+      .filter(({ source }) => identifies.test(source) && substance.test(source))
+      .map(({ file }) => `${file} reproduces an approved sentence instead of reading it`)
+    expect(offenders).toEqual([])
+  })
+
+  it.each(SOURCED)('the page really does resolve $slug from the collection', ({ slug }) => {
+    // The positive assertion. Both negatives above are satisfiable by a
+    // page that says nothing at all.
+    const raw = code(readFileSync(PAGE, 'utf8'))
+    const calls = [...raw.matchAll(/getEntry\(\s*'faq'\s*,\s*'([a-z-]+)'\s*\)/g)].map((m) => m[1])
+    expect(calls, `${PAGE} must getEntry('faq', '${slug}')`).toContain(slug)
+  })
+
+  it('renders both resolved values rather than literals', () => {
+    const raw = code(readFileSync(PAGE, 'utf8'))
+    expect(raw).toContain('{responsePledge}')
+    expect(raw).toContain('{timingNote}')
+  })
+
+  it('the comment stripper is what makes the negative pass, not an absent sentence', () => {
+    /*
+     * The page's frontmatter docblock quotes both halves of both sentences
+     * in order to explain why they must not be typed here. If code()
+     * stopped stripping block comments, the negative assertions above would
+     * go green for the wrong reason.
+     */
+    const raw = readFileSync(PAGE, 'utf8')
+    for (const { entry, substance } of SOURCED) {
+      expect(raw, `the docblock quotes the ${entry} wording it forbids`).toMatch(substance)
+      expect(code(raw), `and the stripped ${entry} source does not`).not.toMatch(substance)
+    }
+
+    // ...and one identifier DOES survive stripping, because it is the
+    // matcher the page selects the timing sentence with. That is the one
+    // form of the clause this file is allowed to carry, and asserting it
+    // keeps the negative above from passing merely because the page has
+    // stopped resolving anything.
+    expect(code(raw)).toMatch(/depends on your requirements/i)
+  })
+})

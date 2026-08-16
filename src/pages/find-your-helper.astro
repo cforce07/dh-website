@@ -46,6 +46,7 @@
  * does not list it for this page and because a second dark band is a
  * decision this page has no reason to take.
  */
+import { getEntry } from 'astro:content'
 import BaseLayout from '../layouts/BaseLayout.astro'
 import Container from '../components/Container.astro'
 import Button from '../components/Button.astro'
@@ -53,8 +54,73 @@ import Process from '../sections/Process.astro'
 import FinalCta from '../sections/FinalCta.astro'
 import { company } from '../data/company'
 import { defaultWhatsappUrl } from '../lib/whatsapp'
+import { markdownToPlainText } from '../lib/structured-data'
 
 const whatsappHref = defaultWhatsappUrl()
+
+/*
+ * THE TWO APPROVED SENTENCES THIS PAGE ENDS ON, RESOLVED RATHER THAN
+ * RETYPED — and they used not to be. Both were hand-copies of a content
+ * collection entry, each off by a word or two from the approved original:
+ *
+ *   - the response line (src/content/faq/response-time.md) dropped one
+ *     word. Approved: "whether you send us your requirements through the
+ *     form". Published here: "whether you send your requirements".
+ *   - the closing note (src/content/faq/how-long-does-it-take.md) kept
+ *     both of its distinctive clauses word for word —
+ *     "depends on your requirements and on the interviews", and
+ *     "we would rather find the right person than rush you to a decision"
+ *     — and changed only the lead-in.
+ *
+ * Neither inflated a claim, which is exactly why two task-scoped reviews
+ * read straight past them. The damage is the ordinary single-source one and
+ * it is silent: DirectHired revises either answer, /faq follows, and this
+ * page does not. It is the third and fourth instance of the same defect on
+ * this branch — /contact's response pledge (F-3) was the second — so the
+ * remedy here is the one that worked there rather than a re-edit of the
+ * literals.
+ *
+ * markdownToPlainText is the same normaliser Faq.astro runs bodies through
+ * for structured data, so a future bold or link in either answer arrives
+ * here as text rather than as literal asterisks.
+ */
+const responseTime = await getEntry('faq', 'response-time')
+const responsePledge = markdownToPlainText(responseTime?.body ?? '')
+
+if (responsePledge === '') {
+  throw new Error(
+    '/find-your-helper: src/content/faq/response-time.md resolved to an empty body. This page ' +
+      'renders that answer rather than retyping it; restore the entry — do not paste the ' +
+      'sentence in here.',
+  )
+}
+
+/*
+ * The closing note takes ONE sentence out of a three-sentence answer, so
+ * unlike the pledge above it needs a matcher. The match is on the clause
+ * that identifies WHICH sentence — the topic — and never on the pledge the
+ * sentence makes. "we would rather find the right person than rush you to
+ * a decision" is the part DirectHired might reword, and it stays free to
+ * change without anyone touching this file. Matching on the whole sentence
+ * would mean typing it here, which is the defect this replaced.
+ */
+const timingSentences = markdownToPlainText(
+  (await getEntry('faq', 'how-long-does-it-take'))?.body ?? '',
+)
+  .split(/(?<=[.!?])\s+/)
+  .map((sentence) => sentence.trim())
+  .filter((sentence) => /depends on your requirements/i.test(sentence))
+
+if (timingSentences.length !== 1) {
+  throw new Error(
+    '/find-your-helper: expected exactly one sentence matching "depends on your requirements" in ' +
+      `src/content/faq/how-long-does-it-take.md, found ${timingSentences.length}. This page ` +
+      'renders that sentence rather than retyping it; if the approved wording has changed, ' +
+      'update the match here — do not paste the new sentence in.',
+  )
+}
+
+const timingNote = timingSentences[0]
 
 /*
  * The two halves a match is made from. Kept as data rather than typed into
@@ -209,6 +275,10 @@ const description =
         is a commitment DirectHired has never made, and the guard correctly
         rejects it.
 
+        THE RESPONSE ROW IS READ OUT OF THAT FILE, NOT TYPED HERE, and it
+        used not to be — see `responsePledge` in this page's frontmatter.
+        Do not replace {responsePledge} with its text.
+
         The two placement timings are spec §2.2 verbatim: approximately 2
         weeks for a helper coming to Singapore from overseas, approximately
         1 week for a transfer helper already here, both measured from
@@ -221,10 +291,7 @@ const description =
       <dl class="timing">
         <div class="timing-row">
           <dt>Our response</dt>
-          <dd>
-            We aim to respond within 1 business day, whether you send your requirements through the
-            form or message us on WhatsApp.
-          </dd>
+          <dd>{responsePledge}</dd>
         </div>
         <div class="timing-row">
           <dt>A helper coming to Singapore</dt>
@@ -236,10 +303,13 @@ const description =
         </div>
       </dl>
 
-      <p class="timing-note">
-        Everything before that confirmation depends on your requirements and on the interviews. We
-        would rather find the right person than rush you to a decision.
-      </p>
+      {/*
+        READ from src/content/faq/how-long-does-it-take.md, not reproduced
+        here — see `timingNote` in this page's frontmatter. "That point" is
+        the confirmation the two rows above are both measured from, which
+        is why the sentence stands on its own in this position.
+      */}
+      <p class="timing-note">{timingNote}</p>
     </Container>
   </section>
 
