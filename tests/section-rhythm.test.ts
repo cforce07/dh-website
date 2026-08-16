@@ -178,6 +178,28 @@ interface PageSequence {
   blocks: readonly { block: string; path: string; selector: string }[]
 }
 
+/**
+ * Section files in the order src/pages/find-your-helper.astro renders them.
+ *
+ * Task 6, the first Phase B page to fill in the shape the register above
+ * describes. Two of its four blocks are defined in the page file rather than
+ * in src/sections — the matching explanation and the timing block are this
+ * page's own content and belong to no other route, so they are inline and
+ * addressed by `path: <the page>` exactly as /pricing's hero block is.
+ *
+ * The grounds are not free: Process is fixed at --color-surface-teal and
+ * FinalCta at --color-surface, both because the homepage renders the same
+ * two components. Those two fix the other two — cream at the top so the
+ * page opens on the site's page ground, white in the middle so the teal
+ * wash and the closing cream cannot meet.
+ */
+const FIND_YOUR_HELPER_BLOCKS = [
+  { block: 'F1', path: 'src/pages/find-your-helper.astro', selector: '.helper-match' },
+  { block: 'F2', path: 'src/sections/Process.astro', selector: '.process' },
+  { block: 'F3', path: 'src/pages/find-your-helper.astro', selector: '.match-timing' },
+  { block: 'F4', path: 'src/sections/FinalCta.astro', selector: '.final-cta' },
+] as const
+
 const PAGE_SEQUENCES: PageSequence[] = [
   {
     page: 'src/pages/index.astro',
@@ -192,6 +214,7 @@ const PAGE_SEQUENCES: PageSequence[] = [
   },
   { page: 'src/pages/pricing.astro', blocks: PRICING_BLOCKS },
   // --- Phase B: one entry per page, in the shape above. ---
+  { page: 'src/pages/find-your-helper.astro', blocks: FIND_YOUR_HELPER_BLOCKS },
 ]
 
 /**
@@ -467,6 +490,68 @@ describe('the /pricing ground sequence alternates', () => {
     ] as const
     for (const [pricingBlock, homeBlock] of shared) {
       const p = PRICING_BLOCKS.find((b) => b.block === pricingBlock)!
+      const h = BLOCKS.find((b) => b.block === homeBlock)!
+      expect(p.path).toBe(`src/sections/${h.file}.astro`)
+      expect(p.selector).toBe(h.selector)
+    }
+  })
+})
+
+describe('the /find-your-helper ground sequence alternates', () => {
+  /*
+   * The generic rules in the register above already hold for this page:
+   * the list is tied to the page, no two consecutive blocks share a ground,
+   * at most one section sits in the brand wash, and nothing the page
+   * renders is left off the list. What they cannot say is which sequence
+   * was CHOSEN — a page could satisfy every one of them with white / teal /
+   * cream / white and still not be the arrangement anybody approved.
+   *
+   * So the sequence is stated here, the way the homepage's and /pricing's
+   * are. Changing one entry changes at least two adjacencies; re-derive the
+   * whole thing rather than editing a line.
+   */
+  const grounds = FIND_YOUR_HELPER_BLOCKS.map((b) => ({
+    ...b,
+    ground: groundOfPath(b.path, b.selector),
+  }))
+
+  it('is exactly the approved sequence', () => {
+    expect(grounds.map((g) => `${g.block} ${g.ground}`)).toEqual([
+      'F1 --color-surface',
+      'F2 --color-surface-teal',
+      'F3 --color-surface-raised',
+      'F4 --color-surface',
+    ])
+  })
+
+  it('adds no second dark band', () => {
+    // TwoSidedMatch is not rendered on this page, and this is the assertion
+    // that keeps it that way by consequence rather than by convention:
+    // block 07 of the homepage is the site's only --color-deep section, and
+    // spec §6 requires a second one to be justified on its own terms.
+    expect(grounds.filter((g) => g.ground === '--color-deep')).toEqual([])
+  })
+
+  it('shares Process and FinalCta with the homepage rather than copying them', () => {
+    /*
+     * The coupling this page is built on, asserted the same way /pricing
+     * asserts its own: `heading` and `lede` props exist so a page can
+     * reframe these two sections without duplicating them (spec §3.1), and
+     * the four process steps must never need changing twice — they went
+     * from five to four on 2026-08-16.
+     *
+     * A page-local copy of either would keep every ground assertion above
+     * passing while quietly breaking that guarantee, so the file paths are
+     * what is checked, not the grounds. (Comparing grounds here would be
+     * x === x: both sides would call the same reader on the same file —
+     * the mistake caught in /pricing's equivalent test.)
+     */
+    const shared = [
+      ['F2', '05'],
+      ['F4', '12'],
+    ] as const
+    for (const [pageBlock, homeBlock] of shared) {
+      const p = FIND_YOUR_HELPER_BLOCKS.find((b) => b.block === pageBlock)!
       const h = BLOCKS.find((b) => b.block === homeBlock)!
       expect(p.path).toBe(`src/sections/${h.file}.astro`)
       expect(p.selector).toBe(h.selector)

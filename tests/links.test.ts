@@ -109,7 +109,13 @@ describe('CTA integrity', () => {
  */
 const DEFERRED_ROUTES: readonly string[] = [
   // --- Phase B of THIS sub-project (core pages), spec §1 ---
-  '/find-your-helper',
+  //
+  // '/find-your-helper' was here until Task 6 shipped it. Deleted in the
+  // same commit as the page, which the "no enumerated deferred route has
+  // already been built" assertion below insists on: an entry left behind
+  // for a route that now exists would exempt that route from ever having
+  // to resolve again, so a later regression deleting the page would not
+  // fail this suite. The remaining four go the same way as their tasks land.
   '/why-directhired',
   '/about',
   '/faq',
