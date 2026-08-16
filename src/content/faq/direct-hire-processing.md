@@ -2,7 +2,7 @@
 question: Do you handle direct-hire processing?
 surfaces: [faq]
 category: process
-order: 6.3
+order: 110
 ---
 
 Yes. If you have already identified a helper independently, DirectHired can manage the processing required to formalise the arrangement, so you don’t have to navigate it alone. You have one point of contact throughout.

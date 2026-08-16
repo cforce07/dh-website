@@ -1,0 +1,568 @@
+---
+/**
+ * /contact — HOW TO REACH DIRECTHIRED, and where it is.
+ *
+ * Core-pages design spec §3.2 gives it five parts and no others: details
+ * from company.ts · office · hours · socials · EmploymentAgency structured
+ * data · CTA. Spec §4 gives it ONE intent — local — which is the only
+ * intent no other page on this site owns, and the reason the title and
+ * description below are written around a place and a phone number rather
+ * than around a promise.
+ *
+ * IT IS LINKED FROM THE FOOTER, NOT THE NAVIGATION. Spec §3.4 records that
+ * as a decision taken by default: the header nav is at its width budget
+ * (tests/header-fit.test.ts pins the item count that was measured), and the
+ * footer already carries the same details as text. So src/lib/nav.ts gains
+ * `footerItems` rather than an eighth `navItems` entry — adding one to
+ * navItems fails header-fit, correctly, and would be the wrong fix for it.
+ *
+ * NOT ONE VALUE ON THIS PAGE IS TYPED. The phone number, the display
+ * spelling of it, the email, the address, the opening hours, both social
+ * profiles, the licence and the WhatsApp deep link all resolve from
+ * src/data/company.ts, and the address is assembled exactly the way
+ * Footer.astro and /about assemble it. That is not tidiness: master brief
+ * §51 asks for CONSISTENT company details as the Singapore-presence signal,
+ * and a contact page is the one page where a second copy of a detail is
+ * both most likely and most damaging. tests/company.test.ts sweeps every
+ * surface for a retyped licence; nothing sweeps for a retyped phone number,
+ * which is exactly why this file must not start one.
+ *
+ * WHAT IS DELIBERATELY NOT HERE.
+ *
+ *   - NO DESCRIPTION OF THE OFFICE, no district characterisation, no
+ *     "drop in", no team size, no photograph. /about had to delete "and so
+ *     is the office those placements are handled from" for inferring one
+ *     office and what happens in it from an address string; the same
+ *     sentence is even easier to write on this page and is equally
+ *     unsupplied. What ships is the address, as a fact.
+ *   - NO RESPONSE PROMISE BEYOND THE PUBLISHED ONE. "A consultant reviews
+ *     every submission and aims to respond within 1 business day" is
+ *     client-approved copy, already on /faq and the homepage. "We reply
+ *     fast", "we are always available", "call any time" are not, and the
+ *     24-hour opening figure is not licence to invent one.
+ *
+ *     IT IS READ OUT OF THE CONTENT COLLECTION, NOT TYPED HERE, and it used
+ *     not to be. This docblock claimed the sentence was
+ *     src/content/faq/submit-requirements.md verbatim while the hero
+ *     rendered a hand-retyped variant of it — "a consultant reviews every
+ *     submission, AIMING to respond within 1 business day" against the
+ *     approved "and AIMS to respond". The substance was not inflated, so
+ *     this was a sourcing failure rather than an invented claim, and the
+ *     consequence is the ordinary one: DirectHired revises that wording,
+ *     /faq and the homepage follow, and /contact silently does not. See
+ *     `responsePledge` below for how it resolves and what it does if the
+ *     sentence it is looking for is not there.
+ *   - NO REGISTERED ENTITY AND NO UEN. src/data/company.ts's own docblock
+ *     scopes both to /about — "they appear nowhere else on the site" — and
+ *     that is a deliberate division: /about publishes the company's
+ *     particulars as a register entry, this page publishes how to reach it.
+ *     The licence number is the one credential that belongs on both,
+ *     because a family checking a Singapore agency checks the licence, and
+ *     it points at /about for the rest rather than restating it.
+ *   - NO CONTACT FORM. Spec §2.6.5: the employer requirement form stays on
+ *     the legacy site, so the primary conversion path leaves this domain.
+ *     A second, different form here would be a new form nobody asked for.
+ *
+ * SECTION GROUNDS run cream / white / teal / cream across the four blocks
+ * (.contact-start, .contact-direct, .contact-office, FinalCta), registered
+ * and asserted in tests/section-rhythm.test.ts. The brand wash lands on the
+ * office block for the same reason it lands on /about's Singapore block:
+ * --color-surface-teal exists to give #00a4a6 real graphic area, and the
+ * block about where the company physically IS is the one place on a page
+ * where a brand ground carries meaning rather than decoration. No second
+ * dark band — spec §6 keeps block 07's --color-deep as the site's only
+ * palette register shift, and §3.2 does not list TwoSidedMatch here.
+ *
+ * THE CTA PAIR SITS IN THE HERO AS WELL AS IN FinalCta, and /about
+ * deliberately does the opposite. That page's argument was that four short
+ * blocks put a second pair of buttons a few hundred pixels above the
+ * closing one, i.e. two conversion surfaces in one screen. It does not
+ * reach this page: the pair here is on the FIRST screen and FinalCta is
+ * below three blocks of details, which is the /pricing arrangement rather
+ * than the /about one. A contact page whose primary action is three blocks
+ * down is a contact page that hid the thing it exists for.
+ */
+import { getEntry } from 'astro:content'
+import BaseLayout from '../layouts/BaseLayout.astro'
+import Container from '../components/Container.astro'
+import Button from '../components/Button.astro'
+import FinalCta from '../sections/FinalCta.astro'
+import { company } from '../data/company'
+import { defaultWhatsappUrl } from '../lib/whatsapp'
+import { employmentAgencySchema, markdownToPlainText } from '../lib/structured-data'
+
+const whatsappHref = defaultWhatsappUrl()
+
+/*
+ * THE RESPONSE LINE, RESOLVED FROM THE APPROVED SOURCE.
+ *
+ * src/content/faq/submit-requirements.md is where this sentence was signed
+ * off, and it is what /faq and the homepage render. This page used to carry
+ * a hardcoded near-copy of it — see this file's header. One edit to that
+ * markdown file now moves all three surfaces together, which is the whole
+ * reason the collection exists.
+ *
+ * markdownToPlainText is the same normaliser Faq.astro runs the body through
+ * for its structured data, so a future bold or link in that sentence arrives
+ * here as text rather than as literal asterisks.
+ *
+ * IT THROWS AT BUILD TIME rather than degrading. The alternatives are both
+ * worse than a failed build: rendering nothing puts a dangling "Send us your
+ * requirements." in the hero, and falling back to a literal reintroduces
+ * exactly the retyped copy this replaced — a fallback that is a second copy
+ * of the fact is not a fallback. The same reasoning as breadcrumbSchema's
+ * two throws in src/lib/structured-data.ts.
+ *
+ * The match is deliberately on a distinctive FRAGMENT rather than on the
+ * whole sentence: matching the whole sentence would mean typing it here,
+ * and then a revision to the wording would fail the build instead of
+ * flowing through. "consultant reviews every submission" is the clause that
+ * identifies WHICH sentence; the response figure, the verb and the tense
+ * are all free to change without touching this page.
+ */
+const submitRequirements = await getEntry('faq', 'submit-requirements')
+const responseSentences = markdownToPlainText(submitRequirements?.body ?? '')
+  .split(/(?<=[.!?])\s+/)
+  .map((sentence) => sentence.trim())
+  .filter((sentence) => /consultant reviews every submission/i.test(sentence))
+
+if (responseSentences.length !== 1) {
+  throw new Error(
+    `/contact: expected exactly one sentence matching "consultant reviews every submission" in ` +
+      `src/content/faq/submit-requirements.md, found ${responseSentences.length}. This page renders ` +
+      `that sentence rather than retyping it; if the approved wording has changed, update the match ` +
+      `in src/pages/contact.astro — do not paste the new sentence in here.`,
+  )
+}
+
+const responsePledge = responseSentences[0]
+
+/*
+ * Assembled from company.ts exactly as Footer.astro and /about assemble it.
+ * Never retyped — see this file's header. The postal code is part of the
+ * string rather than a separate row because that is how a Singapore address
+ * is written and how a visitor will paste it into a map.
+ */
+const addressLine = `${company.address.street}, ${company.address.locality} ${company.address.postalCode}`
+
+/*
+ * Spec §4: this page owns LOCAL intent, which is the one intent no other
+ * page claims. So the title carries the two things a local search resolves
+ * on — what the business is and where it is — rather than the brand-and-
+ * trust framing /about and /why-directhired share. The licence resolves
+ * from company.ts like every other value here; a literal fails
+ * tests/company.test.ts's never-retyped sweep, which now covers src/lib and
+ * src/data as well as the markup.
+ */
+const title = 'Contact DirectHired — Phone, WhatsApp and Office in Singapore'
+const description =
+  `Contact DirectHired, a licensed Singapore maid agency: call ${company.phoneDisplay}, ` +
+  `email ${company.email}, or find the office address and opening hours.`
+---
+
+<BaseLayout title={title} description={description} breadcrumb="Contact">
+  {/*
+    EmploymentAgency structured data — spec §4's local-intent signal for
+    this page, and the reason §3.2 names it here by name.
+
+    THE SAME FUNCTION THE HOMEPAGE CALLS, not a second schema. Every value
+    in it resolves from src/data/company.ts (name, telephone, email, the
+    postal address, both social profiles), so the two pages cannot describe
+    the business differently — which is the entire point of a LocalBusiness
+    subtype: a search engine reconciling two pages of one site must find one
+    business, one address and one number. Adding a literal to that function
+    scored a fully green suite once; it does not now, and
+    tests/company.test.ts records the mutation that proved it.
+  */}
+  <script type="application/ld+json" set:html={JSON.stringify(employmentAgencySchema())} slot="head" />
+
+  <section class="contact-start">
+    <Container>
+      <h1>Talk to DirectHired.</h1>
+
+      {/*
+        The published response line, READ from
+        src/content/faq/submit-requirements.md rather than reproduced here —
+        client-approved copy that already renders on /faq and the homepage.
+        It is the only response figure anybody has supplied, and it is a
+        TARGET ("aims to"), which is how it was given and how it must stay.
+        Do not upgrade it to a guarantee, do not add a second faster one for
+        WhatsApp, and do not paste the sentence into this file: the whole
+        point of `responsePledge` is that there is one copy of it.
+      */}
+      <p class="contact-lede">
+        Send us your requirements. {responsePledge} If you would rather ask something first, the
+        details below reach us directly.
+      </p>
+
+      <div class="contact-cta">
+        <Button variant="primary" href={company.requirementFormUrl}>Submit Your Requirements</Button>
+        <Button variant="secondary" href={whatsappHref} external>WhatsApp Us</Button>
+      </div>
+    </Container>
+  </section>
+
+  <section class="contact-direct">
+    <Container>
+      <h2 class="section-title">Ways to reach us</h2>
+
+      {/*
+        A row each, term in a fixed column and the value beside it — the
+        site's established fact-table shape (/about's record block,
+        /find-your-helper's timings). A card each would box three short
+        facts into three surfaces on a white ground, which is the generic-
+        UI-kit reading Card.astro's own header warns about.
+
+        Every href is built, never typed: tel: from phoneE164 (E.164 is the
+        form a dialler wants), mailto: from email, and the WhatsApp link
+        from defaultWhatsappUrl() — the same single-sourced deep link every
+        secondary CTA on the site uses, carrying the same pre-filled
+        message. tests/links.test.ts and tests/whatsapp.test.ts both hold
+        that.
+      */}
+      <dl class="channels">
+        <div class="channel-row">
+          <dt>Phone</dt>
+          <dd class="channel-value">
+            <a href={`tel:${company.phoneE164}`}>{company.phoneDisplay}</a>
+          </dd>
+        </div>
+
+        <div class="channel-row">
+          <dt>WhatsApp</dt>
+          <dd class="channel-value">
+            <a href={whatsappHref} target="_blank" rel="noopener noreferrer">
+              {company.phoneDisplay}
+            </a>
+          </dd>
+          <dd class="channel-note">Opens a message to the same number, ready to send.</dd>
+        </div>
+
+        <div class="channel-row">
+          <dt>Email</dt>
+          <dd class="channel-value">
+            <a href={`mailto:${company.email}`}>{company.email}</a>
+          </dd>
+        </div>
+      </dl>
+    </Container>
+  </section>
+
+  <section class="contact-office">
+    <Container>
+      <h2 class="section-title">Where we are</h2>
+
+      <div class="office">
+        <div class="office-address">
+          <p class="office-label">Office</p>
+          {/*
+            The address as a fact, at display size, with tabular figures so
+            the postal code reads as a number — the treatment /about gives
+            the same string. Nothing describes the building, the district or
+            what happens inside it: none of that is supplied, and all of it
+            is the natural next sentence.
+          */}
+          <p class="address">{addressLine}</p>
+        </div>
+
+        <div class="office-meta">
+          <p class="office-label">Opening hours</p>
+          <p class="hours">{company.openingHours}</p>
+
+          <p class="office-label office-label-spaced">Follow DirectHired</p>
+          <ul class="socials">
+            <li>
+              <a href={company.socials.facebook} target="_blank" rel="noopener noreferrer">Facebook</a>
+            </li>
+            <li>
+              <a href={company.socials.instagram} target="_blank" rel="noopener noreferrer">
+                Instagram
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {/*
+        The licence, and only the licence. It is the one credential a family
+        checking a Singapore agency actually checks, and a contact page that
+        made them go and look for it would be withholding the useful half of
+        "who am I calling". The registered entity, the UEN and the track
+        record stay on /about — company.ts scopes the first two there by
+        name — so this points at that page instead of restating it.
+      */}
+      <p class="licence">
+        MOM Employment Agency licence {company.momLicence}. The rest of the company’s particulars
+        are on the <a href="/about">about page</a>.
+      </p>
+    </Container>
+  </section>
+
+  {/*
+    The page's closing conversion surface, framed for this page. It says
+    what the details above cannot: a phone number tells you how to ask, and
+    the submission is what actually starts a placement. No response figure
+    here — the hero already carries the published one, and repeating it
+    twice on one page would read as a promise being pressed rather than
+    stated.
+  */}
+  <FinalCta
+    heading="Or start with your requirements."
+    lede="Tell us about your household and what you are looking for, and a consultant will pick it up from there."
+  />
+</BaseLayout>
+
+<style>
+  .contact-start {
+    /*
+     * --space-12 top, --space-section bottom — the treatment every other
+     * page gives its opening block, for the same reason: this block carries
+     * the page's hero, and a full --space-section (128px at ≥1280) above an
+     * image-less single-column headline spends the first screen on cream.
+     */
+    padding-block: var(--space-12) var(--space-section);
+    background: var(--color-surface);
+  }
+
+  .contact-start h1 {
+    margin: 0;
+    /*
+     * 16ch. "Talk to DirectHired." is one 20-character line and sets on a
+     * single line at every width from 320 up at --size-h1's clamped scale;
+     * the measure is here to stop it stretching if the headline is ever
+     * lengthened, not to break this one. /about's 20ch is a MEASURED value
+     * for a 45-character sentence and does not transfer.
+     */
+    max-width: 16ch;
+    font-family: var(--font-display);
+    font-size: var(--size-h1);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.1;
+    color: var(--color-ink);
+  }
+
+  .contact-lede {
+    max-width: 52ch;
+    margin: var(--space-6) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-lede);
+    line-height: 1.5;
+    color: var(--color-ink);
+  }
+
+  .contact-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-8);
+  }
+
+  .contact-direct {
+    padding-block: var(--space-section);
+    /* White, between the cream hero above and the teal wash below.
+       Registered in tests/section-rhythm.test.ts; the grounds have to be
+       judged as a sequence, so do not flip this one alone. */
+    background: var(--color-surface-raised);
+  }
+
+  /* Shared by both page-local <h2>s, at --size-h3 rather than --size-h2:
+     these head a sub-part of a page the <h1> has already opened, and
+     setting them at section-header scale would put three competing display
+     sizes on one screen. Same size and role as /about's .section-title. */
+  .section-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--size-h3);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  .channels {
+    max-width: 60rem;
+    margin: var(--space-8) 0 0;
+  }
+
+  /* The rule between rows rather than around them — /about's record block
+     and /find-your-helper's timings use the same shape. --color-border is
+     a decorative hairline (~1.3:1, see tokens.css); it carries no text and
+     bounds no control, and it is never --color-brand-teal, which is
+     reserved as a drawn line for block 07's crossbar and FinalCta's mark. */
+  .channel-row {
+    padding-block: var(--space-6);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .channel-row:last-child {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  /* The site's established eyebrow treatment (TrustBadge's .trust-label,
+     /about's .record dt). --tracking-wide's contract requires
+     text-transform: uppercase in the same rule — tests/tokens.test.ts
+     asserts it, and it scans src/pages. */
+  .channels dt {
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+  }
+
+  .channel-value {
+    max-width: 40ch;
+    margin: var(--space-2) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-h3);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.25;
+    color: var(--color-ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* --color-accent (6.03:1 on cream, 5.83:1 on white, 5.54:1 on the teal
+     wash), never --color-brand-teal, which measures 2.89:1 and carries no
+     text anywhere on this site. */
+  .channel-value a,
+  .licence a,
+  .socials a {
+    color: var(--color-accent);
+    text-decoration: none;
+    border-bottom: 1px solid var(--color-accent);
+  }
+
+  .channel-value a:hover,
+  .licence a:hover,
+  .socials a:hover {
+    color: var(--color-accent-hover);
+    border-color: var(--color-accent-hover);
+  }
+
+  .channel-note {
+    max-width: 46ch;
+    margin: var(--space-3) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+  }
+
+  .contact-office {
+    padding-block: var(--space-section);
+    /*
+     * The page's one section in the brand wash. --color-surface-teal is 8%
+     * --color-brand-teal over cream (tokens.css) and exists to give the
+     * logo colour real graphic AREA without ever setting text in it;
+     * measured, --color-ink reads 12.87:1 on it, --color-ink-muted 7.32:1
+     * and --color-accent 5.54:1. One per page is the rule —
+     * tests/section-rhythm.test.ts asserts it.
+     */
+    background: var(--color-surface-teal);
+  }
+
+  .office {
+    display: grid;
+    gap: var(--space-8);
+    margin-top: var(--space-6);
+  }
+
+  /* The site's established eyebrow treatment. Same contract as .channels dt
+     above: --tracking-wide only on uppercase. */
+  .office-label {
+    margin: 0;
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+  }
+
+  .office-label-spaced {
+    margin-top: var(--space-8);
+  }
+
+  /*
+   * The address and the hours at display size — both are facts rather than
+   * prose, and the address is the one thing on this page a visitor is most
+   * likely to copy. Tabular figures for the same reason TrustBadge uses
+   * them: a postal code should read as a number.
+   */
+  .address,
+  .hours {
+    max-width: 30ch;
+    margin: var(--space-3) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-h3);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.3;
+    color: var(--color-ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .socials {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-6);
+    margin-top: var(--space-3);
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+  }
+
+  .licence {
+    max-width: 56ch;
+    margin: var(--space-12) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    /* Full ink rather than --color-ink-muted on this ground: the wash lifts
+       the page's lightness, and the muted step that reads as secondary on
+       white starts to read as faded here. Same finding as /about's. */
+    color: var(--color-ink);
+  }
+
+  /* 48em = --bp-tablet (tokens.css); the literal is repeated by hand
+     because custom properties do not resolve inside a media condition. */
+  @media (min-width: 48em) {
+    /*
+     * The term column is fixed so all three values start on one axis;
+     * `minmax(0, 1fr)` on the second track lets it shrink below its
+     * content's min-content width instead of pushing the row wider than the
+     * container — which a long email address on a narrow tablet will do.
+     *
+     * The dt is pinned to the first cell and every dd to the second, in
+     * explicit placement rather than auto-flow: the WhatsApp row has a
+     * value AND a note, and auto-flow places the note back under the term
+     * in column 1, filling the term column with body copy.
+     */
+    .channel-row {
+      display: grid;
+      grid-template-columns: 12rem minmax(0, 1fr);
+      column-gap: var(--space-8);
+      align-items: baseline;
+    }
+
+    .channels dt {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .channels dd {
+      grid-column: 2;
+    }
+
+    .channel-value {
+      margin-top: 0;
+    }
+
+    /* Address left, hours and socials right. Same geometry and the same
+       reason as /about's .presence: single-column, the one section that
+       spends the brand ground would run tall with its content in the left
+       60% and nothing beside it. */
+    .office {
+      grid-template-columns: minmax(0, 1fr) 20rem;
+      column-gap: var(--space-12);
+      align-items: start;
+    }
+  }
+</style>

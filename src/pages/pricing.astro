@@ -120,7 +120,7 @@ const description =
   `${withTotal} with a replacement, ${withoutTotal} without — and what sits outside the package.`
 ---
 
-<BaseLayout title={title} description={description}>
+<BaseLayout title={title} description={description} breadcrumb="Pricing">
   <section class="pricing-packages">
     <Container>
       <div class="page-intro">
@@ -257,6 +257,37 @@ const description =
       </div>
 
       {/*
+        THE ONE EDGE OF SPEC §4'S TRIANGLE THAT WAS MISSING.
+
+        Pricing ↔ Find Your Helper ↔ FAQ, all three ↔ the requirement form.
+        Five of those six edges already existed and were built for readers
+        rather than for a test: /find-your-helper points at both the pricing
+        page and the FAQ (.match-links), /faq points at both (.faq-body),
+        /pricing reaches /faq through Faq.astro's "See all FAQs", and every
+        one of the three carries the primary CTA. Only pricing → find your
+        helper had nowhere in the copy it belonged.
+
+        It belongs HERE, immediately above this page's first CTA pair, which
+        is the same shape /find-your-helper uses (.match-links above
+        .match-cta): a reader who has just compared two totals either acts
+        or wants to know what the money buys, and this is the sentence for
+        the second one. Placed after the totals rather than before them, so
+        it cannot pull anybody off the page before it has answered its own
+        question.
+
+        NO NEW CLAIM. It states what another page contains, which is a fact
+        about this site rather than about DirectHired, and it deliberately
+        does not reuse /why-directhired's wording for the same edge ("what
+        happens after you send us your requirements") — two pages pointing
+        at a third in the same sentence is how the link starts reading as
+        furniture.
+      */}
+      <p class="packages-next">
+        How a helper is matched to your household is explained on the
+        <a href="/find-your-helper">find your helper</a> page.
+      </p>
+
+      {/*
         The page's first way to act.
 
         Before this, <main> held no CTA at all until the final block — on
@@ -280,7 +311,42 @@ const description =
   <LoanAndPlacement />
 
   {/*
-    Three entries, not five.
+    Two entries, not five — and the third went for exactly the reason the
+    first two did. 2026-08-17.
+
+    "WHAT DOES THE HELPER LOAN AND PLACEMENT FEE MEAN?"
+    (src/content/faq/helper-loan-placement-fee.md) was untagged from this
+    surface. All three of its paragraphs reprinted <LoanAndPlacement /> — the
+    section immediately above this block:
+
+      "The placement fee is fixed at one month's salary… the same amount for
+       a new helper and for a transfer helper"   <- the Placement fee card
+      "The loan is assessed case by case… no standard figure we can publish"
+                                                 <- the Helper loan card
+      "As the employer you advance both amounts at the start, and you recover
+       them through the helper's repayment"      <- "Who actually bears
+                                                     these", 847 characters
+                                                     earlier in the built
+                                                     page, sharing that
+                                                     opening clause VERBATIM
+
+    A ruling in the earlier round called these "three well-differentiated
+    statements" and it was wrong on its own standard: the homepage's version
+    of the same defect was ~628 characters apart and was fixed (see
+    src/pages/index.astro), and this one is closer in kind — not a family of
+    related sentences but one clause typed twice with "As the employer" in
+    front of it, with a third statement of the framing sitting between them.
+    Spec §2.6.4 says in terms that reassurance is not a licence for
+    near-verbatim adjacent repetition.
+
+    NEITHER HALF OF §2.4 IS LOST, on this surface or any other. /pricing
+    still states the framing twice: the qualifier under the cards ("They are
+    not an extra charge you carry: you advance them and recover them") and
+    <LoanAndPlacement />'s "Who actually bears these", which carries both
+    halves in full and is the section the page exists to deliver. The FAQ
+    answer is untagged, not deleted, and still carries both halves on /faq,
+    where the reader has not just read the cards. That is the same remedy,
+    for the same reason, as the two entries below.
 
     "How much does it cost to hire a helper?" gave both totals again and
     "What is included in the fly-in package?" reprinted the entire line-item
@@ -296,25 +362,63 @@ const description =
     `limit` is unchanged: it has always been a ceiling, and the number of
     entries is decided by the tagging, not by this prop.
   */}
+  {/*
+    THE LEDE, and why it is what it is. This note used to sit BETWEEN THE
+    ATTRIBUTES of the <Faq /> below, and it moved out on 2026-08-17 because
+    typechecking was turned on for the first time and could not parse it —
+    see the note below the tag. The content is unchanged.
+
+    The lede read "The ones families ask us most often once they have seen
+    the figures above." Nothing in the brief supports a claim about what
+    families ask most often — and the comment directly above this one records
+    the opposite, since "what do families ask you AFTER you send them the
+    price list?" is an open question to DirectHired. The page was asserting
+    the answer to a question it was simultaneously recording as unanswered.
+  */}
   <Faq
     surface="pricing"
     limit={6}
     heading="Questions about what it costs"
-    {/*
-      The lede read "The ones families ask us most often once they have seen
-      the figures above." Nothing in the brief supports a claim about what
-      families ask most often — and the comment directly above this one
-      records the opposite, since "what do families ask you AFTER you send
-      them the price list?" is an open question to DirectHired. The page was
-      asserting the answer to a question it was simultaneously recording as
-      unanswered.
-    */}
     lede="A few more questions about the figures above."
   />
+  {/*
+    WHY THE COMMENT ABOVE IS ABOVE THE TAG AND NOT INSIDE IT.
 
+    `{/* … *\/}` is valid between ELEMENTS in an Astro template. Between
+    ATTRIBUTES it is not: Astro's own compiler tolerates it and builds, but
+    TypeScript reads the braces as a spread expression, and the result was
+    eleven errors from this one comment —
+
+      ts(2783) 'heading' is specified more than once
+      ts(2783) 'lede' is specified more than once
+      ts(2322) Type 'boolean' is not assignable to type 'string'
+      ts(1002) Unterminated string literal
+      ts(1005) ',' expected  (x3)
+      ts(1109) Expression expected  (x2)
+
+    — and the parse errors meant EVERYTHING BELOW THIS POINT IN THE FILE WAS
+    NEVER TYPECHECKED. It built and shipped correctly the whole time, which
+    is exactly why nobody found it: the defect was invisible until
+    `npm run typecheck` existed.
+
+    Put explanatory comments above the tag, never inside its attribute list.
+  */}
+
+  {/*
+    THE FOURTH VARIANT OF THE UNAPPROVED PROMISE, deleted 2026-08-17.
+
+    The lede ended "— and the exact figures for each of them", which is the
+    same promise src/sections/LoanAndPlacement.astro documents as never
+    approved, in the same shape: a commitment that a specific loan figure
+    will be produced, on a page whose own cards say the loan has no standard
+    figure to publish (§2.3). Four copies of it shipped in one build.
+
+    What is left promises only what §2.6.5's conversion path already is:
+    requirements in, helpers back. No figure is offered.
+  */}
   <FinalCta
     heading="Know the numbers. Now tell us the household."
-    lede="Send us what your family needs and we will come back with helpers who fit it — and the exact figures for each of them."
+    lede="Send us what your family needs and we will come back with helpers who fit it."
   />
 </BaseLayout>
 
@@ -460,11 +564,44 @@ const description =
     color: var(--color-accent);
   }
 
+  /* The sideways link, immediately above the CTA pair. Body size and muted
+     ink so it reads as a route out for the reader who is not ready to act,
+     without competing with the primary button below it.
+
+     THE SPACING IS A HANDOVER, NOT AN ADDITION. This paragraph takes the
+     --space-12 the CTA used to sit on, and the CTA drops to --space-6 —
+     near enough to read as belonging to the sentence above it rather than
+     as a third detached element. The block still grows by this
+     paragraph's height plus --space-6, which is the honest cost of adding
+     a sentence; the section's own padding, its ground, and every block
+     after it are untouched. */
+  .packages-next {
+    max-width: 60ch;
+    margin: var(--space-12) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+  }
+
+  /* --color-accent (6.03:1 on this section's cream ground), never
+     --color-brand-teal, which measures 2.89:1 and carries no text anywhere
+     on this site. Same treatment as PricingSection's qualifier link. */
+  .packages-next a {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .packages-next a:hover {
+    color: var(--color-accent-hover);
+  }
+
   .packages-cta {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-3);
-    margin-top: var(--space-12);
+    margin-top: var(--space-6);
   }
 
   .grid-heading {

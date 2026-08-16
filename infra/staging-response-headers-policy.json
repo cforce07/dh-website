@@ -1,0 +1,17 @@
+{
+  "Name": "directhired-staging-noindex",
+  "Comment": "Security headers plus X-Robots-Tag noindex for staging.directhired.com",
+  "SecurityHeadersConfig": {
+    "XSSProtection": { "Override": false, "Protection": true, "ModeBlock": true },
+    "FrameOptions": { "Override": false, "FrameOption": "SAMEORIGIN" },
+    "ReferrerPolicy": { "Override": false, "ReferrerPolicy": "strict-origin-when-cross-origin" },
+    "ContentTypeOptions": { "Override": true },
+    "StrictTransportSecurity": { "Override": false, "AccessControlMaxAgeSec": 31536000 }
+  },
+  "CustomHeadersConfig": {
+    "Quantity": 1,
+    "Items": [
+      { "Header": "X-Robots-Tag", "Value": "noindex, nofollow", "Override": true }
+    ]
+  }
+}

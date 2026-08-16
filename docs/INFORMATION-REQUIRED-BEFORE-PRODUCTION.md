@@ -10,13 +10,17 @@ Four categories, which behave differently and are tracked separately (master bri
 
 Categories A, B and D are **derived** from the codebase and cannot fall out of sync with it. Category C is **declared** — see that section for why those items cannot be derived.
 
+A fifth section follows the four. It is not a category of missing information: it records two conditions of the build itself that DirectHired should know about and that no page shows.
+
 ## Category A — Inline gaps (block the production build)
 
 A missing value on a block that still renders. Each is marked with `<Tbd>` in the source and shows up as a `data-tbd` attribute in the built HTML. `npm run build` runs `scripts/check-tbd.mjs` against `dist/` and **fails** while any of these remain — publishing a rendered block with a hole in it is a broken claim.
 
 _None found — every inline value in the current build is verified._
 
-**Read that carefully:** there are currently **0 `<Tbd>` call sites** anywhere in `src/`. The last one, the MOM licence number, was resolved on 2026-08-15. So this category is not reporting that nothing is missing — it is reporting that nothing is *marked*, which is a weaker statement. `npm run build` passes the gate today. The gate and the `<Tbd>` component are deliberately kept for the next unverified value; until one is marked, Category A cannot detect anything and Categories B, C and D carry the whole checklist.
+**Read that carefully — it is not a clean bill of health.** There are currently **0 `<Tbd>` call sites** anywhere in `src/`. The last one, the MOM licence number, was resolved on 2026-08-15. So this category is not reporting that nothing is missing — it is reporting that nothing is *marked*, which is a much weaker statement. With zero markers, Category A cannot detect anything at all: it would say "none found" on a site with a hundred gaps in it, and `npm run build` would pass its gate. The gate and the `<Tbd>` component are deliberately kept for the next unverified value.
+
+**What is actually outstanding is below, and in one other place.** Categories B, C and D carry the whole of this document. They are not the whole of what DirectHired still owes: this checklist covers what the codebase can *detect* (B, D) or has *declared* (C), and by construction that is everything with a consequence in the build. Items with no consequence in the build — a founding story that is one sentence long, what your insurance covers above MOM's floor, whether one consultant carries a placement end to end — leave no trace here at all, because the honest response to not having them was to write less rather than to write something. Those live in `docs/OPEN-DECISIONS.md`, which is the companion to this file and not a duplicate of it. **Read both, or you have read half the list.**
 
 ## Category B — Whole-block omissions (do not block the production build)
 
@@ -35,8 +39,12 @@ Information DirectHired still owes that leaves **no detectable trace** in the co
 
 They are therefore **declared** in `DECLARED_INPUTS` in `scripts/generate-info-required.mjs` — the only hand-maintained list in this document. The alternative would be sprinkling cosmetic `<Tbd>` markers onto pages purely so this script could find them, which would trade a correct page for a broken one. `npm run build` **succeeds** with these outstanding; nothing false is published.
 
-Design spec §5 named three Category A items — the MOM licence number, detailed replacement terms, and the without-replacement inclusion list. **All three have since been supplied**: the licence number on 2026-08-15 (its `<Tbd>` removed), the other two on 2026-08-16. What remains below is one item that is not missing information at all — the facts are in hand and what is outstanding is DirectHired’s sign-off on publishing them — and one that is a placeholder asset rather than a gap in the copy.
+Design spec §5 named three Category A items — the MOM licence number, detailed replacement terms, and the without-replacement inclusion list. **All three have since been supplied**: the licence number on 2026-08-15 (its `<Tbd>` removed), the other two on 2026-08-16. What remains below are three items, and no two of them are the same kind of thing. **The form URL is the one that matters**: nothing is missing from the code at all, the destination simply does not resolve, and until it does the site cannot convert. The second is not missing information either — those facts are in hand, and what is outstanding is DirectHired’s sign-off on publishing them. The third is a placeholder asset rather than a gap in the copy.
 
+- **Production URL for the employer requirement form**
+  - Source: Brief §79; core-pages spec §3; docs/OPEN-DECISIONS.md ("Blocks launch")
+  - Blocks: **every conversion on the site.** `src/data/company.ts` sets `requirementFormUrl` to `https://www.directhired.com/employer-requirement`, which does not resolve. That URL is behind **46 calls to action across all 8 built pages** — every "Submit Your Requirements" button in the header, the mobile nav, every hero, every closing block and the fixed mobile bar, plus the 404. Nothing on the site is broken to look at and every page passes every check; the primary conversion path simply ends nowhere. DirectHired confirmed on 2026-08-16 that the form stays on their existing separate site, so what is needed is **that site's live form URL** — not a form to be built.
+  - Handled meanwhile by: A single constant. `company.requirementFormUrl` is the only definition of the destination anywhere in the codebase — `tests/links.test.ts` asserts that no `.astro` or `.ts` file under `src/` writes the URL as a literal, so repointing it at launch is one edit to one line and all 46 call sites follow. That is the whole of the work. Because the form is hosted elsewhere, this site cannot measure whether anyone arrives at it or finishes it; that consequence is accepted and written up under *Housekeeping* in `docs/OPEN-DECISIONS.md`.
 - **Approved social share image (Open Graph)**
   - Source: Brief §79 Reminders 01/02; §55
   - Blocks: nothing from rendering — a share card ships and link previews work, including in WhatsApp, a secondary conversion channel for this business. What is still outstanding is DirectHired’s **own approved** card: the one in place is an AI-generated illustration carrying no wordmark, so every link to this site currently previews unbranded.
@@ -59,7 +67,7 @@ This is the production decision list: for each entry, either supply your own pho
   - Usage sites:
     - `src/sections/MeetHelpers.astro:54` — <section class="meet-helpers"> — renders only when the helper-profiles collection is non-empty
     - `src/sections/MeetHelpers.astro:64` — <div class="helper-card"> — the profile card body, where a portrait would sit
-    - `src/content/config.ts:90` — const helperProfiles = defineCollection({ — the helper-profiles schema, which has no portrait field and must not gain one before signed releases exist
+    - `src/content/config.ts:116` — const helperProfiles = defineCollection({ — the helper-profiles schema, which has no portrait field and must not gain one before signed releases exist
   - Should become: Priority 2 of the shot brief: individual portraits of real helpers, eye level, working clothes not uniform, plain background, one consistent crop across all of them, each with a signed release obtained before the shoot in a language the subject reads fluently.
   - AI generation **not permitted**: An AI-generated helper portrait is a fabricated helper. Master brief §78 forbids inventing helper details and §55 forbids presenting placeholder people as actual DirectHired helpers; a face on a profile card asserts that this specific person exists and is available. No prompt is written for this slot. It stays absent until a real, consented photograph exists.
 - **Hero — one frame, both people in it** (`hero-together`)
@@ -81,12 +89,12 @@ This is the production decision list: for each entry, either supply your own pho
   - Generated from: Prompt B1 ("the shared counter, at share-card scale", recommended) under "Slot B — og-share" in docs/design/image-prompts-2026-08-16.md. Generated with DALL·E and supplied by DirectHired on 2026-08-16 as images/image_slotb_promp1.png (1730x909 PNG, 2.0MB), which is kept as the untouched master. src/assets/og-share.png is that master centre-cropped and downscaled to exactly 1200x630 (Lanczos 3): 1730x909 is 1.9032 against the 1.9048 Open Graph wants, so the crop discards about half a pixel of height and nothing else — in particular it does not touch the clear right-hand third the wordmark is meant to sit in.
   - Rendered at: 1200x630 (1.91:1), shipped as a ~57KB JPEG transcoded at build time by astro:assets. WhatsApp, the live conversion channel for this business, reads og:image directly and renders it at roughly 300x157 in a chat bubble. Not fetched by the page itself, so it costs the LCP budget nothing.
   - Usage sites:
-    - `src/layouts/BaseLayout.astro:19` — import ogSource from '../assets/og-share.png'
-    - `src/layouts/BaseLayout.astro:46` — getImage({ src: ogSource, format: 'jpeg', quality: 78 }) — JPEG on purpose; several share consumers still refuse WebP and AVIF
-    - `src/layouts/BaseLayout.astro:47` — new URL(ogImage.src, Astro.site).href — the absolute URL, built exactly the way `canonical` is
-    - `src/layouts/BaseLayout.astro:102` — <meta property="og:image" content={ogImageUrl} /> — :width, :height, :type and :alt follow on the four lines below
-    - `src/layouts/BaseLayout.astro:127` — <meta name="twitter:card" content="summary_large_image" /> — valid only while an og:image ships; back to "summary" in the same commit if this image is ever removed
-    - `src/layouts/BaseLayout.astro:128` — <meta name="twitter:image" content={ogImageUrl} /> — twitter:image:alt follows on the next line
+    - `src/layouts/BaseLayout.astro:20` — import ogSource from '../assets/og-share.png'
+    - `src/layouts/BaseLayout.astro:110` — getImage({ src: ogSource, format: 'jpeg', quality: 78 }) — JPEG on purpose; several share consumers still refuse WebP and AVIF
+    - `src/layouts/BaseLayout.astro:111` — new URL(ogImage.src, Astro.site).href — the absolute URL, built exactly the way `canonical` is
+    - `src/layouts/BaseLayout.astro:181` — <meta property="og:image" content={ogImageUrl} /> — :width, :height, :type and :alt follow on the four lines below
+    - `src/layouts/BaseLayout.astro:206` — <meta name="twitter:card" content="summary_large_image" /> — valid only while an og:image ships; back to "summary" in the same commit if this image is ever removed
+    - `src/layouts/BaseLayout.astro:207` — <meta name="twitter:image" content={ogImageUrl} /> — twitter:image:alt follows on the next line
   - Should become: A DirectHired-owned share card: either a crop of the commissioned hero photograph with the wordmark set over a clear area, or a purely typographic card built from the brand assets. The current card carries no wordmark at all, which is the most visible thing it is still missing.
   - AI generation permitted. Prompt: **Slot B — og-share** in `docs/design/image-prompts-2026-08-16.md`
 - **Reviewer / testimonial faces (block 10b)** (`review-author-portrait`) — **real photo only**
@@ -105,3 +113,14 @@ This is the production decision list: for each entry, either supply your own pho
   - Usage sites: none yet — registered ahead of any consumer
   - Should become: Priority 2 of the shot brief: a real corner of the actual office at working temperature, and a real consultation in progress shot from behind or side-on. Not staged, not empty, not wide-angle.
   - AI generation **not permitted**: A generated office or generated staff photograph is a claim about a real, licensed business (MOM 23C1443) that is simply false. §55 and §78 both apply. This slot is registered with no consumer precisely so that the prohibition is on record before anyone adds an About block and reaches for a plausible-looking interior.
+
+## Known conditions of the current build (nothing is required from DirectHired)
+
+Neither of these is missing information — nobody is being asked for anything, and neither blocks the build. They are here because they are true of the site as it stands, they are not visible on any page, and a launch checklist that omits them leaves the reader to discover them by clicking.
+
+- **41 internal links point at routes this build does not produce** (13 routes) — derived from `dist/`
+  - Blocks: nothing at build time. `npm run build` succeeds, every page passes every check, and nothing looks broken; a visitor who clicks one is served the 404 page. The routes are pages this project has committed to and **sub-project 3** owns, not dead ends: `/disclaimer`, `/pdpa`, `/privacy-policy`, `/terms` — the legal links in the footer's bottom bar, one each on all 8 built pages (32 links) — plus 3 under `/helpers/` and 6 under `/services/`, the detail links inside two sections on the homepage (9 links).
+  - Handled meanwhile by: the navigation itself, which has **no broken links at all** — 'Services' and 'Helper Sources' were taken out of it on 2026-08-17 and stay out until their pages exist (`src/lib/nav.ts` records the decision). What is left is a footer bar a Singapore site is expected to carry and two homepage sections that would have to be redesigned to lose their links. Every route is enumerated in `DEFERRED_ROUTES` in `tests/links.test.ts`, which asserts the residual as an exact set: it fails if a new broken link appears, and it fails if an entry is still listed after its page ships.
+- **6 `astro check` hints, deliberately not silenced** — declared; reproduce with `npm run typecheck`
+  - Blocks: nothing. `npm run typecheck` exits 0 — **0 errors, 0 warnings, 6 hints**. 5 of them are Astro's `astro(4000)` note that a `<script type="application/ld+json">` carrying attributes is treated as `is:inline`, one for each JSON-LD block in the source (`src/layouts/BaseLayout.astro`, `src/pages/contact.astro`, `src/pages/index.astro`, `src/sections/Faq.astro`, `src/sections/FaqGrouped.astro`). The remaining one is `ts(6196)` on `src/layouts/BaseLayout.astro`, which declares an `interface Props` it never references by name.
+  - Handled meanwhile by: leaving both alone, on purpose. `is:inline` is exactly what those blocks want — they emit a JSON string that must not be processed as a module — so adding the directive would be a behaviour-neutral edit to shipping schema, made only to quiet a note that is telling the truth. `Props` is Astro's own convention: the compiler reads it to typecheck every `<BaseLayout>` usage, so deleting the "unused" interface would remove type checking from every page on the site. A hint is a hint; the gate is `0 errors`, and CI enforces that.

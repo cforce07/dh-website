@@ -103,12 +103,37 @@ import { company } from '../data/company'
 
               For anyone reading the live audit's C4, which proposes asking
               DirectHired to approve a sentence containing "before you
-              commit": that request is still open and still correct. It is
-              not satisfied by this clause, which was never approved.
+              commit": that request was answered — spec §2.6.2 approves
+              "We go through the repayment arrangement in full with you
+              before you commit, and it is set out in the contract", and it
+              ships further down this file, in the paragraph about who bears
+              the cost. It is not this link, and it must not become this
+              link.
+
+              AND NEITHER WAS THE REST OF THE SENTENCE (2026-08-17). The
+              anchor text read "Our team goes through the exact amount for
+              the helper you choose". The comment above it said in terms that
+              this phrasing "was never approved", and the §2.6.2 note further
+              down said the approved sentence is "deliberately NOT attached
+              to the requirement-form link in the card above… the worst place
+              for an unapproved promise". The file documented the defect and
+              then shipped it: an unapproved promise as the anchor text of a
+              primary CTA, on the conversion path, in a card whose whole
+              subject is a figure §2.3 forbids publishing.
+
+              What replaced it promises nothing that is not already
+              authorised. "Submit your requirements" is the site's own CTA
+              label (Hero.astro, MobileCtaBar.astro, FinalCta) and names the
+              destination rather than an outcome. "We will come back to you"
+              is already published on /faq and /find-your-helper, and rests
+              on the approved response answer in
+              src/content/faq/response-time.md ("We aim to respond within 1
+              business day…"). Neither half says a figure will be produced,
+              which is the promise §2.3 cannot support and the old anchor
+              made.
             */}
-            <a href={company.requirementFormUrl}
-              >Our team goes through the exact amount for the helper you choose</a
-            >.
+            <a href={company.requirementFormUrl}>Submit your requirements</a> and we will come back
+            to you.
           </p>
         </div>
       </Card>

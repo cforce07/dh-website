@@ -2,7 +2,14 @@ import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { packages, packageTotalCents } from '../src/data/pricing'
+import { company } from '../src/data/company'
 import { formatSgd, formatSgdProse } from '../src/lib/money'
+import {
+  EXEMPT_PLACES,
+  PERMITTED_SOURCES,
+  forbiddenPlaceNames,
+  namedSources,
+} from './support/helper-sources'
 
 /**
  * Strips every comment form this codebase uses, so a comment that explains
@@ -24,12 +31,41 @@ function walk(dir: string): string[] {
 }
 
 /**
+ * An .astro file with its scoped stylesheet removed, then its comments.
+ *
+ * FIX ROUND, F-2. renderedCopy() read each .astro whole, so a `<style>`
+ * block was swept as though it were visitor copy — and CSS is full of
+ * place names. `font-family: Georgia, serif` fired the source allowlist
+ * naming the file, and that exact font stack is what this repo's own
+ * foundation plan proposes (docs/superpowers/plans/
+ * 2026-08-15-directhired-foundation-homepage.md). `background: peru` does
+ * the same; `peru` is a CSS named colour. Nobody reads a stylesheet, so
+ * neither is a claim about where a helper comes from.
+ *
+ * That is the failure mode tests/support/helper-sources.ts's docblock
+ * names as the one that matters: a guard that fires on legitimate work
+ * gets loosened by whoever meets it rather than fixed.
+ *
+ * Only the stylesheet goes. The TEMPLATE is exactly what these sweeps must
+ * keep reading, and the frontmatter with it — copy typed into either is a
+ * violation whether or not the page is built today, which is the entire
+ * reason renderedCopy() exists. Same removal, for the same reason, as
+ * tests/pages.test.ts's renderedText() makes on the built HTML.
+ *
+ * Removed BEFORE comments, so a CSS block comment inside <style> cannot
+ * dissolve the closing tag this depends on.
+ */
+function template(source: string): string {
+  return code(source.replace(/<style[\s\S]*?<\/style>/gi, ' '))
+}
+
+/**
  * Everything a visitor can actually read: the content collections verbatim,
- * plus the comment-free source of every file that renders markup. Data and
- * lib files are deliberately NOT included — src/data/company.ts's
- * `address.country: 'SG'` and structured-data.ts's `areaServed: Country`
- * are the business's own Singapore address, which is a country, and
- * neither is prose about a helper source.
+ * plus the comment-free, stylesheet-free source of every file that renders
+ * markup. Data and lib files are deliberately NOT included —
+ * src/data/company.ts's `address.country: 'SG'` and structured-data.ts's
+ * `areaServed: Country` are the business's own Singapore address, which is
+ * a country, and neither is prose about a helper source.
  */
 function renderedCopy(): { file: string; text: string }[] {
   const markdown = walk('src/content')
@@ -39,7 +75,7 @@ function renderedCopy(): { file: string; text: string }[] {
   const markup = ['src/sections', 'src/components', 'src/layouts', 'src/pages']
     .flatMap(walk)
     .filter((f) => f.endsWith('.astro'))
-    .map((file) => ({ file, text: code(readFileSync(file, 'utf8')) }))
+    .map((file) => ({ file, text: template(readFileSync(file, 'utf8')) }))
 
   return [...markdown, ...markup]
 }
@@ -195,6 +231,37 @@ describe('the site never calls Mizoram a country', () => {
     expect(all).toContain('The source is the only difference')
   })
 
+  it('reads the template and the frontmatter, and not the scoped CSS (F-2)', () => {
+    /*
+     * The two directions of what these sweeps are allowed to see, asserted
+     * together so neither can be traded for the other.
+     *
+     * CSS OUT. `font-family: Georgia, serif` and `background: peru` are a
+     * font stack and a named colour, not statements about a helper source,
+     * and both fired the allowlist while <style> was swept. Checked over
+     * every markup file rather than one, and paired with a raw-source
+     * reading, so this cannot go green because the declaration was deleted
+     * from the site instead of stripped from the sweep.
+     *
+     * TEMPLATE AND FRONTMATTER IN. The narrowing must stop at </style>.
+     * HelperSources.astro is the file to prove it on: it has a scoped
+     * stylesheet AND the one sentence tests above depend on, and its
+     * frontmatter is where a source name would be typed as data.
+     */
+    const markup = copy.filter((c) => c.file.endsWith('.astro'))
+    expect(markup.length).toBeGreaterThanOrEqual(20)
+
+    const raw = markup.filter((c) => /font-family:/.test(readFileSync(c.file, 'utf8')))
+    expect(raw.length, 'no .astro file declares a font-family to strip').toBeGreaterThan(10)
+    expect(markup.filter((c) => /font-family:/.test(c.text)).map((c) => c.file)).toEqual([])
+
+    const block = markup.find((c) => c.file === 'src/sections/HelperSources.astro')!
+    expect(block).toBeDefined()
+    expect(block.text).toContain('The source is the only difference') // template
+    expect(block.text).toContain('helperSources') // frontmatter
+    expect(block.text).not.toContain('font-family')
+  })
+
   it('says "source", never "country", of where a helper comes from', () => {
     const offenders = copy
       .filter(({ text }) => /\bcountr(y|ies)\b/i.test(text))
@@ -258,7 +325,7 @@ describe('no helper source beyond Indonesia, Myanmar and Mizoram is ever named',
       'src/content/services/direct-hire-processing.md',
       'src/content/services/maid-insurance.md',
       'src/content/services/maid-replacement.md',
-      'src/content/services/medical-examination.md',
+      'src/content/services/medical-checkup.md',
       'src/content/helpers/indonesia.md',
       'src/content/helpers/myanmar.md',
       'src/content/helpers/mizoram.md',
@@ -292,6 +359,145 @@ describe('no helper source beyond Indonesia, Myanmar and Mizoram is ever named',
     // ...and not on the three real sources, or the suite would be
     // unsatisfiable by correct copy.
     expect(FORBIDDEN_SOURCE.test('Indonesia, Myanmar and Mizoram.')).toBe(false)
+  })
+})
+
+describe('the source rule is enforced as the allowlist it is written as', () => {
+  /*
+   * Task 5B, G-1. Spec §7 says "never name the Philippines OR ANY SOURCE
+   * BEYOND Indonesia, Myanmar and Mizoram". The describe above implements
+   * the first half — four named countries — and nothing implemented the
+   * second. Appending "We also place helpers from Nepal and Thailand." to
+   * src/content/services/transfer-helper.md scored 317 green.
+   *
+   * This closes it by inverting the rule: every country on earth is a
+   * candidate source, the three permitted ones and two documented
+   * exemptions are subtracted, and whatever is left is a violation. The
+   * country list is derived from Node's ICU data rather than maintained
+   * here — see tests/support/helper-sources.ts for the full reasoning,
+   * including the two alternatives that were rejected and why.
+   *
+   * This runs BEFORE the five Phase B pages are written, deliberately.
+   * /why-directhired, /about and /faq are the three that discuss where
+   * helpers come from; hardening afterwards would mean shaping the guard
+   * around copy that had already shipped.
+   */
+  const copy = renderedCopy()
+
+  it('derives a real country list, not an empty one (guards the whole sweep)', () => {
+    // Intl.DisplayNames comes from the runtime's ICU data. A Node built with
+    // small-icu returns the alpha-2 code for most regions, which would leave
+    // this list nearly empty and every assertion below vacuously green — the
+    // exact failure this fix wave exists to remove. So the list is checked
+    // for size AND for the specific names the rule is about.
+    const names = forbiddenPlaceNames()
+    expect(names.length).toBeGreaterThan(200)
+    for (const name of ['Philippines', 'Nepal', 'Thailand', 'Sri Lanka', 'Cambodia', 'Bangladesh']) {
+      expect(names, `${name} is not in the derived list`).toContain(name)
+    }
+    // ...and the permitted three are absent from it, or correct copy could
+    // never pass.
+    for (const permitted of [...PERMITTED_SOURCES, 'Burma', ...EXEMPT_PLACES.keys()]) {
+      expect(names, `${permitted} must not be flagged`).not.toContain(permitted)
+    }
+  })
+
+  it('flags a source the old denylist could not see', () => {
+    // The mutation that scored 317 green, plus the four the denylist already
+    // covered, plus a demonym no suffix rule derives. These strings live in
+    // this test file and are never built or published.
+    const found = (sentence: string) => namedSources(sentence).sort()
+    expect(found('We also place helpers from Nepal and Thailand.')).toEqual(['Nepal', 'Thailand'])
+    expect(found('Vietnamese and Cambodian candidates are available.')).toEqual([
+      'Cambodian',
+      'Vietnamese',
+    ])
+    expect(found('We also place helpers from the Philippines.')).toEqual(['Philippines'])
+    expect(found('Filipina helpers coming soon.')).toEqual(['Filipina'])
+    expect(found('Sri Lankan and Bangladeshi helpers.')).toEqual(['Bangladeshi', 'Sri Lankan'])
+  })
+
+  it('does not fire on the copy this site legitimately writes', () => {
+    // The half that decides whether the guard survives contact with the
+    // site. A sweep that fires on a real sentence gets loosened by the next
+    // person to meet it, and then it guards nothing.
+    expect(namedSources('Indonesia, Myanmar and Mizoram.')).toEqual([])
+    expect(namedSources('Indonesian and Burmese helpers, placed in Singapore.')).toEqual([])
+    expect(
+      namedSources('DirectHired is a Singapore maid agency placing helpers with Singaporean families.'),
+    ).toEqual([])
+    // India-as-a-state. Mizoram cannot be described without the word, and
+    // this sweep is not the rule that governs it — see the exemption test
+    // below, and EXEMPT_PLACES for why.
+    expect(namedSources('Mizoram is a state in the north-east of India.')).toEqual([])
+  })
+
+  it('reads a derived country name as the proper noun it is (F-3)', () => {
+    /*
+     * The sweep carried `i` over 260-odd derived names, so it fired on
+     * ordinary English nouns that happen to double as place names — the
+     * defect this whole file's docblock warns about, arriving from the
+     * inside.
+     *
+     * Derived names are now matched case-sensitively; the irregulars are
+     * not, because none of them is an English word in lower case. What the
+     * narrowing gives up is a lower-cased spelling of a country nobody has
+     * ever written here. What it does not give up is the case that
+     * happens: FORBIDDEN_SOURCE in the describe above is case-insensitive
+     * and stem-based, and runs over these same two corpora.
+     */
+    expect(namedSources('We also place helpers from Nepal.')).toEqual(['Nepal'])
+    expect(namedSources('we washed the jersey')).toEqual([])
+    expect(namedSources('roast turkey')).toEqual([])
+    // ...and the one lower-case spelling that matters is still caught here
+    // by the irregulars, on top of the four-name denylist above.
+    expect(namedSources('helpers from the philippines')).toEqual(['philippines'])
+  })
+
+  it('exempts India only because a stricter rule already bans it outright', () => {
+    /*
+     * The one exemption that could hide something, so the thing that makes
+     * it safe is asserted rather than described. Both guards ban the word
+     * India in copy a visitor reads — over the source sweep here and over
+     * every built page in tests/pages.test.ts — which is strictly stronger
+     * than flagging it as a source would be. If either of those bans is
+     * ever deleted, this fails and the exemption has to be reconsidered in
+     * the same commit.
+     *
+     * FIX ROUND, F-1. This searched both files for the bare `INDIA.source`
+     * — `\bIndian?\b`. Against tests/pages.test.ts that worked. Against
+     * tests/content.test.ts it searched THE FILE THAT HOLDS ITS OWN
+     * DEFINITION LINE, four lines below, so the literal was present whether
+     * or not the real ban still existed: replacing the pattern at the
+     * "never names India in copy a visitor reads" test with
+     * /\bZZZNOPEZZZ\b/ scored a full green file. Proven by mutation.
+     *
+     * Each half now names the expression at its OWN ban site — the filter
+     * call in this file, the FORBIDDEN_CLAIMS entry in the other — neither
+     * of which occurs at a definition. Both are still built from
+     * INDIA.source, so the pattern itself cannot drift out from under them.
+     * Strictly narrower than what it replaced: each expected string
+     * CONTAINS the old one, so nothing that used to fail can now pass.
+     */
+    expect(EXEMPT_PLACES.has('India')).toBe(true)
+    const INDIA = /\bIndian?\b/
+    expect(INDIA.test('Mizoram is a state in the north-east of India.')).toBe(true)
+    const BAN_SITES: Record<string, string> = {
+      // The sweep over renderedCopy() in the describe above.
+      'tests/content.test.ts': `copy.filter(({ text }) => /${INDIA.source}/.test(text))`,
+      // The FORBIDDEN_CLAIMS entry applied to every built page.
+      'tests/pages.test.ts': `pattern: /${INDIA.source}/,`,
+    }
+    for (const [file, banSite] of Object.entries(BAN_SITES)) {
+      expect(readFileSync(file, 'utf8'), `${file} no longer bans the word India`).toContain(banSite)
+    }
+  })
+
+  it('names no source beyond the three in any surface a visitor reads', () => {
+    const offenders = copy.flatMap(({ file, text }) =>
+      namedSources(text).map((place) => `${file}: ${place}`),
+    )
+    expect(offenders).toEqual([])
   })
 })
 
@@ -381,6 +587,165 @@ describe('services', () => {
   })
 })
 
+/*
+ * ONE LINE ITEM, ONE NAME — spec §2.6.10 and §2.6.11.
+ *
+ * §2.6.10 separated the package's `Medical` line from its `Insurance` line:
+ * the medical is the helper's PRE-EMPLOYMENT MEDICAL CHECKUP and "is not
+ * insurance of any kind". src/data/pricing.ts was renamed to match
+ * (`Medical` -> `Medical checkup`), and tests/cost-boundary.test.ts derives
+ * its line-item vocabulary from that label precisely so a rename cannot leave
+ * a guard watching a name nobody uses.
+ *
+ * THE RENAME NEVER REACHED THE SERVICES COLLECTION. A sweep of dist/ on
+ * 2026-08-17 found the same obligation published under THREE names in one
+ * build:
+ *
+ *   "Medical checkup"              /pricing, /faq  — the price-list label
+ *   "Medical Examination"          /              — the services card title
+ *   "pre-employment medical checkup"  /faq        — the FAQ answer
+ *
+ * The third is the canonical name with the qualifier §2.6.10 requires, so it
+ * is right. The second is a different name for the same thing, sitting on the
+ * homepage, and it made the two adjacent service cards near-identical: the
+ * insurance card and the medical card were the same sentence with one noun
+ * swapped ("X is one of the components in our fly-in package — we arrange it
+ * and coordinate it on your behalf"), which is the boilerplate-with-one-word-
+ * swapped tell src/content/config.ts already records deleting once.
+ *
+ * WHY THIS IS A TEST AND NOT A STYLE NOTE. A reader who sees "Medical
+ * Examination" on the homepage and "Medical checkup" on /pricing has two
+ * candidate obligations and a $60 line, and the one thing §2.6.10 exists to
+ * prevent is the reader merging the medical with the insurance. A fourth name
+ * would cost nothing to add and would not fail anything.
+ *
+ * THE RULE: the canonical name is the price-list label, DERIVED not typed,
+ * and "pre-employment" is the only qualifier it takes. Every other name for
+ * this obligation is banned in source and in the build.
+ */
+describe('the medical line item has exactly one name', () => {
+  /** The canonical label, read off the price list rather than typed here. */
+  const canonical = (() => {
+    const labels = packages.flatMap((pkg) =>
+      pkg.kind === 'itemised' ? pkg.lineItems.map((item) => item.label) : [],
+    )
+    const medical = [...new Set(labels.filter((label) => /medical/i.test(label)))]
+    return medical
+  })()
+
+  it('the price list names it once, and that name is the canonical one', () => {
+    // If §2.6.10's rename is ever reverted, or a second medical line appears,
+    // everything below is measuring the wrong string and this says so first.
+    expect(canonical).toEqual(['Medical checkup'])
+  })
+
+  /**
+   * Every OTHER name for the pre-employment medical checkup. Written from the
+   * words a writer actually reaches for, not from the one that shipped:
+   * "examination", "exam", "screening", "test", "check-up" hyphenated, and
+   * "health" swapped for "medical".
+   *
+   * `medical examination` is deliberately NOT banned as a bare phrase in the
+   * abstract — it is banned as a NAME for this line item, which is what
+   * matters — but no exemption is carved out, because the site has no other
+   * subject it could be describing. The FAQ answer's "a one-off examination
+   * before the helper starts work" survives: `examination` there is not
+   * preceded by `medical`.
+   */
+  const OTHER_NAMES =
+    /\bmedical\s+(?:examination|exam|screening|test|assessment|check-up)s?\b|\bhealth\s+(?:checkup|check-up|examination|exam|screening)s?\b|\bpre-?employment\s+(?:medical\s+)?(?:examination|exam|screening)s?\b/i
+
+  it('is called nothing else anywhere in the source a visitor reads', () => {
+    const offenders = renderedCopy()
+      .filter(({ text }) => OTHER_NAMES.test(text))
+      .map(({ file, text }) => `${file}: ${text.match(OTHER_NAMES)![0]}`)
+    expect(offenders).toEqual([])
+  })
+
+  it('is called nothing else on any built page', () => {
+    const offenders = walk('dist')
+      .filter((f) => f.endsWith('.html'))
+      .map((file) => ({ file, text: readFileSync(file, 'utf8') }))
+      .filter(({ text }) => OTHER_NAMES.test(text))
+      .map(({ file, text }) => `${file}: ${text.match(OTHER_NAMES)![0]}`)
+    expect(offenders).toEqual([])
+  })
+
+  it('the canonical name really is published, so the ban is not satisfied by silence', () => {
+    // A rule that only forbids can be passed by deleting the subject. This is
+    // the half that says the obligation is still named.
+    const built = walk('dist')
+      .filter((f) => f.endsWith('.html'))
+      .map((f) => readFileSync(f, 'utf8'))
+    expect(built.some((html) => /Medical checkup/.test(html))).toBe(true)
+    expect(built.some((html) => /pre-employment medical checkup/i.test(html))).toBe(true)
+  })
+
+  it('catches the names that actually shipped, and the obvious neighbours', () => {
+    for (const name of [
+      'Medical Examination',
+      'the medical examination is one of the components',
+      'medical exam',
+      'health screening',
+      'pre-employment medical examination',
+      'Medical Check-up',
+    ]) {
+      expect(OTHER_NAMES.test(name), `not caught: ${name}`).toBe(true)
+    }
+  })
+
+  it('does not fire on the canonical name or on the copy that surrounds it', () => {
+    for (const ok of [
+      'Medical checkup — $60',
+      'the helper’s pre-employment medical checkup',
+      'a one-off examination before the helper starts work',
+      'It is a checkup, not insurance.',
+      'Medical insurance — in-patient care and day surgery',
+    ]) {
+      expect(OTHER_NAMES.test(ok), `false positive on: ${ok}`).toBe(false)
+    }
+  })
+
+  it('the insurance and medical service cards are not the same sentence with a noun swapped', () => {
+    /*
+     * The defect §2.6.10 was written against, in its visual form: the two
+     * cards render side by side on the homepage. Compared on their summaries,
+     * which is the line a reader sees in the grid.
+     */
+    const summaryOf = (file: string) =>
+      readFileSync(`src/content/services/${file}`, 'utf8').match(/^summary:\s*(.+)$/m)![1].trim()
+    const insurance = summaryOf('maid-insurance.md')
+    const medical = summaryOf('medical-checkup.md')
+
+    expect(insurance).not.toEqual(medical)
+    // Not merely different — differently ARGUED. One is two ongoing policies,
+    // the other a single completed step, and each summary must say its own
+    // thing rather than the other's with one word changed.
+    const words = (s: string) => new Set(s.toLowerCase().match(/[a-z]+/g) ?? [])
+    const shared = [...words(insurance)].filter((w) => words(medical).has(w))
+    const overlap = shared.length / Math.min(words(insurance).size, words(medical).size)
+    expect(overlap, `summaries share ${Math.round(overlap * 100)}% of their vocabulary`).toBeLessThan(
+      0.5,
+    )
+  })
+
+  it('the insurance copy says TWO policies, never "this coverage" in the singular', () => {
+    /*
+     * §2.6.11: the Insurance line "is one price for two policies". The
+     * services entry said "DirectHired arranges this coverage", singular,
+     * which describes one policy and is the same merge §2.6.11 records
+     * catching in DirectHired's own first answer.
+     */
+    const text = readFileSync('src/content/services/maid-insurance.md', 'utf8')
+    expect(text).toMatch(/\btwo\b/i)
+    expect(text).toMatch(/medical insurance/i)
+    expect(text).toMatch(/personal accident/i)
+    expect(text, 'the two policies are merged into one singular noun').not.toMatch(
+      /\bthis (?:coverage|cover|policy|insurance)\b/i,
+    )
+  })
+})
+
 describe('faq categories', () => {
   // Task 1 (core-pages): `category` groups /faq's grouped layout. Required,
   // no default — a default would let a miscategorised entry silently land
@@ -405,7 +770,7 @@ describe('faq categories', () => {
     'insurance.md': 'cost',
     'how-long-does-it-take.md': 'process',
     'response-time.md': 'process',
-    'medical-examination.md': 'process',
+    'medical-checkup.md': 'process',
     'direct-hire-processing.md': 'process',
     'replacement-six-months.md': 'replacement',
     'replacement-what-covered.md': 'replacement',
@@ -491,6 +856,49 @@ describe('faq pricing figures stay in sync with pricing.ts', () => {
 
   const dollarPattern = /\$\d{1,3}(?:,\d{3})*(?:\.\d{2})?/g
 
+  /*
+   * ---------------------------------------------------------------------
+   * THE ONE CLASS OF PUBLISHED FIGURE THAT IS NOT FROM pricing.ts.
+   * ---------------------------------------------------------------------
+   *
+   * Spec §2.6.11. DirectHired confirmed on 2026-08-16 that the package's
+   * `Insurance` line buys BOTH policies MOM requires — medical insurance
+   * and personal accident — at the regulator's minimum cover. Those
+   * minimums are published in src/content/faq/insurance.md, and they are
+   * not prices: they are the statutory floor on what the policies must
+   * pay, set by MOM and not by DirectHired. pricing.ts holds what the
+   * package COSTS, so it can never be the source for them, and adding
+   * them to it would state that DirectHired charges $60,000.
+   *
+   * WHY THEY ARE DECLARED HERE RATHER THAN EXEMPTED BY PATTERN, which is
+   * the same ruling illustrativeAmounts() above records for the loan
+   * carry-forward example. A pattern that let any five-figure amount
+   * through would also let a stray one through. These are two named
+   * values with a named source; a third figure typed into the insurance
+   * answer still fails, and so does either of these typed onto any other
+   * page.
+   *
+   * VERIFIED AGAINST MOM, NOT AGAINST THE CLIENT, and §2.6.11 records why
+   * that mattered: the medical-insurance minimum was first given to this
+   * project as $15,000/year. It is $60,000/year — $15,000 is MOM's
+   * enhanced-MI co-payment threshold on the same page, a real number doing
+   * a different job. This constant is the reason that correction cannot be
+   * quietly undone: reverting the copy alone fails here.
+   *
+   * Keyed by policy, though both figures are $60,000 today. MOM sets them
+   * separately and can revise them separately, and a bare ['$60,000'] would
+   * keep passing after one of the two moved.
+   */
+  const MOM_INSURANCE_MINIMUMS = {
+    'personal accident — sum assured': '$60,000',
+    'medical insurance — annual claim limit': '$60,000',
+  } as const
+
+  const MOM_MINIMUM_AMOUNTS = new Set(Object.values(MOM_INSURANCE_MINIMUMS))
+
+  /** The FAQ file those minimums belong to, and the only one that may state them. */
+  const INSURANCE_ANSWER = 'insurance.md'
+
   it('has package totals and line items to check against (sanity check)', () => {
     // HARDCODED on purpose. This was briefly derived — `expected` was
     // recomputed from the same flatMap that built `amountsCents` — which
@@ -519,22 +927,79 @@ describe('faq pricing figures stay in sync with pricing.ts', () => {
     let matchCount = 0
     for (const file of files) {
       const content = readFileSync(`src/content/faq/${file}`, 'utf8')
+      // MOM's statutory minimums are allowed in the insurance answer and
+      // nowhere else. Every other FAQ file is held to pricing.ts alone, so
+      // "$60,000" typed into cost.md or fly-in-package.md still fails.
+      const allowed =
+        file === INSURANCE_ANSWER ? new Set([...validAmounts, ...MOM_MINIMUM_AMOUNTS]) : validAmounts
       const matches = content.match(dollarPattern) ?? []
       for (const amount of matches) {
         matchCount += 1
-        expect(validAmounts.has(amount), `${file}: ${amount} is not a figure in pricing.ts`).toBe(
-          true,
-        )
+        expect(
+          allowed.has(amount),
+          `${file}: ${amount} is not a figure in pricing.ts${
+            file === INSURANCE_ANSWER ? ' or a MOM statutory minimum' : ''
+          }`,
+        ).toBe(true)
       }
     }
     // Guards against the pattern silently matching nothing (a vacuous pass).
     // 2 totals in cost.md + 1 total + 6 line items + 1 total in
-    // fly-in-package.md = 10 figures currently published.
+    // fly-in-package.md = 10 figures, plus the 2 MOM minimums added to
+    // insurance.md on 2026-08-16 = 12 currently published.
     //
     // Task 5 (core-pages) left this at 10 deliberately: it authored no FAQ
-    // content and changed no figure, so the number it describes has not
-    // moved. Changing it would only have hidden that.
-    expect(matchCount).toBe(10)
+    // content and changed no figure, so the number it describes had not
+    // moved. Changing it would only have hidden that. THIS change did move
+    // it — spec §2.6.11 put two statutory figures into insurance.md, which
+    // previously carried none — so the number is raised deliberately and
+    // the arithmetic above says which two are new.
+    expect(matchCount).toBe(12)
+  })
+
+  it('the insurance answer really states both minimums, and says whose they are', () => {
+    /*
+     * The allowlist above is an exemption, and an unused exemption is how a
+     * guard rots: if the copy ever lost these figures, the widened corpus
+     * would sit there permitting a value nothing publishes, and the next
+     * reader would have no way to tell it was dead.
+     *
+     * The attribution is asserted with them because the figures are
+     * MEANINGLESS WITHOUT IT and actively misleading in its absence.
+     * $60,000 presented as DirectHired's cover is a claim about a product
+     * nobody in this repository has read; presented as MOM's minimum it is
+     * a fact about the law. Spec §2.6.11 turns on that distinction, so it
+     * is asserted rather than trusted to survive a copy edit.
+     */
+    const content = readFileSync(`src/content/faq/${INSURANCE_ANSWER}`, 'utf8')
+    for (const [policy, amount] of Object.entries(MOM_INSURANCE_MINIMUMS)) {
+      expect(content, `the insurance answer no longer states the ${policy} minimum`).toContain(
+        amount,
+      )
+    }
+    expect(content, 'the minimums are published without saying they are MOM’s').toMatch(
+      /Ministry of Manpower|\bMOM\b/,
+    )
+    expect(content, 'the minimums are not identified as minimums').toMatch(/minimum/i)
+  })
+
+  it('never writes "death" as a cover of its own', () => {
+    /*
+     * Spec §2.6.11. MOM folds death into personal accident — "permanent
+     * disability or death" — and never lists it as a separate policy or a
+     * separate figure. It reached this project only through DirectHired's
+     * first answer ("death, personal accident and hospitalization to be at
+     * least 60k"), which is the answer that checking against MOM corrected.
+     *
+     * So there is no source here for a standalone death benefit, and the
+     * copy that would state one is a single word away from the copy that is
+     * correct. That is precisely the kind of edit that gets made in good
+     * faith by someone adding detail to a list of two policies.
+     */
+    for (const file of readdirSync('src/content/faq')) {
+      const content = readFileSync(`src/content/faq/${file}`, 'utf8')
+      expect(content, `${file} publishes a death benefit no source states`).not.toMatch(/\bdeath\b/i)
+    }
   })
 
   // --- extended to EVERY built page (design spec §5.3) -----------------
@@ -636,18 +1101,47 @@ describe('faq pricing figures stay in sync with pricing.ts', () => {
     expect(built.map((p) => p.file)).toContain('dist/pricing/index.html')
   })
 
-  it('every dollar figure on every built page is a real amount', () => {
-    const allowed = new Set([
-      ...validAmounts,
-      ...packageDifferences(),
-      ...illustrativeAmounts(),
-    ])
+  /**
+   * The insurance answer's own question, read from its frontmatter — the
+   * marker for "this page renders the entry that is allowed to state MOM's
+   * minimums". Derived, never typed here, so re-wording the question moves
+   * the marker with it rather than silently emptying the exemption.
+   */
+  function insuranceQuestion(): string {
+    const source = readFileSync(`src/content/faq/${INSURANCE_ANSWER}`, 'utf8')
+    const match = source.match(/^question:\s*(.+)$/m)
+    if (!match) throw new Error(`${INSURANCE_ANSWER} has no question in its frontmatter`)
+    return match[1].trim()
+  }
 
-    const strays = builtPages().flatMap(({ file, text }) =>
-      [...new Set(text.match(dollarPattern) ?? [])]
+  it('finds the page that may state the MOM minimums (guards the exemption below)', () => {
+    // If this question stopped appearing in the build, the exemption below
+    // would apply to no page — which is safe, but it would also mean the
+    // insurance answer had vanished from the site, and that is worth
+    // failing over rather than passing quietly.
+    const question = insuranceQuestion()
+    expect(question.length).toBeGreaterThan(10)
+    const hosts = builtPages().filter(({ text }) => text.includes(question))
+    expect(hosts.map((p) => p.file)).toContain('dist/faq/index.html')
+  })
+
+  it('every dollar figure on every built page is a real amount', () => {
+    const base = new Set([...validAmounts, ...packageDifferences(), ...illustrativeAmounts()])
+    // MOM's statutory minimums, permitted ONLY on a page that actually
+    // renders the answer stating them and attributing them. A "$60,000"
+    // that drifted onto /pricing — beside the package's own figures, where
+    // it would read as a price — is still a stray, and this is what keeps
+    // it one. Same shape as the per-file scoping in the FAQ markdown check
+    // above, applied to the built output.
+    const question = insuranceQuestion()
+    const withMinimums = new Set([...base, ...MOM_MINIMUM_AMOUNTS])
+
+    const strays = builtPages().flatMap(({ file, text }) => {
+      const allowed = text.includes(question) ? withMinimums : base
+      return [...new Set(text.match(dollarPattern) ?? [])]
         .filter((amount) => !allowed.has(amount))
-        .map((amount) => `${file}: ${amount}`),
-    )
+        .map((amount) => `${file}: ${amount}`)
+    })
     expect(strays).toEqual([])
   })
 
@@ -801,5 +1295,601 @@ describe('the /pricing sources contain no hardcoded money', () => {
     const raw = readFileSync('src/sections/ReplacementTerms.astro', 'utf8')
     expect(raw).toMatch(DOLLAR_LITERAL)
     expect(code(raw)).not.toMatch(DOLLAR_LITERAL)
+  })
+})
+
+/**
+ * THE RESPONSE PLEDGE HAS ONE SOURCE, AND EVERY SURFACE READS IT.
+ *
+ * "A consultant reviews every submission and aims to respond within 1
+ * business day" was approved once, in src/content/faq/submit-requirements.md.
+ * /faq and the homepage render that entry through the content collection.
+ * /contact did not: it carried a hand-retyped variant — "a consultant
+ * reviews every submission, AIMING to respond within 1 business day" —
+ * under a docblock claiming the page carried the sentence verbatim.
+ *
+ * The substance was not inflated, which is exactly what let it survive a
+ * review: nothing on the page was untrue. The damage is the ordinary
+ * single-source one — DirectHired revises the wording, two surfaces follow
+ * and the third quietly does not — and it is invisible until someone reads
+ * the two files side by side, which is what a test is for.
+ */
+/*
+ * THE FOUNDING STORY IS SOURCED, NOT RETYPED — spec §3.4, master brief §35.
+ *
+ * §3.4 requires the brief's sentence VERBATIM. Until 2026-08-17 three
+ * surfaces published it and none of them shared a string:
+ *
+ *   src/pages/about.astro:151            correct, hardcoded literal
+ *   src/pages/why-directhired.astro:130  correct, hardcoded literal
+ *   src/sections/Difference.astro:71     "…not finding the right PERSON",
+ *                                        against the mandated "…instead of
+ *                                        finding the right FIT"
+ *
+ * Two of three correct is what a hand-typed mandate looks like shortly before
+ * it is three of three wrong. And spec §9 lists "Founding story in
+ * DirectHired's words" as an OPEN INPUT — the client's own account is going
+ * to replace this, on every surface, in one change, by somebody who did not
+ * write any of it.
+ *
+ * WHY THE PARAPHRASE MATTERED BEYOND THE RULE. "The right fit" is the claim
+ * the section it sat in is making. A person can be the right person and the
+ * wrong fit for a household; that distinction is the business. The paraphrase
+ * lost the argument as well as the authority.
+ */
+describe('the founding story is sourced, not retyped', () => {
+  /** The three surfaces that publish it, and the file that owns it. */
+  const OWNER = 'src/data/company.ts'
+  const SURFACES = [
+    'src/pages/about.astro',
+    'src/pages/why-directhired.astro',
+    'src/sections/Difference.astro',
+  ]
+
+  it('matches master brief §35 verbatim', () => {
+    // Read off the brief rather than typed here, so the constant is checked
+    // against its actual authority and not against a second copy of itself.
+    const brief = readFileSync(
+      'DirectHired Website — Master Context & Design Brief for Claude Code + Taste Skills.md',
+      'utf8',
+    )
+    expect(brief).toContain(company.foundingStory)
+  })
+
+  it('names DirectHired, the vacancy framing and the fit framing', () => {
+    // Named parts, so a truncation or a drift in the constant itself fails
+    // here rather than passing because the brief is a long document.
+    expect(company.foundingStory).toMatch(/^DirectHired was created after seeing families/)
+    expect(company.foundingStory).toMatch(/filling vacancies/)
+    expect(company.foundingStory).toMatch(/finding the right fit\.$/)
+  })
+
+  it('is retyped by no template, on any surface', () => {
+    /*
+     * The sweep runs over EVERY .astro file, not the three named above — a
+     * fourth page carrying a fourth copy is the next instance of this defect
+     * and would not be caught by checking only the three that had it.
+     *
+     * Matched on a distinctive fragment rather than the whole sentence,
+     * because a retype that drifted (which is exactly what Difference.astro
+     * did) would not contain the whole sentence to match.
+     */
+    const offenders = ['src/sections', 'src/components', 'src/layouts', 'src/pages']
+      .flatMap(walk)
+      .filter((f) => f.endsWith('.astro'))
+      .map((file) => ({ file, text: template(readFileSync(file, 'utf8')) }))
+      .filter(({ text }) => /DirectHired was created after seeing families/i.test(text))
+      .map(({ file }) => file)
+    expect(offenders, 'the founding story is hardcoded rather than read from company.ts').toEqual(
+      [],
+    )
+  })
+
+  it('the paraphrase that shipped is caught by that sweep', () => {
+    // The rule has to fire on the DRIFTED form, or it only catches the copies
+    // that were already correct — which is the useless half of the problem.
+    expect(
+      /DirectHired was created after seeing families/i.test(
+        'DirectHired was created after seeing families go through agencies focused on filling a vacancy, not finding the right person.',
+      ),
+    ).toBe(true)
+  })
+
+  it('every surface reads the constant', () => {
+    for (const file of SURFACES) {
+      const source = readFileSync(file, 'utf8')
+      expect(source, `${file} does not read company.foundingStory`).toContain(
+        'company.foundingStory',
+      )
+    }
+  })
+
+  it('the constant is defined once, in company.ts', () => {
+    expect(readFileSync(OWNER, 'utf8')).toContain(company.foundingStory)
+  })
+
+  it('all three surfaces publish it, verbatim, in the build', () => {
+    // The half that stops the rule being satisfied by deleting the sentence.
+    const built = ['dist/index.html', 'dist/about/index.html', 'dist/why-directhired/index.html']
+    for (const file of built) {
+      const html = readFileSync(file, 'utf8')
+        .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+      expect(html, `${file} does not publish the founding story`).toContain(company.foundingStory)
+    }
+  })
+})
+
+describe('the response pledge is sourced, not retyped', () => {
+  const SOURCE = 'src/content/faq/submit-requirements.md'
+
+  /**
+   * A RETYPE IS THE TWO HALVES TOGETHER, and it has to be defined that way
+   * rather than as either half alone. Both halves have a legitimate solo
+   * appearance in this repo:
+   *
+   *   - contact.astro contains IDENTIFIES on its own. That is the matcher
+   *     the page selects the sentence WITH, and a rule that failed the
+   *     implementation of itself would be a bad rule.
+   *   - find-your-helper.astro contains RESPONSE_FIGURE on its own, in its
+   *     own sentence, sourced from a DIFFERENT approved answer
+   *     (src/content/faq/response-time.md) and allowlisted by name in
+   *     tests/pages.test.ts's duration guard. It is the same figure, not
+   *     this sentence, and it is not what this rule is about.
+   *
+   * A source file carrying BOTH is reproducing the approved sentence, which
+   * is the thing that drifts.
+   */
+  const IDENTIFIES = /consultant reviews every submission/i
+  const RESPONSE_FIGURE = /\b1\s+business\s+day\b/i
+
+  /** The approved sentence, read the way /contact reads it. */
+  function approvedSentence(): string {
+    const body = readFileSync(SOURCE, 'utf8').split(/^---\s*$/m).slice(2).join('---')
+    const sentences = body
+      .replace(/\s+/g, ' ')
+      .split(/(?<=[.!?])\s+/)
+      .map((sentence) => sentence.trim())
+      .filter((sentence) => IDENTIFIES.test(sentence))
+    expect(sentences, `${SOURCE} must contain exactly one response sentence`).toHaveLength(1)
+    return sentences[0]
+  }
+
+  /** Every built page as a reader sees it, whitespace collapsed. */
+  function builtPageText(): { file: string; text: string }[] {
+    const walkDist = (dir: string): string[] =>
+      readdirSync(dir).flatMap((entry) => {
+        const full = join(dir, entry).split('\\').join('/')
+        return statSync(full).isDirectory() ? walkDist(full) : [full]
+      })
+
+    return walkDist('dist')
+      .filter((f) => f.endsWith('.html'))
+      .map((file) => ({
+        file,
+        text: readFileSync(file, 'utf8')
+          .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+          .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
+          .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&quot;/g, '"')
+          .replace(/&apos;/g, "'")
+          .replace(/\s+/g, ' '),
+      }))
+  }
+
+  it('reads the source it claims to read', () => {
+    // Every assertion below is satisfiable by a file that has lost the
+    // sentence entirely, so the sentence is named here first.
+    expect(approvedSentence()).toMatch(IDENTIFIES)
+    expect(approvedSentence()).toMatch(RESPONSE_FIGURE)
+  })
+
+  it('every page that states it states the approved sentence, character for character', () => {
+    const surfaces = builtPageText().filter(({ text }) => IDENTIFIES.test(text))
+    // Three today: /contact, /faq and the homepage. A floor rather than an
+    // equality, so a fourth surface joins the check instead of breaking it.
+    expect(surfaces.length).toBeGreaterThanOrEqual(3)
+    expect(surfaces.map(({ file }) => file)).toContain('dist/contact/index.html')
+
+    const sentence = approvedSentence()
+    const offenders = surfaces
+      .filter(({ text }) => !text.includes(sentence))
+      .map(({ file }) => `${file} states a variant of the approved response sentence`)
+    expect(offenders).toEqual([])
+  })
+
+  it('no source file under src/ reproduces the approved sentence', () => {
+    /*
+     * The anti-drift half, and the one that actually holds the line. The
+     * assertion above compares two rendered strings and would go green
+     * again the moment someone "fixed" a mismatch by pasting the new
+     * wording into contact.astro — which is exactly how the retyped copy
+     * got there in the first place.
+     *
+     * The markdown source is excluded because it IS the source. Comments
+     * are stripped, so contact.astro's docblock quoting the sentence in
+     * order to explain this rule is not a violation of it.
+     */
+    const offenders = walk('src')
+      .filter((file) => file.endsWith('.astro') || file.endsWith('.ts'))
+      .map((file) => ({ file, source: code(readFileSync(file, 'utf8')) }))
+      .filter(({ source }) => IDENTIFIES.test(source) && RESPONSE_FIGURE.test(source))
+      .map(({ file }) => `${file} reproduces the approved response sentence`)
+    expect(offenders).toEqual([])
+  })
+
+  it('the comment stripper is what makes that pass, not an absence of the sentence', () => {
+    /*
+     * contact.astro's header DOES quote both halves of the approved
+     * sentence, in the paragraphs explaining that the page must not retype
+     * it. If code() stopped stripping block comments the test above would
+     * go green for the wrong reason — a stripped comment rather than an
+     * absent violation — so the stripping is asserted directly.
+     */
+    const raw = readFileSync('src/pages/contact.astro', 'utf8')
+    expect(raw).toMatch(IDENTIFIES)
+    expect(raw).toMatch(RESPONSE_FIGURE)
+    expect(code(raw)).not.toMatch(RESPONSE_FIGURE)
+    // ...and the matcher survives the stripping, which is the one form of
+    // the clause this file is allowed to carry.
+    expect(code(raw)).toMatch(IDENTIFIES)
+  })
+
+  it('the page really does resolve it from the collection', () => {
+    // Belt and braces on the two negative assertions above: they are both
+    // satisfiable by a /contact that says nothing at all. This is the
+    // positive one — the page imports the entry and renders the value it
+    // read, and no literal stands in for either.
+    const raw = readFileSync('src/pages/contact.astro', 'utf8')
+    expect(code(raw)).toMatch(/getEntry\(\s*['"]faq['"]\s*,\s*['"]submit-requirements['"]\s*\)/)
+    expect(code(raw)).toContain('{responsePledge}')
+  })
+})
+
+/**
+ * /find-your-helper CARRIED TWO MORE COPIES OF THE SAME DEFECT.
+ *
+ * F-3 fixed /contact, which retyped the approved response pledge from
+ * src/content/faq/submit-requirements.md. Task 12's sweep of every
+ * content-collection sentence against every .astro and .ts file under src/
+ * found two more on ONE page, from two different entries:
+ *
+ *   1. src/content/faq/response-time.md — "whether you send US your
+ *      requirements". /find-your-helper rendered "whether you send your
+ *      requirements", dropping the "us", under a comment naming that file
+ *      as the source of the wording.
+ *   2. src/content/faq/how-long-does-it-take.md — its closing sentence.
+ *      /find-your-helper reproduced both of its distinctive clauses word
+ *      for word ("depends on your requirements and on the interviews", "we
+ *      would rather find the right person than rush you to a decision")
+ *      and changed only the lead-in.
+ *
+ * Neither inflated a claim. That is precisely the property that let both
+ * survive the page's own task review AND the whole-branch fix round that
+ * caught the /contact one — nothing on the page was untrue, so there was
+ * nothing for a correctness read to catch. The failure is silent and
+ * deferred: DirectHired revises either answer, /faq follows, this page does
+ * not.
+ *
+ * Guarded the way F-3 guarded /contact, because the defect recurs and a
+ * one-off correction of the literals would have left the fifth instance to
+ * the next reviewer.
+ */
+describe('/find-your-helper sources its closing sentences, it does not retype them', () => {
+  const PAGE = 'src/pages/find-your-helper.astro'
+  const BUILT = 'dist/find-your-helper/index.html'
+
+  /**
+   * Each entry pairs the approved source with the clause that IDENTIFIES
+   * which sentence the page takes from it, and a second clause that is
+   * pure substance — the part that must never appear in a source file
+   * alongside the identifier.
+   *
+   * A retype is defined as BOTH clauses in one file, for the same reason
+   * F-3's guard defines it that way: the identifier alone is what the page
+   * legitimately matches with, and the substance alone appears in
+   * unrelated approved copy. Only the two together mean somebody typed the
+   * sentence out.
+   */
+  const SOURCED = [
+    {
+      entry: 'src/content/faq/response-time.md',
+      slug: 'response-time',
+      identifies: /aim to respond within/i,
+      // The half that carries the dropped word. "whether you send YOUR
+      // requirements" is what the page used to say; the approved answer
+      // says "whether you send US your requirements".
+      substance: /whether you send us your requirements/i,
+    },
+    {
+      entry: 'src/content/faq/how-long-does-it-take.md',
+      slug: 'how-long-does-it-take',
+      identifies: /depends on your requirements/i,
+      substance: /rather find the right person than rush you/i,
+    },
+  ] as const
+
+  function entryBody(file: string): string {
+    return readFileSync(file, 'utf8')
+      .split(/^---\s*$/m)
+      .slice(2)
+      .join('---')
+      .replace(/\*\*(.+?)\*\*/g, '$1')
+      .replace(/\s+/g, ' ')
+      .trim()
+  }
+
+  function builtText(): string {
+    return readFileSync(BUILT, 'utf8')
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
+      .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/\s+/g, ' ')
+  }
+
+  it.each(SOURCED)('$entry still contains the sentence the page reads', ({ entry, identifies }) => {
+    // Named first, because every assertion below is satisfiable by a source
+    // file that has lost the sentence altogether.
+    const sentences = entryBody(entry)
+      .split(/(?<=[.!?])\s+/)
+      .filter((sentence) => identifies.test(sentence))
+    expect(sentences, `${entry} must contain exactly one sentence matching ${identifies}`).toHaveLength(1)
+  })
+
+  it.each(SOURCED)(
+    'the built page states $entry character for character',
+    ({ entry, identifies }) => {
+      const sentence = entryBody(entry)
+        .split(/(?<=[.!?])\s+/)
+        .filter((s) => identifies.test(s))[0]
+        .trim()
+      expect(builtText()).toContain(sentence)
+    },
+  )
+
+  it.each(SOURCED)('no source file under src/ reproduces $entry', ({ identifies, substance }) => {
+    /*
+     * The anti-drift half. The assertion above compares two rendered
+     * strings and would go green again the moment somebody "fixed" a
+     * mismatch by pasting the new wording into the page — which is exactly
+     * how both of these got there.
+     *
+     * The markdown sources are excluded because they ARE the sources.
+     * Comments are stripped, so this file's own explanation of the rule and
+     * the page's docblock describing what it must not do are not
+     * violations of it.
+     */
+    const offenders = walk('src')
+      .filter((file) => file.endsWith('.astro') || file.endsWith('.ts'))
+      .map((file) => ({ file, source: code(readFileSync(file, 'utf8')) }))
+      .filter(({ source }) => identifies.test(source) && substance.test(source))
+      .map(({ file }) => `${file} reproduces an approved sentence instead of reading it`)
+    expect(offenders).toEqual([])
+  })
+
+  it.each(SOURCED)('the page really does resolve $slug from the collection', ({ slug }) => {
+    // The positive assertion. Both negatives above are satisfiable by a
+    // page that says nothing at all.
+    const raw = code(readFileSync(PAGE, 'utf8'))
+    const calls = [...raw.matchAll(/getEntry\(\s*'faq'\s*,\s*'([a-z-]+)'\s*\)/g)].map((m) => m[1])
+    expect(calls, `${PAGE} must getEntry('faq', '${slug}')`).toContain(slug)
+  })
+
+  it('renders both resolved values rather than literals', () => {
+    const raw = code(readFileSync(PAGE, 'utf8'))
+    expect(raw).toContain('{responsePledge}')
+    expect(raw).toContain('{timingNote}')
+  })
+
+  it('the comment stripper is what makes the negative pass, not an absent sentence', () => {
+    /*
+     * The page's frontmatter docblock quotes both halves of both sentences
+     * in order to explain why they must not be typed here. If code()
+     * stopped stripping block comments, the negative assertions above would
+     * go green for the wrong reason.
+     */
+    const raw = readFileSync(PAGE, 'utf8')
+    for (const { entry, substance } of SOURCED) {
+      expect(raw, `the docblock quotes the ${entry} wording it forbids`).toMatch(substance)
+      expect(code(raw), `and the stripped ${entry} source does not`).not.toMatch(substance)
+    }
+
+    // ...and one identifier DOES survive stripping, because it is the
+    // matcher the page selects the timing sentence with. That is the one
+    // form of the clause this file is allowed to carry, and asserting it
+    // keeps the negative above from passing merely because the page has
+    // stopped resolving anything.
+    expect(code(raw)).toMatch(/depends on your requirements/i)
+  })
+})
+
+/*
+ * NO PAGE STATES §2.4'S FRAMING TWICE IN THE SAME WORDS — W-6, 2026-08-17.
+ *
+ * Spec §2.4 is binding on all copy and six surfaces carry it, which is right:
+ * the employer advances the loan and the placement fee and recovers them
+ * through the helper's repayment, and both halves must be stated. Spec §2.6.4
+ * then records that families RE-ASK questions the page has answered, so an
+ * FAQ restating the page is correct behaviour — and says in the same breath
+ * that this "does not license restoring near-verbatim adjacent repetition".
+ *
+ * THAT LINE HAS BEEN CROSSED TWICE, and both times the same way. On the
+ * homepage, PricingSection's qualifier, faq/cost.md and faq/fly-in-package.md
+ * all co-rendered, the last two ~628 characters apart; fly-in-package.md was
+ * untagged from `home` (src/pages/index.astro records it). On /pricing,
+ * <LoanAndPlacement />'s "Who actually bears these" and
+ * faq/helper-loan-placement-fee.md sat 847 characters apart and OPENED WITH
+ * THE SAME CLAUSE VERBATIM — "you advance both amounts at the start, and you
+ * recover them through the helper's repayment" — with a third statement of
+ * the framing between them. An earlier ruling called those "three
+ * well-differentiated statements". Measured on built HTML they were not.
+ *
+ * SO THE RULE IS MEASURED RATHER THAN JUDGED. Both defects were found by a
+ * person reading a page and both were argued about afterwards; a character
+ * count settles it. Two blocks on ONE page that both carry the framing may
+ * not share a verbatim run of 50 characters or more.
+ *
+ * AND THE MEASUREMENT IMMEDIATELY FOUND TWO MORE, both worse than either of
+ * the two that were argued about — which is the whole case for measuring:
+ *
+ *   dist/index.html       160 shared characters. PricingSection's qualifier
+ *                         under the cards, and faq/cost.md's answer in the
+ *                         accordion below them. The homepage de-duplication
+ *                         untagged fly-in-package.md and left these two,
+ *                         which were the same sentence with "these packages"
+ *                         and "those totals" swapped.
+ *   dist/faq/index.html   142 shared characters. faq/cost.md and
+ *                         faq/fly-in-package.md, two answers to two
+ *                         different questions closing on one sentence.
+ *
+ * Both were fixed by a single edit, because cost.md was half of each pair:
+ * its closing now states the framing in its own words. UNTAGGING WAS NOT
+ * AVAILABLE for the /faq pair — both answers belong on /faq — so the remedy
+ * there is differentiation rather than removal. §2.6.4 permits both; what it
+ * refuses is the repetition, not the second statement.
+ *
+ * WHY 50. The shared clause on /pricing was 88 characters. The longest run
+ * shared by two co-rendering blocks in the current build is well under 50 —
+ * asserted below with the real margin printed, so the threshold is a
+ * measurement rather than a preference, and so that anyone tempted to raise
+ * it can see how much room they would be taking.
+ *
+ * IT IS A REPETITION RULE, NOT A DELETION RULE. Nothing here says the framing
+ * may appear only once; a page may state it as often as it has something new
+ * to say. The "both halves are still published" assertion below is what stops
+ * this being satisfiable by cutting §2.4 off a surface.
+ */
+describe('no built page states the §2.4 framing twice in the same words', () => {
+  /** The framing: the employer advances an amount and recovers it. */
+  const FRAMING =
+    /\badvanced?s?\b[\s\S]{0,200}?\brecover(?:s|ed|ing)?\b|\brecover(?:s|ed|ing)?\b[\s\S]{0,200}?\badvanced?s?\b/i
+
+  /** One entry per block-level element, entities decoded. */
+  function pageBlocks(html: string): string[] {
+    return html
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<\/?(?:p|li|h[1-6]|td|th|dt|dd|blockquote|figcaption|summary)\b[^>]*>/gi, '\u0000')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
+      .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&[a-z]+;/gi, ' ')
+      .split('\u0000')
+      .map((block) => block.replace(/\s+/g, ' ').trim())
+      .filter(Boolean)
+  }
+
+  /** Normalised for comparison: case and curly quotes folded, nothing else. */
+  const norm = (s: string) => s.toLowerCase().replace(/[’`]/g, "'")
+
+  /** The longest run of characters two strings share. */
+  function longestCommonRun(a: string, b: string): string {
+    const x = norm(a)
+    const y = norm(b)
+    let best = ''
+    let prev = new Array<number>(y.length + 1).fill(0)
+    for (let i = 1; i <= x.length; i++) {
+      const row = new Array<number>(y.length + 1).fill(0)
+      for (let j = 1; j <= y.length; j++) {
+        if (x[i - 1] === y[j - 1]) {
+          row[j] = prev[j - 1] + 1
+          if (row[j] > best.length) best = x.slice(i - row[j], i)
+        }
+      }
+      prev = row
+    }
+    return best
+  }
+
+  const THRESHOLD = 50
+
+  /** Every page's framing blocks, derived from dist/ — never a listed page set. */
+  function framingBlocks(): { file: string; blocks: string[] }[] {
+    return walk('dist')
+      .filter((f) => f.endsWith('.html'))
+      .map((file) => ({
+        file,
+        blocks: pageBlocks(readFileSync(file, 'utf8')).filter((b) => FRAMING.test(b)),
+      }))
+      .filter(({ blocks }) => blocks.length > 0)
+  }
+
+  it('finds the framing on the pages that carry it, so the rule has a subject', () => {
+    const pages = framingBlocks()
+    expect(pages.length).toBeGreaterThanOrEqual(2)
+    expect(pages.map((p) => p.file)).toContain('dist/pricing/index.html')
+    expect(pages.flatMap((p) => p.blocks).length).toBeGreaterThanOrEqual(4)
+  })
+
+  it('no two blocks on one page share 50 characters of it', () => {
+    const offenders = framingBlocks().flatMap(({ file, blocks }) => {
+      const found: string[] = []
+      for (let i = 0; i < blocks.length; i++) {
+        for (let j = i + 1; j < blocks.length; j++) {
+          const run = longestCommonRun(blocks[i], blocks[j])
+          if (run.length >= THRESHOLD) {
+            found.push(`${file}: ${run.length} shared chars — "${run.trim()}"`)
+          }
+        }
+      }
+      return found
+    })
+    expect(offenders).toEqual([])
+  })
+
+  it('reports the margin, so the threshold is a measurement and not a preference', () => {
+    const runs = framingBlocks().flatMap(({ blocks }) =>
+      blocks.flatMap((a, i) => blocks.slice(i + 1).map((b) => longestCommonRun(a, b).length)),
+    )
+    const longest = runs.reduce((max, run) => Math.max(max, run), 0)
+    expect(longest, `longest shared run in the current build is ${longest} chars`).toBeLessThan(
+      THRESHOLD,
+    )
+  })
+
+  it('catches the /pricing repetition that shipped', () => {
+    // The two blocks as they were built, so the rule is measured against the
+    // defect rather than against itself.
+    const section =
+      'You advance both amounts at the start, and you recover them through the helper’s repayment. Both halves matter: the money does leave your account first, and it does come back.'
+    const faq =
+      'As the employer you advance both amounts at the start, and you recover them through the helper’s repayment. The money leaves your account first, but it is not a cost you carry.'
+    expect(longestCommonRun(section, faq).length).toBeGreaterThanOrEqual(THRESHOLD)
+  })
+
+  it('does not fire on two statements that genuinely differ', () => {
+    const a =
+      'Two further amounts — the helper’s loan and the placement fee — sit outside both totals. They are not an extra charge you carry: you advance them and recover them, and they are explained further down this page.'
+    const b =
+      'You advance both amounts at the start, and you recover them through the helper’s repayment. Both halves matter: the money does leave your account first, and it does come back.'
+    expect(longestCommonRun(a, b).length).toBeLessThan(THRESHOLD)
+  })
+
+  it('both halves of §2.4 are still published on /pricing and on /faq', () => {
+    /*
+     * The half that stops this being satisfied by deleting the framing. §2.4
+     * is binding: the money leaves the employer's account first, AND it comes
+     * back, AND it is ultimately the helper's cost. Both surfaces must still
+     * say all three.
+     */
+    for (const file of ['dist/pricing/index.html', 'dist/faq/index.html']) {
+      const text = pageBlocks(readFileSync(file, 'utf8')).join(' ')
+      expect(text, `${file} lost the advance half`).toMatch(/\badvance\b/i)
+      expect(text, `${file} lost the recover half`).toMatch(/\brecover\b/i)
+      expect(text, `${file} lost whose cost it ultimately is`).toMatch(/helper['’]s cost/i)
+    }
   })
 })

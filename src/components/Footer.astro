@@ -29,7 +29,7 @@
 import Container from './Container.astro'
 import Button from './Button.astro'
 import WordmarkOnDeep from '../assets/logo-wordmark-on-deep.svg'
-import { navItems, legalItems } from '../lib/nav'
+import { navItems, footerItems, legalItems } from '../lib/nav'
 import { company } from '../data/company'
 import { defaultWhatsappUrl } from '../lib/whatsapp'
 
@@ -58,9 +58,20 @@ const addressLine = `${company.address.street}, ${company.address.locality} ${co
 
       <nav class="footer-nav" aria-label="Footer">
         <p class="footer-heading">Explore</p>
+        {/*
+          navItems THEN footerItems, and the second list is why /contact is
+          reachable at all. Core-pages design spec §3.4: /contact is linked
+          from the footer, not the navigation, because the header is at its
+          measured width budget (tests/header-fit.test.ts pins the count)
+          and the footer already carries the same details as text.
+
+          Rendered as one list rather than two so a visitor meets one set of
+          links; kept as two arrays so nothing can quietly promote a
+          footer-only route into the header. See src/lib/nav.ts.
+        */}
         <ul>
           {
-            navItems.map((item) => (
+            [...navItems, ...footerItems].map((item) => (
               <li>
                 <a href={item.href}>{item.label}</a>
               </li>

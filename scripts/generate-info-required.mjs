@@ -79,12 +79,73 @@ const DIST_DIR = 'dist'
 const SECTIONS_DIR = 'src/sections'
 const CONTENT_DIR = 'src/content'
 const IMAGE_REGISTRY_PATH = 'src/data/images.json'
-const OUTPUT_PATH = 'docs/INFORMATION-REQUIRED-BEFORE-PRODUCTION.md'
+/**
+ * The env override exists for ONE consumer: tests/info-required.test.ts, which
+ * regenerates into a temp file and diffs it against the committed document
+ * to prove the document is current. Without that test this file's own
+ * opening claim — "derived from the codebase and cannot fall out of sync
+ * with it" — was false in the ordinary way: the document is only derived at
+ * the moment somebody remembers to run this script, and on 2026-08-16 it was
+ * found carrying six stale line-number citations from before
+ * BaseLayout.astro and config.ts grew. Nothing was wrong except that nobody
+ * had re-run it. Writing to a temp path is what lets the test check that
+ * without mutating a tracked file.
+ */
+const OUTPUT_PATH =
+  process.env.INFO_REQUIRED_OUT ?? 'docs/INFORMATION-REQUIRED-BEFORE-PRODUCTION.md'
 
 // Same two patterns as scripts/check-tbd.mjs (kept in sync deliberately —
 // this script and the build gate must agree on what counts as a gap).
 const QUOTED_PATTERN = /data-tbd="([^"]*)"/g
 const BARE_PATTERN = /data-tbd(?![-="])/g
+
+/**
+ * How many calls to action currently point at the requirement form, and on
+ * how many pages.
+ *
+ * DERIVED, NOT TYPED, because the whole point of the entry it feeds is that
+ * this number is the measure of the damage — and a hand-typed count in a
+ * client document is exactly the sort of figure that is right on the day it
+ * is written and quietly wrong a page later. The URL is read out of
+ * `src/data/company.ts` rather than repeated here for the same reason
+ * tests/links.test.ts forbids any page from repeating it: there is one
+ * definition of that address in this codebase and this is not it.
+ *
+ * Counted from BUILT HTML, so it counts what a visitor can actually click,
+ * including the instances a component contributes to every page.
+ */
+function requirementFormUsage() {
+  // This runs while DECLARED_INPUTS is being built, which is BEFORE
+  // findCategoryA's own dist check, so it carries its own.
+  if (!existsSync(DIST_DIR)) {
+    console.error(
+      `\nNo "${DIST_DIR}" directory found. The requirement-form CTA count is read from built\n` +
+        'HTML — run "npm run build:dev" first, then re-run this script.\n',
+    )
+    process.exit(1)
+  }
+
+  const companySource = readFileSync('src/data/company.ts', 'utf8')
+  const match = companySource.match(/requirementFormUrl:\s*'([^']+)'/)
+  if (!match) {
+    console.error(
+      '\nCould not read `requirementFormUrl` from src/data/company.ts. That constant is the ' +
+        'only definition of the requirement-form destination; if it has been renamed or moved, ' +
+        'update this function rather than hardcoding the URL here.\n',
+    )
+    process.exit(1)
+  }
+  const url = match[1]
+
+  let ctas = 0
+  let pages = 0
+  for (const file of htmlFiles(DIST_DIR)) {
+    const hits = readFileSync(file, 'utf8').split(`href="${url}"`).length - 1
+    if (hits > 0) pages++
+    ctas += hits
+  }
+  return { ctas, pages }
+}
 
 /**
  * Category C. The ONLY hand-maintained data in this script — everything
@@ -96,7 +157,47 @@ const BARE_PATTERN = /data-tbd(?![-="])/g
  * `handledBy` states what the site does in the meantime — so a reader can
  * confirm the gap is being handled honestly rather than silently ignored.
  */
+const FORM_USAGE = requirementFormUsage()
+
 const DECLARED_INPUTS = [
+  // ADDED 2026-08-16 BY TASK 12, AND IT SHOULD HAVE BEEN HERE FROM THE
+  // START. This is the single highest-value outstanding input on the
+  // project and it was absent from the document named "Information
+  // Required Before Production" — tracked only in docs/OPEN-DECISIONS.md,
+  // which is the decisions register, not the production checklist.
+  //
+  // It is undetectable for the usual Category C reason, and the reason is
+  // worth stating because it is the opposite of the others: the code is not
+  // silent here, it is CONFIDENT. Every CTA renders a real anchor with a
+  // real href. Nothing is missing from the markup, no collection is empty,
+  // no <Tbd> is marked, and the build is correct. The gap is that the URL
+  // the constant holds does not resolve — a fact about the internet, not
+  // about this repository, and no scanner over src/ or dist/ can see it.
+  //
+  // It is listed FIRST because it is the only item here that stops the site
+  // doing the thing it exists to do.
+  {
+    item: 'Production URL for the employer requirement form',
+    source: 'Brief §79; core-pages spec §3; docs/OPEN-DECISIONS.md ("Blocks launch")',
+    blocks:
+      '**every conversion on the site.** `src/data/company.ts` sets ' +
+      '`requirementFormUrl` to `https://www.directhired.com/employer-requirement`, ' +
+      `which does not resolve. That URL is behind **${FORM_USAGE.ctas} calls to action across ` +
+      `all ${FORM_USAGE.pages} built pages** — every "Submit Your Requirements" button in the header, ` +
+      'the mobile nav, every hero, every closing block and the fixed mobile bar, plus ' +
+      'the 404. Nothing on the site is broken to look at and every page passes every ' +
+      'check; the primary conversion path simply ends nowhere. DirectHired confirmed on ' +
+      '2026-08-16 that the form stays on their existing separate site, so what is needed ' +
+      'is **that site\'s live form URL** — not a form to be built.',
+    handledBy:
+      'A single constant. `company.requirementFormUrl` is the only definition of the ' +
+      'destination anywhere in the codebase — `tests/links.test.ts` asserts that no ' +
+      '`.astro` or `.ts` file under `src/` writes the URL as a literal, so repointing it ' +
+      `at launch is one edit to one line and all ${FORM_USAGE.ctas} call sites follow. That is the whole ` +
+      'of the work. Because the form is hosted elsewhere, this site cannot measure ' +
+      'whether anyone arrives at it or finishes it; that consequence is accepted and ' +
+      'written up under *Housekeeping* in `docs/OPEN-DECISIONS.md`.',
+  },
   // RESOLVED 2026-08-16 — "Detailed replacement terms and conditions"
   // (brief §18 / §79 Reminder 04; design spec §5 Category A). DirectHired
   // supplied them, and they are recorded verbatim in core-pages design
@@ -268,6 +369,98 @@ function tbdCallSites() {
     .filter((f) => /<Tbd[\s/>]/.test(stripComments(readFileSync(f, 'utf8'))))
 }
 
+/**
+ * Every internal link in the build that points at a route the build does not
+ * produce, and the shape of that residual.
+ *
+ * DERIVED FROM THE BUILD, NOT TYPED, for the reason the CTA count above is:
+ * a figure like this is right on the day it is written and quietly wrong one
+ * page later. It went 57 -> 41 on 2026-08-17 when two nav items came out,
+ * and it goes to zero when sub-project 3 ships — neither of which anyone
+ * should have to remember to retype here.
+ *
+ * Resolution follows the same three rules tests/links.test.ts uses, so the
+ * document and the suite cannot disagree about what a broken link is: a file
+ * at the path, an index.html under it, or the path with `.html` appended.
+ * Hrefs are de-duplicated per page, also as that suite does — a route linked
+ * twice from one page is one broken destination, not two.
+ */
+function deferredRouteLinks() {
+  const pages = htmlFiles(DIST_DIR)
+
+  const resolves = (href) => {
+    const target = join(DIST_DIR, href)
+    if (existsSync(target) && statSync(target).isFile()) return true
+    if (existsSync(join(target, 'index.html'))) return true
+    return existsSync(`${target}.html`)
+  }
+
+  const routes = new Map() // route -> [page, ...]
+  let internalHrefs = 0
+  for (const file of pages) {
+    const page = relative(DIST_DIR, file).split('\\').join('/')
+    const hrefs = new Set(
+      [...readFileSync(file, 'utf8').matchAll(/href="(\/[^"]*)"/g)].map((m) => m[1].split(/[?#]/)[0]),
+    )
+    internalHrefs += hrefs.size
+    for (const href of hrefs) {
+      if (resolves(href)) continue
+      if (!routes.has(href)) routes.set(href, [])
+      routes.get(href).push(page)
+    }
+  }
+
+  // Guards the sweep itself. "0 broken links" and "the href scan stopped
+  // working" produce the same sentence in the document, and the reassuring one
+  // is the wrong one to publish by accident.
+  if (pages.length === 0 || internalHrefs === 0) {
+    console.error(
+      `\nRead ${internalHrefs} internal links across ${pages.length} built pages under ` +
+        `"${DIST_DIR}" — that cannot be right, and a broken scan would have been published as\n` +
+        'a clean bill of health. Rebuild with "npm run build:dev" and re-run this script.\n',
+    )
+    process.exit(1)
+  }
+
+  const entries = [...routes.entries()]
+    .map(([route, on]) => ({ route, on }))
+    .sort((a, b) => a.route.localeCompare(b.route))
+
+  return {
+    instances: entries.reduce((n, { on }) => n + on.length, 0),
+    routes: entries,
+    pageCount: pages.length,
+    // Routes carried by every built page — a footer or a header, in practice.
+    everywhere: entries.filter(({ on }) => on.length === pages.length),
+    // ...and the ones that sit on some pages only, grouped by their first
+    // path segment so "/services/<slug>" reads as one family rather than six.
+    localised: entries.filter(({ on }) => on.length < pages.length),
+  }
+}
+
+/**
+ * The JSON-LD blocks in the source, counted rather than stated. Each one
+ * carries attributes (`set:html`, and a `slot` on two of them), which is what
+ * draws Astro's `astro(4000)` hint — so this count IS the hint count for that
+ * group, and it moves on its own if a schema block is added or removed.
+ */
+function jsonLdBlocks() {
+  const walk = (dir) =>
+    readdirSync(dir).flatMap((entry) => {
+      const full = join(dir, entry).split('\\').join('/')
+      return statSync(full).isDirectory() ? walk(full) : [full]
+    })
+
+  return walk('src')
+    .filter((f) => f.endsWith('.astro'))
+    .map((file) => ({
+      file,
+      count: (readFileSync(file, 'utf8').match(/<script type="application\/ld\+json"/g) ?? []).length,
+    }))
+    .filter(({ count }) => count > 0)
+    .sort((a, b) => a.file.localeCompare(b.file))
+}
+
 function findCategoryA() {
   if (!existsSync(DIST_DIR)) {
     console.error(
@@ -402,6 +595,12 @@ function renderMarkdown(categoryA, categoryB, categoryC, categoryD) {
       'Category C is **declared** — see that section for why those items cannot be derived.',
   )
   lines.push('')
+  lines.push(
+    'A fifth section follows the four. It is not a category of missing information: it records ' +
+      'two conditions of the build itself that DirectHired should know about and that no page ' +
+      'shows.',
+  )
+  lines.push('')
 
   lines.push('## Category A — Inline gaps (block the production build)')
   lines.push('')
@@ -417,13 +616,27 @@ function renderMarkdown(categoryA, categoryB, categoryC, categoryD) {
     lines.push('_None found — every inline value in the current build is verified._')
     lines.push('')
     lines.push(
-      `**Read that carefully:** there are currently **${tbdCallSites().length} \`<Tbd>\` call sites** ` +
-        'anywhere in `src/`. The last one, the MOM licence number, was resolved on 2026-08-15. ' +
-        'So this category is not reporting that nothing is missing — it is reporting that ' +
-        'nothing is *marked*, which is a weaker statement. `npm run build` passes the gate ' +
-        'today. The gate and the `<Tbd>` component are deliberately kept for the next ' +
-        'unverified value; until one is marked, Category A cannot detect anything and ' +
-        'Categories B, C and D carry the whole checklist.',
+      `**Read that carefully — it is not a clean bill of health.** There are currently ` +
+        `**${tbdCallSites().length} \`<Tbd>\` call sites** anywhere in \`src/\`. The last one, the MOM ` +
+        'licence number, was resolved on 2026-08-15. So this category is not reporting that ' +
+        'nothing is missing — it is reporting that nothing is *marked*, which is a much weaker ' +
+        'statement. With zero markers, Category A cannot detect anything at all: it would say ' +
+        '"none found" on a site with a hundred gaps in it, and `npm run build` would pass its ' +
+        'gate. The gate and the `<Tbd>` component are deliberately kept for the next ' +
+        'unverified value.',
+    )
+    lines.push('')
+    lines.push(
+      '**What is actually outstanding is below, and in one other place.** Categories B, C and ' +
+        'D carry the whole of this document. They are not the whole of what DirectHired still ' +
+        'owes: this checklist covers what the codebase can *detect* (B, D) or has *declared* ' +
+        '(C), and by construction that is everything with a consequence in the build. Items ' +
+        'with no consequence in the build — a founding story that is one sentence long, what ' +
+        'your insurance covers above MOM\'s floor, whether one consultant carries a placement ' +
+        'end to end — leave no trace here at all, because the honest response to not having ' +
+        'them was to write less rather than to write something. Those live in ' +
+        '`docs/OPEN-DECISIONS.md`, which is the companion to this file and not a duplicate of ' +
+        'it. **Read both, or you have read half the list.**',
     )
   } else {
     for (const { item, files } of categoryA) {
@@ -483,9 +696,12 @@ function renderMarkdown(categoryA, categoryB, categoryC, categoryD) {
     'Design spec §5 named three Category A items — the MOM licence number, detailed ' +
       'replacement terms, and the without-replacement inclusion list. **All three have since ' +
       'been supplied**: the licence number on 2026-08-15 (its `<Tbd>` removed), the other two ' +
-      'on 2026-08-16. What remains below is one item that is not missing information at all — ' +
-      'the facts are in hand and what is outstanding is DirectHired’s sign-off on publishing ' +
-      'them — and one that is a placeholder asset rather than a gap in the copy.',
+      'on 2026-08-16. What remains below are three items, and no two of them are the same ' +
+      'kind of thing. **The form URL is the one that matters**: nothing is missing from the ' +
+      'code at all, the destination simply does not resolve, and until it does the site ' +
+      'cannot convert. The second is not missing information either — those facts are in ' +
+      'hand, and what is outstanding is DirectHired’s sign-off on publishing them. The third ' +
+      'is a placeholder asset rather than a gap in the copy.',
   )
   lines.push('')
 
@@ -557,7 +773,111 @@ function renderMarkdown(categoryA, categoryB, categoryC, categoryD) {
   }
   lines.push('')
 
+  lines.push(...renderKnownConditions())
+
   return lines.join('\n')
+}
+
+/**
+ * Two facts about the build as it stands that are NOT information anybody
+ * owes, and are therefore not a category above. They were recorded only in an
+ * internal implementation report, which is a document DirectHired will never
+ * read — and both are things a reader of THIS file would otherwise have to
+ * take on trust, because neither leaves a mark on any page.
+ *
+ * The link count is derived, for the reason the CTA count is: it has already
+ * changed once on this branch and it goes to zero when sub-project 3 ships.
+ * The hint total is declared, and the document says so and gives the command
+ * that reproduces it — but the JSON-LD half of it is counted from the source,
+ * so the part that can move on its own does.
+ */
+function renderKnownConditions() {
+  const links = deferredRouteLinks()
+  const ld = jsonLdBlocks()
+  const ldTotal = ld.reduce((n, { count }) => n + count, 0)
+  // The JSON-LD hints, plus the single ts(6196) on BaseLayout's `Props`. The
+  // total is written as that sum rather than as the number 6, so the two
+  // halves of this entry cannot contradict each other after a schema block is
+  // added or removed. If a hint of a third kind ever appears, `npm run
+  // typecheck` will report more than this and the sum is what needs the edit.
+  const hintTotal = ldTotal + 1
+
+  const everywhereRoutes = links.everywhere.map(({ route }) => `\`${route}\``).join(', ')
+  const everywhereInstances = links.everywhere.length * links.pageCount
+
+  const families = new Map()
+  for (const { route, on } of links.localised) {
+    const segments = route.split('/').filter(Boolean)
+    const family = segments.length > 1 ? `/${segments[0]}/` : route
+    families.set(family, (families.get(family) ?? 0) + on.length)
+  }
+  const familyText = [...families]
+    .map(([family, n]) => `${n} under \`${family}\``)
+    .join(' and ')
+  const localisedInstances = links.localised.reduce((n, { on }) => n + on.length, 0)
+  const localisedPages = [...new Set(links.localised.flatMap(({ on }) => on))].sort()
+  const localisedWhere = localisedPages
+    .map((p) => (p === 'index.html' ? 'the homepage' : `\`/${p.replace(/\/index\.html$/, '')}\``))
+    .join(', ')
+
+  const lines = []
+  lines.push('## Known conditions of the current build (nothing is required from DirectHired)')
+  lines.push('')
+  lines.push(
+    'Neither of these is missing information — nobody is being asked for anything, and neither ' +
+      'blocks the build. They are here because they are true of the site as it stands, they are ' +
+      'not visible on any page, and a launch checklist that omits them leaves the reader to ' +
+      'discover them by clicking.',
+  )
+  lines.push('')
+
+  lines.push(
+    `- **${links.instances} internal links point at routes this build does not produce** ` +
+      `(${links.routes.length} routes) — derived from \`${DIST_DIR}/\``,
+  )
+  lines.push(
+    `  - Blocks: nothing at build time. \`npm run build\` succeeds, every page passes every ` +
+      `check, and nothing looks broken; a visitor who clicks one is served the 404 page. The ` +
+      `routes are pages this project has committed to and **sub-project 3** owns, not dead ` +
+      `ends: ${everywhereRoutes} — the legal links in the footer's bottom bar, one each on all ` +
+      `${links.pageCount} built pages (${everywhereInstances} links) — plus ${familyText}, the ` +
+      `detail links inside two sections on ${localisedWhere} (${localisedInstances} links).`,
+  )
+  lines.push(
+    '  - Handled meanwhile by: the navigation itself, which has **no broken links at all** — ' +
+      "'Services' and 'Helper Sources' were taken out of it on 2026-08-17 and stay out until " +
+      'their pages exist (`src/lib/nav.ts` records the decision). What is left is a footer bar ' +
+      'a Singapore site is expected to carry and two homepage sections that would have to be ' +
+      'redesigned to lose their links. Every route is enumerated in `DEFERRED_ROUTES` in ' +
+      '`tests/links.test.ts`, which asserts the residual as an exact set: it fails if a new ' +
+      'broken link appears, and it fails if an entry is still listed after its page ships.',
+  )
+
+  lines.push(
+    `- **${hintTotal} \`astro check\` hints, deliberately not silenced** — declared; reproduce ` +
+      'with `npm run typecheck`',
+  )
+  lines.push(
+    `  - Blocks: nothing. \`npm run typecheck\` exits 0 — **0 errors, 0 warnings, ${hintTotal} ` +
+      `hints**. ` +
+      `${ldTotal} of them are Astro's \`astro(4000)\` note that a ` +
+      `\`<script type="application/ld+json">\` carrying attributes is treated as \`is:inline\`, ` +
+      `one for each JSON-LD block in the source (${ld.map(({ file }) => `\`${file}\``).join(', ')}). ` +
+      'The remaining one is `ts(6196)` on `src/layouts/BaseLayout.astro`, which declares an ' +
+      '`interface Props` it never references by name.',
+  )
+  lines.push(
+    '  - Handled meanwhile by: leaving both alone, on purpose. `is:inline` is exactly what those ' +
+      'blocks want — they emit a JSON string that must not be processed as a module — so adding ' +
+      'the directive would be a behaviour-neutral edit to shipping schema, made only to quiet a ' +
+      'note that is telling the truth. `Props` is Astro\'s own convention: the compiler reads it ' +
+      'to typecheck every `<BaseLayout>` usage, so deleting the "unused" interface would remove ' +
+      'type checking from every page on the site. A hint is a hint; the gate is `0 errors`, and ' +
+      'CI enforces that.',
+  )
+  lines.push('')
+
+  return lines
 }
 
 const categoryA = findCategoryA()
@@ -573,3 +893,7 @@ console.log(`  Category A (inline gaps, block the build): ${categoryA.length}`)
 console.log(`  Category B (whole-block omissions, do not block the build): ${categoryB.length}`)
 console.log(`  Category C (declared, not derivable): ${categoryC.length}`)
 console.log(`  Category D (images not yet DirectHired's own): ${categoryD.length}`)
+console.log(
+  `  Known conditions: ${deferredRouteLinks().instances} internal links to routes that do not ` +
+    `exist yet, and ${jsonLdBlocks().reduce((n, { count }) => n + count, 0) + 1} astro check hints`,
+)

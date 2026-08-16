@@ -20,9 +20,10 @@
  * when it does not hold.
  */
 import { describe, it, expect } from 'vitest'
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { company } from '../src/data/company'
+import { forbiddenPlaceNames, namedSources } from './support/helper-sources'
 
 interface Page {
   /** Path on disk, e.g. `dist/pricing/index.html`. */
@@ -126,9 +127,29 @@ describe('the page sweep', () => {
     const staticFiles = routeFiles.filter((f) => !isDynamic(f))
     const dynamicFiles = routeFiles.filter(isDynamic)
 
-    /** src/pages/index.astro → "/", src/pages/a/b.astro → "/a/b/". */
+    /**
+     * src/pages/index.astro → "/", src/pages/a/b.astro → "/a/b/".
+     *
+     * Task 10, ONE EXCEPTION, AND IT IS ASTRO'S RATHER THAN OURS. Every
+     * other route builds as `<route>/index.html` under `build.format:
+     * 'directory'` (the default, and what astro.config.mjs leaves alone).
+     * `src/pages/404.astro` does not: Astro emits it as `dist/404.html`,
+     * a file rather than a directory, because a CDN's error-page mapping
+     * needs a single object key to point at — which is exactly what
+     * scripts/deploy-cloudfront-error-pages.sh points its
+     * `ResponsePagePath` at. The route this file's own walker derives from
+     * that output is therefore "/404", not "/404/".
+     *
+     * Written as a mapping rather than by filtering 404 out of the check.
+     * Filtering would exempt the page from "every static route file built a
+     * page", which is the assertion that would notice if the 404 stopped
+     * building at all — and a 404 that silently stopped building is a site
+     * that silently goes back to serving a bare 403.
+     */
     const expectedRoute = (file: string) =>
-      file.replace(/^src\/pages/, '').replace(/index\.astro$/, '').replace(/\.astro$/, '/')
+      file === 'src/pages/404.astro'
+        ? '/404'
+        : file.replace(/^src\/pages/, '').replace(/index\.astro$/, '').replace(/\.astro$/, '/')
 
     const built = new Set(pages.map((p) => p.route))
     const missing = staticFiles.map(expectedRoute).filter((route) => !built.has(route))
@@ -198,6 +219,14 @@ describe.each(pages)('$route', (page) => {
     // is worse than none: it tells Google this page is a duplicate of that
     // one and de-indexes it. BaseLayout builds it from Astro.url, so the
     // failure mode is a page hardcoding its own — which this catches.
+    //
+    // ONE PAGE HAS NO CANONICAL, AND THAT IS THE POINT OF IT (Task 10).
+    // /404 is served in place of every URL that does not exist, so it has no
+    // URL of its own; BaseLayout's `noindex` prop drops the tag and the
+    // robots meta together. Its absence is asserted, in both directions, in
+    // "the 404 page is the only page kept out of the index" below — this is
+    // not an exemption that quietly checks nothing.
+    if (page.route === '/404') return
     const match = page.html.match(/<link rel="canonical" href="([^"]*)"/)
     expect(match, 'no canonical link').not.toBeNull()
     expect(match![1]).toBe(`${company.siteUrl}${page.route}`)
@@ -319,6 +348,57 @@ describe.each(pages)('$route publishes no invented information', (page) => {
       expect(renderedText(page.html)).not.toMatch(pattern)
     })
   }
+})
+
+// ---------------------------------------------------------------------
+// The source rule as an allowlist, over the build
+// ---------------------------------------------------------------------
+//
+// Task 5B, G-1. FORBIDDEN_CLAIMS above carries the four-name denylist —
+// Philippines, Sri Lanka, Cambodia, Bangladesh — and keeps it byte-identical
+// with tests/content.test.ts's copy, which is asserted there. That list is
+// the four a Singapore agency writer reaches for by habit, and spec §7 is
+// not a list of four: it is "any source beyond Indonesia, Myanmar and
+// Mizoram". "We also place helpers from Nepal and Thailand." satisfied every
+// assertion in this file.
+//
+// So the same rule also runs as an ALLOWLIST here: every country name on
+// earth, derived from Node's ICU data, minus the three permitted sources and
+// two documented exemptions. The denylist is kept as well — it is
+// case-insensitive and stem-based, so it catches a lowercased or mangled
+// spelling that a proper-noun sweep can miss. See
+// tests/support/helper-sources.ts for the choice and the two rejected
+// alternatives.
+
+describe.each(pages)('$route names no source beyond the three', (page) => {
+  it('names no country except the permitted sources and the documented exemptions', () => {
+    const offenders = namedSources(renderedText(page.html))
+    expect(offenders).toEqual([])
+  })
+})
+
+describe('the source allowlist is doing real work', () => {
+  it('derives a real country list, not an empty one', () => {
+    // Same non-vacuity guard as the content-side sweep, for the same reason:
+    // a small-icu Node would empty the list and make every assertion above
+    // pass on anything. Asserted in both files because either could be run
+    // alone.
+    const names = forbiddenPlaceNames()
+    expect(names.length).toBeGreaterThan(200)
+    expect(names).toContain('Philippines')
+    expect(names).toContain('Nepal')
+    expect(names).not.toContain('Singapore')
+  })
+
+  it('fires on the sentence a built page would have to carry', () => {
+    // These strings live in this test file and are never built or published.
+    expect(namedSources('We also place helpers from Nepal and Thailand.').sort()).toEqual([
+      'Nepal',
+      'Thailand',
+    ])
+    // ...and not on what every page on this site actually says.
+    expect(namedSources('DirectHired is a Singapore maid agency.')).toEqual([])
+  })
 })
 
 /**
@@ -554,5 +634,549 @@ describe('the empty-FAQ check has sections to check (sanity check)', () => {
       0,
     )
     expect(total).toBeGreaterThan(0)
+  })
+})
+
+// ---------------------------------------------------------------------
+// Rendered markdown must LOOK like more than one block when it is more
+// than one block
+// ---------------------------------------------------------------------
+//
+// A live readability defect, found by the /faq task on 2026-08-16 and fixed
+// in the same round. global.css resets `* { margin: 0 }`. All four surfaces
+// that render a content collection's markdown through <Content /> —
+// Faq.astro, FaqGrouped.astro, MeetHelpers.astro's helper bio and
+// Reviews.astro's review quote — carried `p:first-child { margin-top: 0 }`
+// and `p:last-child { margin-bottom: 0 }`, which zero margins that are
+// already zero, and not one restored spacing BETWEEN blocks. A
+// two-paragraph answer rendered as one unbroken block on the homepage and
+// on /pricing; measured in Chrome at 320px, both paragraphs of faq/cost.md
+// computing 0px. The other two surfaces render nothing today only because
+// their collections are deliberately empty.
+//
+// A second divergence rode along with it: FaqGrouped.astro alone styled
+// answer links, so the same answer's link was rgb(4,106,108) with a
+// bordered underline on /faq and rgb(77,77,77) with a plain underline on /
+// and /pricing.
+//
+// Both are fixed at one level — `.rich-text` in src/styles/global.css — and
+// asserted here, over dist/ rather than over a component, because the
+// question is what a visitor's browser is handed: the markdown and the CSS
+// that styles it have to arrive on the SAME page, and a component-level
+// check cannot say that.
+
+/** Every rule in a built page's CSS, inlined or linked, as selector/body. */
+function styleRules(html: string): { selector: string; body: string }[] {
+  const inline = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1])
+  const linked = [...html.matchAll(/<link[^>]+href="(\/[^"]+\.css)"/g)]
+    .map((m) => `dist${m[1]}`)
+    .filter((file) => existsSync(file))
+    .map((file) => readFileSync(file, 'utf8'))
+  return [...inline, ...linked]
+    .join('\n')
+    .split(/@media[^{]*\{/)
+    .flatMap((chunk) => [...chunk.matchAll(/([^{}]+)\{([^{}]*)\}/g)])
+    .map((m) => ({ selector: m[1].trim(), body: m[2].trim() }))
+}
+
+/** Each rendered-markdown container on a page, with its inner markup. */
+function markdownContainers(html: string): string[] {
+  return [...html.matchAll(/<(\w+) class="[^"]*\brich-text\b[^"]*"[^>]*>([\s\S]*?)<\/\1>/g)].map(
+    (m) => m[2],
+  )
+}
+
+describe('every <Content /> in the source is wrapped in .rich-text', () => {
+  /*
+   * THE SOURCE-SIDE HALF, AND THE ONLY ONE THAT CAN SEE TWO OF THE FOUR
+   * SURFACES.
+   *
+   * MeetHelpers.astro's helper bio and Reviews.astro's review quote render
+   * nothing today — both collections are deliberately empty — so no built
+   * page carries them and the dist/-derived rules below cannot say a word
+   * about either. Both carried the identical defect, and both would have
+   * shipped it the day DirectHired supplies profiles or reviews, as a
+   * rendering fault in content nobody changed.
+   *
+   * So the opt-in is asserted where it is written. DERIVED from the
+   * <Content /> call sites rather than from a list of files: a fifth
+   * markdown surface is caught by this the moment it exists, which is the
+   * whole reason the treatment was moved to one shared class.
+   */
+  const astroFiles = walk('src').filter((f) => f.endsWith('.astro'))
+  const CONTENT_TAG = /<Content\s*\/>/g
+  const WRAPPED = /<[a-z]+ class="([^"]*)"[^>]*>\s*<Content\s*\/>/g
+
+  /**
+   * Comments stripped, or every file that EXPLAINS <Content /> counts as
+   * four more call sites — Faq.astro's header alone mentions it twice. The
+   * repo's convention: a rule explained next to the code obeying it must
+   * not read as a breach of itself.
+   */
+  const template = (file: string) =>
+    readFileSync(file, 'utf8')
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/<!--[\s\S]*?-->/g, ' ')
+      // `//` only at the start of a line: a `//` mid-line is the one in an
+      // https:// URL, and eating the rest of that line could hide real code.
+      .replace(/^[ \t]*\/\/.*$/gm, ' ')
+
+  it('finds the call sites it claims to check (guards the assertion below)', () => {
+    const total = astroFiles.reduce((n, f) => n + (template(f).match(CONTENT_TAG) ?? []).length, 0)
+    // Four today: the two FAQ layouts, the helper bio and the review quote.
+    // A floor rather than an equality, so adding a fifth surface fails on
+    // the class rather than on the count.
+    expect(total).toBeGreaterThanOrEqual(4)
+  })
+
+  it('wraps every one of them in an element carrying the class', () => {
+    const offenders: string[] = []
+    for (const file of astroFiles) {
+      const source = template(file)
+      const calls = (source.match(CONTENT_TAG) ?? []).length
+      const wrapped = [...source.matchAll(WRAPPED)].filter((m) => /\brich-text\b/.test(m[1]))
+      if (wrapped.length !== calls) offenders.push(`${file}: ${wrapped.length}/${calls} wrapped`)
+    }
+    expect(offenders).toEqual([])
+  })
+})
+
+describe('every built page spaces the markdown it renders', () => {
+  const withMarkdown = pages.filter((p) => markdownContainers(p.html).length > 0)
+
+  it('has pages to check, and a multi-paragraph block among them', () => {
+    /*
+     * Both halves matter. Without the first, a page sweep that stopped
+     * finding markdown containers would make the rules below pass on an
+     * empty list. Without the second, they would be about a defect no
+     * visitor could meet — and the whole point is that this one HAS been
+     * shipping, on the two pages named here, apparently since sub-project 1.
+     */
+    expect(withMarkdown.map((p) => p.route)).toEqual(
+      expect.arrayContaining(['/', '/pricing/', '/faq/']),
+    )
+    const multiParagraph = withMarkdown.flatMap((p) =>
+      markdownContainers(p.html)
+        .filter((inner) => (inner.match(/<p[\s>]/g) ?? []).length > 1)
+        .map(() => p.route),
+    )
+    expect(multiParagraph).toEqual(expect.arrayContaining(['/', '/pricing/']))
+  })
+
+  /**
+   * A rule that puts space between ANY two adjacent blocks — the `* + *`
+   * shape, whatever combinator and whitespace it is written with.
+   *
+   * SPECIFIC ON PURPOSE, and a mutation is why. The first version of this
+   * accepted any `.rich-text` rule containing a `+`, which the `li + li`
+   * rule below satisfies on its own: zeroing the block margin left the
+   * paragraphs running together again and the assertion still passed,
+   * because a different rule in the same family carried a non-zero value.
+   * A between-BLOCKS guarantee has to be checked against the between-blocks
+   * rule.
+   */
+  const BETWEEN_BLOCKS = /\.rich-text\b[^,{]*\*\s*\+\s*\*/
+  const BETWEEN_LIST_ITEMS = /\.rich-text\b[^,{]*\bli\s*\+\s*li\b/
+  const NON_ZERO_TOP = /margin-top:\s*var\(--space-[1-9]\d*\)/
+
+  it.each(withMarkdown)('$route separates one markdown block from the next', (page) => {
+    const rules = styleRules(page.html)
+    const between = rules.filter((rule) => BETWEEN_BLOCKS.test(rule.selector))
+    expect(between.length, `${page.route} has no rule between markdown blocks`).toBeGreaterThan(0)
+    expect(
+      between.some((rule) => NON_ZERO_TOP.test(rule.body)),
+      `${page.route} declares a between-blocks rule with no non-zero top margin`,
+    ).toBe(true)
+
+    // Asserted separately rather than folded in above, so neither can stand
+    // in for the other: a list of stacked lines and two paragraphs running
+    // together are the same defect at two scales.
+    const items = rules.filter((rule) => BETWEEN_LIST_ITEMS.test(rule.selector))
+    expect(
+      items.some((rule) => NON_ZERO_TOP.test(rule.body)),
+      `${page.route} does not separate markdown list items`,
+    ).toBe(true)
+  })
+
+  it.each(withMarkdown)('$route styles links inside markdown the same way', (page) => {
+    /*
+     * The other half of the divergence, and it is asserted per page for the
+     * reason it went unnoticed: the defect was not that a link was
+     * unstyled, it was that the SAME answer's link was styled on one page
+     * and not on another. A rule that exists on every page carrying
+     * markdown is the only form of that guarantee.
+     */
+    const links = styleRules(page.html).filter((rule) =>
+      /\.rich-text\b[^,{]*\sa\b/.test(rule.selector),
+    )
+    expect(
+      links.some((rule) => /color:\s*var\(--color-accent\)/.test(rule.body)),
+      `${page.route} does not give markdown links the accent colour`,
+    ).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------
+// BreadcrumbList — built by Task 11, and now policed in both directions
+// ---------------------------------------------------------------------
+//
+// Task 7 fix round, W-2 recorded spec §4's `BreadcrumbList` requirement as
+// failing by OMISSION and shipped a self-policing deferral list —
+// ROUTES_AWAITING_BREADCRUMBS — so that the gap could neither widen silently
+// nor be forgotten. Task 11 built the thing: `breadcrumbSchema` in
+// src/lib/structured-data.ts, applied through BaseLayout's `breadcrumb` prop,
+// on every page that has a position in the hierarchy.
+//
+// THE DEFERRAL LIST IS GONE BECAUSE IT REACHED ZERO, which is what its own
+// comment asked for. What survives is the permanent exemption below, and the
+// assertions are unchanged in shape: the set of pages carrying no
+// BreadcrumbList must equal the exempt set EXACTLY, so a page that loses its
+// trail fails just as loudly as a page that gains one it should not have.
+//
+// The CONTENT of every trail — positions, names, absolute URLs, and whether
+// each URL resolves to a page that exists — is validated in
+// tests/json-ld.test.ts, over every JSON-LD block on every built page. This
+// block answers "is there one"; that file answers "is it true".
+
+/**
+ * Routes that must NEVER carry a `BreadcrumbList`.
+ *
+ * '/404' — decided by Task 10, for three reasons, any one of which would be
+ * enough:
+ *
+ *   1. A BreadcrumbList states WHERE A PAGE SITS in the site's hierarchy.
+ *      A 404 sits nowhere. The URL that produced it is not a node in any
+ *      hierarchy — that is the entire meaning of the response — and
+ *      /404.html itself is not a destination anybody navigates to. Any
+ *      trail written here would be fiction: either a trail to the missing
+ *      URL, which does not exist, or a trail to /404, which nothing links
+ *      to.
+ *   2. Google's breadcrumb guidance requires the markup to describe a real
+ *      navigational path to the page. Structured data that describes a
+ *      position the page does not occupy is a structured-data mismatch, and
+ *      the penalty for those falls on the whole site rather than on the one
+ *      page.
+ *   3. It could never be used anyway. Once
+ *      scripts/deploy-cloudfront-error-pages.sh is applied this page is
+ *      served with a 404 STATUS, and a crawler drops a 404 rather than
+ *      indexing it — while the directly-reachable /404.html carries
+ *      `noindex`. Rich results are computed for indexed pages.
+ *
+ * '/' — decided by Task 11, which is the call ROUTES_AWAITING_BREADCRUMBS's
+ * docblock explicitly delegated to it ("the one entry that may legitimately
+ * survive that task is '/'... That is Task 11's call to make and to record
+ * here"). The homepage is EXEMPT, and this is the argument:
+ *
+ *   1. FOUNDATION SPEC §242 SCOPES THE REQUIREMENT: "`BreadcrumbList` on
+ *      nested pages". The site root is not nested. Core-pages spec §4's
+ *      "per page" list does not overrule that — it is the same requirement
+ *      restated for the six pages that task was about, all six of which are
+ *      nested.
+ *   2. THE ONLY TRAIL IT COULD CARRY WOULD DESCRIBE NOTHING. Every trail on
+ *      this site starts at the root, so the homepage's own trail is a single
+ *      ListItem whose `item` is the page it is already on. That states no
+ *      position: it is a path of length zero written down as if it were a
+ *      path. Google's breadcrumb guidance is about the route to a page, and
+ *      there is no route to the root.
+ *   3. IT IS NOT A GAP IN COVERAGE. The homepage is position 1 of all six
+ *      trails the site does ship, so the root's place in the hierarchy is
+ *      already stated six times, by the pages that actually have a position
+ *      relative to it.
+ *
+ * NOTE THE ASYMMETRY WITH THE DELETED LIST, because it is the point. This
+ * list is not a to-do: an entry here is a decision that has been made and
+ * argued, and both assertions below run in both directions over it. Nothing
+ * may be added without an argument of the same kind, and the moment a route
+ * here starts shipping a BreadcrumbList the first assertion fails.
+ */
+const ROUTES_EXEMPT_FROM_BREADCRUMBS: readonly string[] = ['/', '/404']
+
+const ROUTES_WITHOUT_BREADCRUMBS: readonly string[] = ROUTES_EXEMPT_FROM_BREADCRUMBS
+
+/**
+ * Every `@type` in every JSON-LD block on a page, however nested — an array at
+ * the top level, a `@graph`, an `itemListElement`, all of it.
+ *
+ * A raw string search for "BreadcrumbList" would also fire on the word
+ * appearing in page copy or in a comment, which would let a page look
+ * compliant without carrying any structured data at all. A block that does not
+ * parse contributes nothing, which is the right reading: malformed JSON-LD is
+ * not a shipped BreadcrumbList.
+ */
+function jsonLdTypes(html: string): string[] {
+  const blocks = [
+    ...html.matchAll(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi),
+  ].map((m) => m[1])
+
+  const types: string[] = []
+  const visit = (node: unknown): void => {
+    if (Array.isArray(node)) {
+      node.forEach(visit)
+      return
+    }
+    if (node && typeof node === 'object') {
+      for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+        if (key === '@type' && typeof value === 'string') types.push(value)
+        else visit(value)
+      }
+    }
+  }
+
+  for (const block of blocks) {
+    try {
+      visit(JSON.parse(block))
+    } catch {
+      // Unparseable — contributes no types, deliberately.
+    }
+  }
+  return types
+}
+
+describe('the 404 page is the only page kept out of the index', () => {
+  /*
+   * Task 10. Two halves of one property, asserted together so neither can be
+   * traded for the other.
+   *
+   * THE 404 MUST CARRY noindex. Once
+   * scripts/deploy-cloudfront-error-pages.sh is applied, a missing route is
+   * served this page's body with a 404 STATUS, which a crawler drops. But
+   * the file also sits at /404.html as a real object, where it answers 200
+   * and is a perfectly indexable thin page with no content of its own. The
+   * robots meta is what closes that, and it is invisible on the rendered
+   * page — exactly the kind of thing a tidy-up deletes.
+   *
+   * NO OTHER PAGE MAY CARRY IT. A stray `noindex` on /contact or /pricing
+   * removes that page from Google silently: nothing breaks, nothing looks
+   * wrong, and the traffic simply stops. This is the cheapest possible guard
+   * against the single most expensive one-line mistake on a marketing site.
+   */
+  const NOINDEX = /<meta[^>]+name="robots"[^>]+content="[^"]*noindex/i
+
+  it('the 404 page declines indexing', () => {
+    const notFound = pages.find((p) => p.route === '/404')
+    expect(notFound, 'dist/404.html was not built').toBeDefined()
+    expect(notFound!.html).toMatch(NOINDEX)
+  })
+
+  it('no other page does', () => {
+    const offenders = pages
+      .filter((p) => p.route !== '/404')
+      .filter((p) => NOINDEX.test(p.html))
+      .map((p) => p.route)
+    expect(offenders).toEqual([])
+  })
+
+  it('the 404 page claims no canonical URL, and every other page does', () => {
+    /*
+     * The other half of the same flag. BaseLayout drops the self-canonical
+     * and the og:url with the robots meta, because all three are claims
+     * about "this page's URL" and a 404 has none — it is served in place of
+     * every URL that does not exist, and the tag BaseLayout would otherwise
+     * write (…/404/) is itself a URL that returns 404.
+     *
+     * Asserted here rather than only as an early return in the per-page
+     * canonical check above, which is what keeps that early return from
+     * being an exemption that checks nothing. Both directions, so a change
+     * that dropped canonicals site-wide fails loudly.
+     */
+    const CANONICAL = /<link rel="canonical"/i
+    const notFound = pages.find((p) => p.route === '/404')!
+    expect(notFound.html).not.toMatch(CANONICAL)
+    expect(notFound.html).not.toMatch(/<meta property="og:url"/i)
+
+    const withoutCanonical = pages
+      .filter((p) => p.route !== '/404')
+      .filter((p) => !CANONICAL.test(p.html))
+      .map((p) => p.route)
+    expect(withoutCanonical).toEqual([])
+  })
+})
+
+describe('BreadcrumbList (spec §4)', () => {
+  it('the exempt list is exactly the two routes argued above — nothing may join it quietly', () => {
+    /*
+     * THE PIN, AND THE LEAK IT CLOSES.
+     *
+     * While ROUTES_AWAITING_BREADCRUMBS existed, the only assertions over
+     * these two lists were: the union equals the set of pages carrying no
+     * BreadcrumbList, the two lists are disjoint, and the exempt one is
+     * non-empty. NOTHING PINNED WHAT WAS IN IT. A reviewer proved the
+     * consequence by moving '/contact/' from the deferred list into the
+     * exempt one: all 184 assertions in this file passed. So "shrink
+     * ROUTES_AWAITING_BREADCRUMBS to empty" — the documented success
+     * condition for Task 11, the one that authorises deleting the block —
+     * was satisfiable by RELOCATING routes rather than by shipping
+     * breadcrumbs, which is strictly weaker than the single list the pair
+     * replaced, on exactly the property the pair existed to protect.
+     *
+     * The deferred list is gone, so that particular route out is closed.
+     * This is the general one: an exemption is now a literal in this
+     * assertion as well as an entry in the list, so granting one is a
+     * two-place diff a reviewer sees, next to the argument it has to carry.
+     * Union-equality alone can never notice a route being excused, because
+     * excusing it changes both sides at once.
+     *
+     * Re-verified by mutation after it was written, with the reviewer's own
+     * case: '/contact/' added here and `breadcrumb="Contact"` deleted from
+     * the page. 187 assertions in this file passed and this one failed —
+     * it is the only thing standing between the site and a silent excusal.
+     */
+    expect([...ROUTES_EXEMPT_FROM_BREADCRUMBS].sort()).toEqual(['/', '/404'])
+  })
+
+  it('the pages carrying no BreadcrumbList are exactly the exempt ones', () => {
+    const missing = pages
+      .filter((p) => !jsonLdTypes(p.html).includes('BreadcrumbList'))
+      .map((p) => p.route)
+      .sort()
+    expect(missing).toEqual([...ROUTES_WITHOUT_BREADCRUMBS].sort())
+  })
+
+  it('every other page carries exactly one, and never two', () => {
+    /*
+     * The other direction, and it is not implied by the assertion above.
+     * That one asks whether the type appears at all; a page emitting two
+     * BreadcrumbList blocks — the layout's plus a hand-rolled one — would
+     * satisfy it while shipping a structured-data defect of exactly the kind
+     * /faq avoids by not rendering <Faq /> alongside <FaqGrouped />.
+     */
+    const counts = pages
+      .filter((p) => !ROUTES_WITHOUT_BREADCRUMBS.includes(p.route))
+      .map((p) => ({
+        route: p.route,
+        n: jsonLdTypes(p.html).filter((t) => t === 'BreadcrumbList').length,
+      }))
+    expect(counts.length, 'no page is required to carry a breadcrumb').toBeGreaterThan(0)
+    expect(counts.filter((c) => c.n !== 1)).toEqual([])
+  })
+
+  it('every exempt route is a page that actually exists', () => {
+    // The DEFERRED_ROUTES lesson: an entry for a route nothing builds is an
+    // exemption granted in advance, and it would let a deleted page hide here.
+    const built = new Set(pages.map((p) => p.route))
+    expect(ROUTES_WITHOUT_BREADCRUMBS.filter((r) => !built.has(r))).toEqual([])
+  })
+
+  it('the detector recognises a BreadcrumbList, and does not invent one', () => {
+    /*
+     * Without this, a detector that found nothing anywhere would report every
+     * page as missing, the enumeration would match, and the whole guard would
+     * be green while checking nothing — the vacuous pass this suite keeps
+     * finding. These strings live in this file and are never built.
+     */
+    const script = (json: string) =>
+      `<script type="application/ld+json">${json}</script>`
+    expect(
+      jsonLdTypes(
+        script(
+          '{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://x/"}]}',
+        ),
+      ),
+    ).toContain('BreadcrumbList')
+    // Nested inside a @graph, which is how a page carrying two schemas would
+    // most likely ship it.
+    expect(
+      jsonLdTypes(script('{"@graph":[{"@type":"EmploymentAgency"},{"@type":"BreadcrumbList"}]}')),
+    ).toContain('BreadcrumbList')
+    // The word in prose is not structured data.
+    expect(jsonLdTypes('<p>We add a BreadcrumbList later.</p>')).toEqual([])
+    expect(jsonLdTypes(script('{"@type":"FAQPage"}'))).not.toContain('BreadcrumbList')
+  })
+
+  it('reads the structured data the site really ships (the detector is wired to dist/)', () => {
+    // The other half of non-vacuity: the detector must work on real built
+    // markup, not only on the literals above.
+    const all = pages.flatMap((p) => jsonLdTypes(p.html))
+    expect(all).toContain('EmploymentAgency')
+    expect(all).toContain('FAQPage')
+  })
+})
+
+// ---------------------------------------------------------------------
+// The sitemap — every real page, and nothing that is not a page
+// ---------------------------------------------------------------------
+//
+// Task 11. @astrojs/sitemap generates this from the build, so nobody
+// maintains a list — which is exactly why nobody would notice it going
+// wrong. Two things can, and both are silent:
+//
+//   A PAGE MISSING FROM IT is a page Google is never told about. The
+//   integration has options (`filter`, `exclude`) that make that a one-line
+//   change, and public/robots.txt points crawlers at the sitemap as the
+//   authoritative list, so an omission here is not softened by the site's
+//   internal linking.
+//
+//   /404 PRESENT IN IT is the opposite defect: submitting an error page for
+//   indexing, on the one page of the site that carries `noindex`. The
+//   integration excludes it today because Astro emits it as `dist/404.html`
+//   rather than as a route; nothing about that is guaranteed, and it is
+//   cheaper to assert than to re-derive.
+//
+// The expected list is DERIVED from dist/ rather than typed, for the reason
+// this whole file is: a page added next month has to appear here without
+// anybody remembering this test exists.
+
+describe('the sitemap', () => {
+  const sitemap = readFileSync('dist/sitemap-0.xml', 'utf8')
+  const locations = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])
+
+  /** Routes that belong in a sitemap: every built page except the 404. */
+  const indexableRoutes = pages.map((p) => p.route).filter((r) => r !== '/404')
+
+  it('lists every built page except the 404, and nothing else', () => {
+    /*
+     * A FLOOR, NOT A COUNT — corrected 2026-08-17.
+     *
+     * This read `.toBe(7)` with the message "no indexable pages were found",
+     * and the message is the intent: the equality below compares two derived
+     * lists, and two EMPTY lists are equal. Something has to say that the
+     * left-hand side is not empty, or a build that emitted nothing would make
+     * the real assertion pass with nothing to say.
+     *
+     * `toBe(7)` expressed that as an exact count, which is a different claim
+     * and one nothing here wanted to make. It contradicts this file's own
+     * doctrine, stated directly above — "DERIVED from dist/ rather than
+     * typed, ... so a page added next month has to appear here without
+     * anybody remembering this test exists" — and sub-project 3 adds eleven
+     * pages, every one of which would have failed this line.
+     *
+     * NOT A WEAKENING. What `toBe(7)` actually protected was the floor: 7 is
+     * still the minimum, so the sitemap cannot silently shrink. The EXACTNESS
+     * — that the sitemap holds these routes and no others — was never carried
+     * by this line at all. It is carried by the `toEqual` below, which
+     * compares the full sorted sets, and by the uniqueness check added with
+     * this change. Growth is the one thing the old form caught, and growth is
+     * not a defect here.
+     */
+    expect(
+      indexableRoutes.length,
+      'no indexable pages were found, so the equality below would compare two empty lists',
+    ).toBeGreaterThanOrEqual(7)
+    expect(new Set(indexableRoutes).size, 'a route was built twice').toBe(indexableRoutes.length)
+    expect([...locations].sort()).toEqual(
+      indexableRoutes.map((r) => `${company.siteUrl}${r}`).sort(),
+    )
+  })
+
+  it('does not list the 404, under any spelling of it', () => {
+    /*
+     * Asserted separately from the equality above, and deliberately not by
+     * the same means. The equality compares against routes derived from
+     * dist/, so a build that stopped emitting the 404 page altogether would
+     * make it pass with nothing to say — and "/404.html" and "/404/" are two
+     * different strings, only one of which the derived route can be.
+     */
+    const notFound = locations.filter((loc) => /\/404(\.html|\/)?$/.test(loc))
+    expect(notFound).toEqual([])
+    // ...and the page really is built, so the check above has a subject.
+    expect(pages.map((p) => p.route)).toContain('/404')
+  })
+
+  it('is reachable from the sitemap index robots.txt points at', () => {
+    // public/robots.txt names sitemap-index.xml, not sitemap-0.xml. A
+    // sitemap file nothing indexes is a sitemap nothing reads.
+    const index = readFileSync('dist/sitemap-index.xml', 'utf8')
+    expect(index).toContain(`${company.siteUrl}/sitemap-0.xml`)
   })
 })

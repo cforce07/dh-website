@@ -1,0 +1,11 @@
+{
+  "Comment": "ACM validation for cert 6c22fa0e (directhired.com + www). PERMANENT - ACM re-reads these to auto-renew; deleting them breaks renewal silently ~11 months later. See docs/runbooks/2026-08-16-dns-cutover.md",
+  "Changes": [
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_1cf5adf581a5bbf754c150b5e473d696.directhired.com.", "Type": "CNAME", "TTL": 300,
+        "ResourceRecords": [{ "Value": "_d0ec8682fa1710f48ccf7892e6590703.jkddzztszm.acm-validations.aws." }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_f1f2343d2b8f54e18d5df35462b8675d.www.directhired.com.", "Type": "CNAME", "TTL": 300,
+        "ResourceRecords": [{ "Value": "_fd086a91ca8420de85e3c3fb97516426.jkddzztszm.acm-validations.aws." }] } }
+  ]
+}

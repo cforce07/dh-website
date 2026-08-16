@@ -119,15 +119,38 @@ describe('--tracking-wide is used only where its contract allows', () => {
    * var(--tracking-wide)` must sit in a rule that also declares
    * `text-transform: uppercase`.
    */
-  const COMPONENT_DIRS = ['src/components', 'src/sections', 'src/layouts']
+  /*
+   * Task 5B, G-3. This was ['src/components', 'src/sections', 'src/layouts'] —
+   * every directory that holds scoped CSS EXCEPT the one the pages are in.
+   * src/pages/pricing.astro already ships ~195 lines of scoped CSS that this
+   * scan never opened, and Phase B adds five more page files. The token's
+   * contract does not stop applying because a declaration was written in a
+   * page rather than a component.
+   *
+   * Latent when it was fixed — no page declares --tracking-wide today — so it
+   * was mutation-checked by planting one in src/pages/pricing.astro without
+   * text-transform: uppercase, which the scan then caught.
+   */
+  const COMPONENT_DIRS = ['src/components', 'src/sections', 'src/layouts', 'src/pages']
 
-  function componentFiles(): string[] {
+  /**
+   * The subset that existed before src/pages was added. Not a second scan
+   * list: it exists solely so the count floor below cannot be satisfied by
+   * page files — see that assertion for why that matters.
+   */
+  const SHARED_COMPONENT_DIRS = COMPONENT_DIRS.filter((d) => d !== 'src/pages')
+
+  function filesIn(dirs: readonly string[]): string[] {
     const walk = (dir: string): string[] =>
       readdirSync(dir).flatMap((entry) => {
         const full = join(dir, entry).split('\\').join('/')
         return statSync(full).isDirectory() ? walk(full) : [full]
       })
-    return COMPONENT_DIRS.flatMap(walk).filter((f) => f.endsWith('.astro'))
+    return dirs.flatMap(walk).filter((f) => f.endsWith('.astro'))
+  }
+
+  function componentFiles(): string[] {
+    return filesIn(COMPONENT_DIRS)
   }
 
   /** Each `selector { ... }` block in a scoped <style>, comments removed. */
@@ -149,14 +172,43 @@ describe('--tracking-wide is used only where its contract allows', () => {
     expect(offenders).toEqual([])
   })
 
+  /** How many rule blocks in `dirs` declare the token. */
+  const declarationCount = (dirs: readonly string[]) =>
+    filesIn(dirs)
+      .flatMap((f) => ruleBlocks(readFileSync(f, 'utf8')))
+      .filter((b) => /letter-spacing:\s*var\(--tracking-wide\)/.test(b)).length
+
   it('finds the declarations it claims to check (guards the scan)', () => {
     // Four legitimate users today: .footer-heading, .trust-label,
     // .total-label, .match-kicker. If this ever reads zero, the scan has
     // broken and the assertion above is vacuous.
-    const count = componentFiles()
-      .flatMap((f) => ruleBlocks(readFileSync(f, 'utf8')))
-      .filter((b) => /letter-spacing:\s*var\(--tracking-wide\)/.test(b)).length
+    const count = declarationCount(COMPONENT_DIRS)
 
     expect(count).toBeGreaterThanOrEqual(4)
+  })
+
+  it('opens a file in every directory it says it scans', () => {
+    // G-3 added src/pages to the list. A directory that contributes no
+    // files is a directory not being scanned, and the assertion above would
+    // not notice — it counts declarations, and a page has none today.
+    for (const dir of COMPONENT_DIRS) {
+      expect(filesIn([dir]).length, `${dir} contributed no .astro files`).toBeGreaterThan(0)
+    }
+  })
+
+  it('meets the floor from the shared component layer, not from src/pages', () => {
+    /*
+     * The other half of adding a directory: a floor of four over a widened
+     * corpus can be met by the new directory alone. If five Phase B pages
+     * each declared an eyebrow, all four of the component-layer users could
+     * be deleted and the count assertion above would still read four —
+     * "the scan is working" would be true while "the four users I named are
+     * still there" had quietly stopped being.
+     *
+     * Asserting the floor against the pre-existing directories keeps that
+     * sentence true no matter what src/pages grows, and it is not a
+     * narrower check than the one above: both still run.
+     */
+    expect(declarationCount(SHARED_COMPONENT_DIRS)).toBeGreaterThanOrEqual(4)
   })
 })

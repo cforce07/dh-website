@@ -1,0 +1,189 @@
+---
+/**
+ * /faq — ALL FOURTEEN QUESTIONS, GROUPED. The page spec §3.2 describes in
+ * one line: "All 14 of §37's questions, grouped: Cost & Pricing / Helpers
+ * & Sources / Process & Timing / Replacement."
+ *
+ * THREE BLOCKS, AND THE MIDDLE ONE IS THE PAGE. Unlike the four Phase B
+ * pages before it, this page has almost no prose of its own: the content
+ * is the collection, and every sentence in it has already been reviewed
+ * and shipped. What this file owns is the frame — a short hero that says
+ * what the list is and links the other two corners of the triangle, the
+ * grouped list, and the CTA.
+ *
+ * SPEC §4 GIVES THIS PAGE THE LONG-TAIL INTENT, "via FAQPage structured
+ * data across all 14". That is the page's actual SEO mechanism, and it is
+ * why <Faq /> is deliberately NOT rendered here. Faq.astro emits its own
+ * FAQPage block whenever `emitSchema` is left at its default; rendering
+ * both components would put two FAQPage blocks on one page, which is a
+ * structured-data defect rather than twice the signal. FaqGrouped emits
+ * the single block covering every entry.
+ *
+ * THE INTERNAL LINKING TRIANGLE (spec §4) CLOSES HERE. Pricing ↔ Find Your
+ * Helper ↔ FAQ was unbuildable in sub-project 1 because there was nowhere
+ * to link. The FAQ entries themselves already link to /pricing — several
+ * of them — but they may not link to /find-your-helper: tests/content.test.ts
+ * forbids any file under src/content from doing so, because a markdown body
+ * is shared across surfaces and cannot know which page it is on. So the
+ * third edge is drawn here, in the page file, where it can be.
+ *
+ * NO INLINE CTA PAIR, for /about's reason: FinalCta sits directly under
+ * the last group, and a second pair of buttons a few hundred pixels above
+ * it would put two conversion surfaces in one screen. The mobile CTA bar
+ * is fixed on every page regardless.
+ *
+ * NO FREQUENCY CLAIM ANYWHERE ON THIS PAGE. "The questions we're asked
+ * most often" ranks questions by how often they arrive and nobody has that
+ * data — the defect W-6 deleted from /pricing twice and Faq.astro's own
+ * default lede a third time. This page states what the list IS (all of
+ * them, grouped by subject), which is a fact about the page rather than a
+ * claim about DirectHired's phone calls. Spec §2.6.4 records the one thing
+ * DirectHired did say about what families ask — that they re-ask for
+ * reassurance — and that is not a ranking.
+ *
+ * GROUNDS: cream / white / cream, registered in
+ * tests/section-rhythm.test.ts. FinalCta is fixed at --color-surface
+ * because the homepage renders the same component, which fixes the middle
+ * block white; opening on cream is what all four earlier pages do.
+ *
+ * NO BRAND WASH, and it is a decision rather than an omission. The
+ * register's rule is "at most one" --color-surface-teal section per page,
+ * and this page spends none. There are only two candidates: the hero,
+ * which would make /faq the one page on the site that does not open on the
+ * page ground, and the list, which would put the brand wash behind ~1,400px
+ * of collapsed accordion rows — the definition of wallpaper that
+ * tests/section-rhythm.test.ts's own comment warns about. Neither earns
+ * it. Stated so that adding one is a decision somebody takes rather than a
+ * background flipped in this file.
+ *
+ * NO SECOND DARK BAND — TwoSidedMatch is not rendered here (spec §3.2 does
+ * not list it for this page), so block 07 remains the site's only
+ * --color-deep section.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro'
+import Container from '../components/Container.astro'
+import FaqGrouped from '../sections/FaqGrouped.astro'
+import FinalCta from '../sections/FinalCta.astro'
+
+/*
+ * Long tail (spec §4), so the title names the SUBJECTS rather than a
+ * single query: the four groups are what the fourteen questions are about,
+ * and they are also what somebody types. No figure and no licence number
+ * here — /pricing owns the figures in its title and /about owns the
+ * licence, and both are single-sourced there.
+ */
+const title = 'Domestic Helper FAQs — Cost, Sources, Process, Replacement | DirectHired'
+const description =
+  'Answers about hiring a domestic helper in Singapore: what the fly-in package covers, ' +
+  'where DirectHired’s helpers come from, how long a placement takes, and how the 6-month ' +
+  'replacement works.'
+---
+
+<BaseLayout title={title} description={description} breadcrumb="FAQ">
+  <section class="faq-intro">
+    <Container>
+      {/*
+        The <h1> is a statement about the page, not about the questions.
+        "Every question we answer" is true and checkable — FaqGrouped
+        renders the whole collection and fails the build rather than
+        dropping an entry — where "the questions families ask most" would
+        be a claim about data nobody has.
+      */}
+      <h1>Every question we answer, in one place.</h1>
+
+      <p class="faq-lede">
+        Cost and pricing, where our helpers come from, how a placement runs, and how replacement
+        works. Open any question to read the answer.
+      </p>
+
+      {/*
+        The third edge of spec §4's triangle. Both links point at pages
+        that go further than an FAQ answer can, which is also why they are
+        worth a visitor's click rather than being link decoration.
+      */}
+      <p class="faq-body">
+        Two of these subjects have a page of their own: every figure is itemised on
+        <a href="/pricing">pricing</a>, and the matching is explained step by step on
+        <a href="/find-your-helper">find your helper</a>.
+      </p>
+    </Container>
+  </section>
+
+  <FaqGrouped />
+
+  {/*
+    Framed for this page: a visitor who has read fourteen answers has read
+    everything this site can tell them in general, and the next thing is
+    the part that is specific to their household. "A consultant reads every
+    submission" is already published site copy (master brief line 353's
+    intake role, which faq/submit-requirements.md states) and deliberately
+    stops short of a response time, which that entry owns and states as
+    within 1 business day.
+  */}
+  <FinalCta
+    heading="Still a question this page does not answer?"
+    lede="The answers above are the general ones. Send us your household’s requirements and a consultant will come back to you about yours."
+  />
+</BaseLayout>
+
+<style>
+  .faq-intro {
+    /*
+     * --space-12 top, --space-section bottom — Hero's treatment, and the
+     * treatment /pricing, /find-your-helper, /why-directhired and /about
+     * all give their opening block, for the same reason: this block
+     * carries the page's hero, and a full --space-section (128px at ≥1280)
+     * above an image-less single-column headline spends the first screen
+     * on cream.
+     */
+    padding-block: var(--space-12) var(--space-section);
+    background: var(--color-surface);
+  }
+
+  .faq-intro h1 {
+    margin: 0;
+    /*
+     * 18ch, the measure /pricing and /find-your-helper use. This headline
+     * is a 38-character sentence; at --size-h1's 64px it breaks once,
+     * after "answer", which puts "in one place." on its own line — the
+     * clause that says what is different about this page.
+     */
+    max-width: 18ch;
+    font-family: var(--font-display);
+    font-size: var(--size-h1);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.1;
+    color: var(--color-ink);
+  }
+
+  .faq-lede {
+    max-width: 52ch;
+    margin: var(--space-6) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-lede);
+    line-height: 1.5;
+    color: var(--color-ink);
+  }
+
+  .faq-body {
+    max-width: 56ch;
+    margin: var(--space-6) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+  }
+
+  /* --color-accent (6.03:1 on cream), never --color-brand-teal, which
+     measures 2.89:1 and carries no text anywhere on this site. */
+  .faq-body a {
+    color: var(--color-accent);
+    text-decoration: none;
+    border-bottom: 1px solid var(--color-accent);
+  }
+
+  .faq-body a:hover {
+    color: var(--color-accent-hover);
+    border-color: var(--color-accent-hover);
+  }
+</style>

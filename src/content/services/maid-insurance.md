@@ -1,12 +1,12 @@
 ---
 title: Maid Insurance
 slug: maid-insurance
-summary: Insurance is one of the components in our fly-in package — we arrange it and coordinate it on your behalf.
+summary: Two policies the Ministry of Manpower requires — medical and personal accident — both bought by the fly-in package.
 order: 5
 ---
 
-Insurance is one of the components included in our fly-in package. DirectHired arranges this coverage as part of your placement, coordinated on your behalf alongside the rest of the process.
+The insurance line in our fly-in package buys **two** separate policies, not one: medical insurance, and personal accident insurance. Both are required by the Ministry of Manpower of every employer of a migrant domestic worker, and DirectHired arranges both as part of your placement.
 
-- Included as a component of the fly-in package
+- Two required policies, each at the Ministry of Manpower’s minimum cover
+- Cover that runs while the helper is here, not a one-off step
 - Arranged and coordinated on your behalf
-- Handled by our team, start to finish

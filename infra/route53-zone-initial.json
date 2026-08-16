@@ -1,0 +1,158 @@
+{
+  "Comment": "Complete copy of the Exabytes zone, from the cPanel Zone Editor export of 2026-08-16. UPSERT so it is idempotent. Web TTLs on the apex A and www lowered to 300 for a fast go-live swap; every VALUE is unchanged.",
+  "Changes": [
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "directhired.com", "Type": "A", "TTL": 300,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "www.directhired.com", "Type": "CNAME", "TTL": 300,
+        "ResourceRecords": [{ "Value": "directhired.com" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "directhired.com", "Type": "MX", "TTL": 3600,
+        "ResourceRecords": [{ "Value": "1 smtp.google.com" }] } },
+
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "mail.directhired.com", "Type": "CNAME", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "directhired.com" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "webmail.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "cpanel.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "whm.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "webdisk.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "cpcontacts.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "cpcalendars.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "ftp.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "autodiscover.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "autoconfig.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "default._domainkey.directhired.com", "Type": "TXT", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "\"v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwSf37jxnPguU94npuiMSbTE0ISlqyflHzpcaCG6J51c6w5zlZvbhu2blbBVZvv/yiBSHWDoUA06SuOqPRNMNJ7wd6+rws90F1TroHN+w5w2jYu83LSlL+ABu8PC0m7PLDLpCis6BLUk/AHp3RAwlJYjOL3oZajqjtnKOoTuRFVqZnHRd+s42Da5HI9zkqmKI7\" \"sloXTpZyLIIxkIVoCjr+ITJZSliV3CN7Ks8mcTFGQE+mMtBPnJDrgT3ahZNiwrOeBZF5D4dluvaSsnoOJ/nK4Y0MBfviijo6QmrQRrZa6TZWXPaoAb6wKk5DdIL9DzdLMC3Xti5TjdTIBP2k3CBNQIDAQAB;\"" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "googleverification.directhired.com", "Type": "TXT", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "\"google-site-verification=PpFPzF9fTAaTVHQB3xU2-7CUCyCV7jL3YyrwUtQjcTQ\"" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "3pbwvtl3lfiw.directhired.com", "Type": "CNAME", "TTL": 86400,
+        "ResourceRecords": [{ "Value": "gv-3enkjlry7hztmh.dv.googlehosted.com" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_cpanel-dcv-test-record.directhired.com", "Type": "TXT", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "\"_cpanel-dcv-test-record=zEpLps4YDVUIndXAMZ_7VxUGexnLC06xFqEkReIQ8SOuyP3cHGKvg0UMbK2jOmhk\"" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_acme-challenge.directhired.com", "Type": "TXT", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "\"0THtbBOVo8Q_zBkav9PGbk8P1ji1UhtTrjVyyVB74bw\"" }] } },
+
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_autodiscover._tcp.directhired.com", "Type": "SRV", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "0 0 443 cpanelemaildiscovery.cpanel.net" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_carddav._tcp.directhired.com", "Type": "SRV", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "0 0 2079 directhired.com" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_carddav._tcp.directhired.com", "Type": "TXT", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "\"path=/\"" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_carddavs._tcp.directhired.com", "Type": "SRV", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "0 0 2080 directhired.com" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_carddavs._tcp.directhired.com", "Type": "TXT", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "\"path=/\"" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_caldav._tcp.directhired.com", "Type": "SRV", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "0 0 2079 directhired.com" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_caldav._tcp.directhired.com", "Type": "TXT", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "\"path=/\"" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_caldavs._tcp.directhired.com", "Type": "SRV", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "0 0 2080 directhired.com" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_caldavs._tcp.directhired.com", "Type": "TXT", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "\"path=/\"" }] } },
+
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "dev.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "www.dev.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "webmail.dev.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "cpanel.dev.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "whm.dev.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "webdisk.dev.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "cpcontacts.dev.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "cpcalendars.dev.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "autodiscover.dev.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "autoconfig.dev.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "default._domainkey.dev.directhired.com", "Type": "TXT", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "\"v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuX+CiFoce22dfwH0nncKDMRYegOMlOxzonFQ1kHLyEv7HvX2U69semb4wVuRalUbklmyeCYvA6fAicPi0nyKf3TBweFx9PzXjNN3Uv9jrrDnAjJAddRW6IPELwB6+BdlKQERGz2FgXFEhbhMZsPFZZW6fMYGa+TqMx89fAJ20AclnrHtQdWKVh6SsMC0WPqqg\" \"ZoC5F4p73Lwki2Qh9PFB+r59NVuVSC932/cdlQpXa8qgXSZExVDWHyiQV6COSQD3ab7BKhlVQzIocBLELCjylwN1hUP0G/7Gb/t4+TTIbVHFHH0W9uHRm9AVFIQibjxFNrIONu2Y3DzpEaphqaFWwIDAQAB;\"" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_acme-challenge.dev.directhired.com", "Type": "TXT", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "\"VErNEN8cBstXJQN8lNC1ECnD2dic-mKH6zOdNZMa8c8\"" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_acme-challenge.www.dev.directhired.com", "Type": "TXT", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "\"6Z8c4ZkUg15AWe2Gbhzq5HSM6Lc5h3VxydZRzAaPw3U\"" }] } },
+
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_autodiscover._tcp.dev.directhired.com", "Type": "SRV", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "0 0 443 cpanelemaildiscovery.cpanel.net" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_carddav._tcp.dev.directhired.com", "Type": "SRV", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "0 0 2079 dev.directhired.com" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_carddav._tcp.dev.directhired.com", "Type": "TXT", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "\"path=/\"" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_carddavs._tcp.dev.directhired.com", "Type": "SRV", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "0 0 2080 dev.directhired.com" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_carddavs._tcp.dev.directhired.com", "Type": "TXT", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "\"path=/\"" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_caldav._tcp.dev.directhired.com", "Type": "SRV", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "0 0 2079 dev.directhired.com" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_caldav._tcp.dev.directhired.com", "Type": "TXT", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "\"path=/\"" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_caldavs._tcp.dev.directhired.com", "Type": "SRV", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "0 0 2080 dev.directhired.com" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_caldavs._tcp.dev.directhired.com", "Type": "TXT", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "\"path=/\"" }] } }
+  ]
+}

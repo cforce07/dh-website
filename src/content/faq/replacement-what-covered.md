@@ -2,7 +2,7 @@
 question: What is included in the replacement package?
 surfaces: [faq, pricing]
 category: replacement
-order: 8
+order: 140
 ---
 
 When you request a replacement, the third-party components are paid again for the new helper:
@@ -10,7 +10,7 @@ When you request a replacement, the third-party components are paid again for th
 - MOM
 - Insurance
 - SIP
-- Medical
+- Medical checkup
 - Handling & transport
 
 **Our agent fee is not charged a second time.** Those are the same components listed in the package breakdown.

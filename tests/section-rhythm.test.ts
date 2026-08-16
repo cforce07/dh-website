@@ -30,7 +30,7 @@
  * text at y=40.
  */
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 
 /** Section files in the order src/pages/index.astro renders them. */
 const BLOCKS = [
@@ -74,9 +74,6 @@ const PRICING_BLOCKS = [
   { block: 'P5', path: 'src/sections/FinalCta.astro', selector: '.final-cta' },
 ] as const
 
-/** Blocks 10a and 10b render nothing while their collections are empty. */
-const CONDITIONAL = new Set(['10a', '10b'])
-
 const read = (file: string) => readFileSync(`src/sections/${file}.astro`, 'utf8')
 
 /** Strip comments so a comment naming a token is not read as a declaration. */
@@ -98,6 +95,70 @@ function groundOfPath(path: string, selector: string): string {
 /** The same reader, for the homepage list's `file` shorthand. */
 function groundOf(file: string, selector: string): string {
   return groundOfPath(`src/sections/${file}.astro`, selector)
+}
+
+/*
+ * CONDITIONAL SECTIONS — DERIVED, NEVER LISTED.
+ *
+ * A section whose whole <section> sits behind a collection-length guard
+ * renders NOTHING while that collection is empty, so the ground sequence a
+ * visitor actually loads is the list with those blocks removed. That sequence
+ * has to alternate too, or the page shows two same-ground sections back to
+ * back to every visitor today while the full list — the one every assertion
+ * above reads — alternates perfectly.
+ *
+ * This used to be `const CONDITIONAL = new Set(['10a', '10b'])`: two
+ * hand-typed HOMEPAGE block IDs, used by one test inside the homepage's own
+ * describe. The register loop had no conditional-aware rule at all, so a
+ * registered page could render MeetHelpers or Reviews (both of which render
+ * nothing today) between two cream sections and the whole suite stayed green
+ * — proved by inserting exactly that on /why-directhired: 50 tests passed,
+ * the build exited 0, and `meet-helpers` appeared zero times in the built
+ * HTML while the page ran cream → cream.
+ *
+ * So the rule moved into the register loop, and the SET IS DERIVED. Hand-typing
+ * it again would reproduce the defect for the third conditional section anybody
+ * writes: a new guarded block would be absent from the set, absent from the
+ * page, and invisible to every assertion here. Reading the guard out of the
+ * source is what makes a new conditional block carry the rule automatically.
+ *
+ * Read from source rather than from dist/ for this file's standing reason (see
+ * the header): a ground and a guard are both decided at author time, and a page
+ * that fails to build must fail here rather than quietly leave the register.
+ * tests/links.test.ts carries the dist/-side half — that no built page ships a
+ * conditional block whose collection is empty.
+ */
+const GUARD_BEFORE_SECTION = /\.length\s*(?:>\s*0\s*|!==?\s*0\s*)?&&\s*\(?\s*$/
+
+/**
+ * The selectors in one file whose <section> renders only when a collection has
+ * entries. Works for a section component and for a <section> written inline in
+ * a page file, because both are just "the file that renders it".
+ */
+function conditionalSelectorsIn(path: string): Set<string> {
+  const source = stripComments(readFileSync(path, 'utf8'))
+  const found = new Set<string>()
+  for (const m of source.matchAll(/<section[^>]*class="([a-z0-9 -]+)"/g)) {
+    if (GUARD_BEFORE_SECTION.test(source.slice(0, m.index))) {
+      found.add(`.${m[1].trim().split(/\s+/)[0]}`)
+    }
+  }
+  return found
+}
+
+/** The blocks of one page's list that render nothing while a collection is empty. */
+function conditionalBlocksOf(
+  blocks: readonly { block: string; path: string; selector: string }[],
+): Set<string> {
+  const byPath = new Map<string, Set<string>>()
+  return new Set(
+    blocks
+      .filter((b) => {
+        if (!byPath.has(b.path)) byPath.set(b.path, conditionalSelectorsIn(b.path))
+        return byPath.get(b.path)!.has(b.selector)
+      })
+      .map((b) => b.block),
+  )
 }
 
 /*
@@ -135,6 +196,435 @@ function renderPositions(
     return { block: b.block, at }
   })
 }
+
+/* -------------------------------------------------------------------------
+ * THE PAGE REGISTER — read this before adding a page.
+ *
+ * Task 5B, G-5. Five core pages ship next: /find-your-helper,
+ * /why-directhired, /about, /faq and /contact. Their sequences are not
+ * invented here — nobody has designed them yet — but the SHAPE a page task
+ * has to fill in is settled now, before the pages exist, so that adding one
+ * is a list rather than an archaeology exercise.
+ *
+ * TO ADD A PAGE: write its block list in the same shape as PRICING_BLOCKS
+ * ({ block, path, selector }, in render order), add one entry to
+ * PAGE_SEQUENCES below, and that is all that is REQUIRED. Everything in
+ * "every registered page keeps the rhythm" then applies to it: the list is
+ * tied to the page it claims to describe, consecutive blocks may not share a
+ * ground, the brand wash appears at most once, and the list must account for
+ * every section the page renders.
+ *
+ * Then decide whether the page also wants its own describe stating its exact
+ * approved sequence, the way the homepage and /pricing do below. That is the
+ * assertion that makes a sequence a DECISION rather than merely a legal
+ * arrangement, and it is the one that cannot be written generically because
+ * the sequence is the design.
+ *
+ * WHY A REGISTER RATHER THAN A COPIED DESCRIBE. Both existing lists say "in
+ * the order <page> renders them", and renderPositions() exists because a
+ * review proved a list could be right about grounds and wrong about the
+ * page. A register makes that tie automatic: a list that is never registered
+ * is never tied, and an unregistered page is the failure this whole file is
+ * about. Nothing is derived from dist/ here on purpose — a ground is decided
+ * in source at author time, and this file's header says why it is asserted
+ * there.
+ *
+ * The two existing describes are unchanged and still run. They carry the
+ * per-page reasoning and the exact sequences; this carries the rules that
+ * hold for any page, including ones nobody has written yet.
+ * ---------------------------------------------------------------------- */
+
+interface PageSequence {
+  page: string
+  blocks: readonly { block: string; path: string; selector: string }[]
+}
+
+/**
+ * Section files in the order src/pages/find-your-helper.astro renders them.
+ *
+ * Task 6, the first Phase B page to fill in the shape the register above
+ * describes. Two of its four blocks are defined in the page file rather than
+ * in src/sections — the matching explanation and the timing block are this
+ * page's own content and belong to no other route, so they are inline and
+ * addressed by `path: <the page>` exactly as /pricing's hero block is.
+ *
+ * The grounds are not free: Process is fixed at --color-surface-teal and
+ * FinalCta at --color-surface, both because the homepage renders the same
+ * two components. Those two fix the other two — cream at the top so the
+ * page opens on the site's page ground, white in the middle so the teal
+ * wash and the closing cream cannot meet.
+ */
+const FIND_YOUR_HELPER_BLOCKS = [
+  { block: 'F1', path: 'src/pages/find-your-helper.astro', selector: '.helper-match' },
+  { block: 'F2', path: 'src/sections/Process.astro', selector: '.process' },
+  { block: 'F3', path: 'src/pages/find-your-helper.astro', selector: '.match-timing' },
+  { block: 'F4', path: 'src/sections/FinalCta.astro', selector: '.final-cta' },
+] as const
+
+/**
+ * Section files in the order src/pages/why-directhired.astro renders them.
+ *
+ * Task 7. Two of its five blocks are defined in the page file — the origin
+ * and the credentials are this page's own content and belong to no other
+ * route — so they are addressed by `path: <the page>` exactly as /pricing's
+ * hero block and /find-your-helper's two inline blocks are.
+ *
+ * THIS IS THE FIRST PAGE OTHER THAN THE HOMEPAGE TO RENDER TwoSidedMatch,
+ * and therefore the first to carry --color-deep. Spec §3.2 lists that
+ * component in this page's composition by name, and spec §6's rule is that a
+ * page's ground rhythm contains at most ONE palette register shift — which
+ * this sequence does. See the page file's header for the full argument, and
+ * the "shifts palette register at most once" assertion in the register
+ * below, which is what holds the rule for every page rather than for the
+ * homepage alone.
+ *
+ * The grounds are not free: TwoSidedMatch is fixed at --color-deep and
+ * FinalCta at --color-surface, both because the homepage renders the same
+ * two components. Those two fix the other three — cream at the top so the
+ * page opens on the site's page ground, and white either side of the deep
+ * band so nothing meets a ground it shares.
+ */
+const WHY_DIRECTHIRED_BLOCKS = [
+  { block: 'W1', path: 'src/pages/why-directhired.astro', selector: '.why-origin' },
+  { block: 'W2', path: 'src/pages/why-directhired.astro', selector: '.why-pillars' },
+  { block: 'W3', path: 'src/sections/TwoSidedMatch.astro', selector: '.two-sided' },
+  { block: 'W4', path: 'src/pages/why-directhired.astro', selector: '.why-credentials' },
+  { block: 'W5', path: 'src/sections/FinalCta.astro', selector: '.final-cta' },
+] as const
+
+/**
+ * Section files in the order src/pages/about.astro renders them.
+ *
+ * Task 8. Four of its five blocks are defined in the page file — the company
+ * story, the philosophy, the Singapore presence and the record are this
+ * page's own content and belong to no other route — so they are addressed by
+ * `path: <the page>` exactly as /pricing's hero block and the two earlier
+ * Phase B pages' inline blocks are.
+ *
+ * THE ONLY GROUND HERE THAT IS A CHOICE IS A3. FinalCta is fixed at
+ * --color-surface because the homepage renders the same component, which
+ * forces A4 off cream; opening on cream is what every other page does; and
+ * A2 then cannot be cream either. That leaves the Singapore block, which
+ * could have been cream and is --color-surface-teal instead: this page has
+ * no --color-deep section to spend its register change on, and a metronomic
+ * cream/white/cream/white/cream is the exact defect the /pricing audit
+ * found (5,201px of alternation at identical padding). The wash lands on
+ * the block about where the company physically is, which is the one place
+ * on the page where the brand ground means something.
+ *
+ * TwoSidedMatch is deliberately NOT rendered here — spec §3.2 does not list
+ * it for this page, and the "adds no dark band" assertion in this page's own
+ * describe holds that by consequence rather than by convention.
+ */
+const ABOUT_BLOCKS = [
+  { block: 'A1', path: 'src/pages/about.astro', selector: '.about-company' },
+  { block: 'A2', path: 'src/pages/about.astro', selector: '.about-philosophy' },
+  { block: 'A3', path: 'src/pages/about.astro', selector: '.about-singapore' },
+  { block: 'A4', path: 'src/pages/about.astro', selector: '.about-record' },
+  { block: 'A5', path: 'src/sections/FinalCta.astro', selector: '.final-cta' },
+] as const
+
+/**
+ * Section files in the order src/pages/faq.astro renders them.
+ *
+ * Task 9, and the shortest sequence on the site: three blocks, of which
+ * only the first is defined in the page file. This page has almost no prose
+ * of its own — the content is the faq collection — so the page file owns the
+ * hero and nothing else.
+ *
+ * THE GROUNDS ARE ENTIRELY FORCED, and that is worth stating because it
+ * means there was no ground decision to take here. FinalCta is fixed at
+ * --color-surface because the homepage renders the same component; opening
+ * on cream is what all four earlier Phase B pages do; and those two fix the
+ * middle block white.
+ *
+ * NO BRAND WASH, deliberately — see the page file's header. The only two
+ * candidates are the hero (which would make /faq the one page that does not
+ * open on the page ground) and the list (which would put --color-surface-teal
+ * behind ~1,400px of collapsed accordion rows, which is the wallpaper this
+ * file's own rule warns about). The "grounds no section in the brand wash"
+ * assertion in this page's describe holds that as a decision rather than as
+ * an accident of a three-block page.
+ */
+const FAQ_BLOCKS = [
+  { block: 'Q1', path: 'src/pages/faq.astro', selector: '.faq-intro' },
+  { block: 'Q2', path: 'src/sections/FaqGrouped.astro', selector: '.faq-grouped' },
+  { block: 'Q3', path: 'src/sections/FinalCta.astro', selector: '.final-cta' },
+] as const
+
+/**
+ * Section files in the order src/pages/contact.astro renders them.
+ *
+ * Task 10. Three of its four blocks are defined in the page file — the
+ * opening, the channels and the office are this page's own content and
+ * belong to no other route — so they are addressed by `path: <the page>`
+ * exactly as every earlier Phase B page's inline blocks are.
+ *
+ * THE ONLY GROUND HERE THAT IS A CHOICE IS C3, and it is the same choice
+ * /about faced. FinalCta is fixed at --color-surface because the homepage
+ * renders the same component, which forces C3 off cream; opening on cream is
+ * what every other page does; and C2 then cannot be cream either. That
+ * leaves the office block, which could have been cream and is
+ * --color-surface-teal instead: this page has no --color-deep section to
+ * spend its register change on, and the block about where the company
+ * physically is is the one place on the page where the brand ground means
+ * something. The same reasoning, on the same subject, as ABOUT_BLOCKS' A3.
+ *
+ * TwoSidedMatch is deliberately NOT rendered here — spec §3.2 does not list
+ * it for this page — and the "adds no dark band" assertion in this page's
+ * own describe holds that by consequence rather than by convention.
+ */
+const CONTACT_BLOCKS = [
+  { block: 'C1', path: 'src/pages/contact.astro', selector: '.contact-start' },
+  { block: 'C2', path: 'src/pages/contact.astro', selector: '.contact-direct' },
+  { block: 'C3', path: 'src/pages/contact.astro', selector: '.contact-office' },
+  { block: 'C4', path: 'src/sections/FinalCta.astro', selector: '.final-cta' },
+] as const
+
+/**
+ * The one block src/pages/404.astro renders.
+ *
+ * Task 10, and the shortest sequence on the site by some distance: ONE
+ * block, defined in the page file, with no FinalCta under it.
+ *
+ * THAT ABSENCE IS THE DESIGN, NOT AN OMISSION, and it is worth stating here
+ * because a one-entry list looks like a list somebody forgot to finish. A
+ * 404 is a page a visitor did not ask for, arriving instead of the thing
+ * they wanted; the useful thing to give them is the way back, in as few
+ * lines as possible. FinalCta is the site's designated conversion surface at
+ * --space-section-lg — it would be taller than the entire page it was
+ * appended to, and it is fixed at --color-surface, which is also the ground
+ * this block opens on, so adding it would put two cream sections back to
+ * back and fail the register's own adjacency rule. Both CTAs still reach
+ * the visitor: Footer and MobileCtaBar render on every page, which is what
+ * satisfies tests/pages.test.ts's per-page CTA assertions here.
+ */
+const NOT_FOUND_BLOCKS = [
+  { block: 'X1', path: 'src/pages/404.astro', selector: '.notfound' },
+] as const
+
+const PAGE_SEQUENCES: PageSequence[] = [
+  {
+    page: 'src/pages/index.astro',
+    // BLOCKS uses the `file` shorthand because every homepage block is a
+    // section component. Expanded to the `path` shape the register speaks,
+    // so a page task meets ONE shape rather than two.
+    blocks: BLOCKS.map((b) => ({
+      block: b.block,
+      path: `src/sections/${b.file}.astro`,
+      selector: b.selector,
+    })),
+  },
+  { page: 'src/pages/pricing.astro', blocks: PRICING_BLOCKS },
+  // --- Phase B: one entry per page, in the shape above. ---
+  { page: 'src/pages/find-your-helper.astro', blocks: FIND_YOUR_HELPER_BLOCKS },
+  { page: 'src/pages/why-directhired.astro', blocks: WHY_DIRECTHIRED_BLOCKS },
+  { page: 'src/pages/about.astro', blocks: ABOUT_BLOCKS },
+  { page: 'src/pages/faq.astro', blocks: FAQ_BLOCKS },
+  { page: 'src/pages/contact.astro', blocks: CONTACT_BLOCKS },
+  { page: 'src/pages/404.astro', blocks: NOT_FOUND_BLOCKS },
+]
+
+/**
+ * Every section the page actually renders, as the register would name it:
+ * a section component by its file path, an inline <section> by
+ * `<page>:<selector>`.
+ *
+ * This is the direction renderPositions() does not cover. That function
+ * proves every LISTED block is on the page and in order; this proves the
+ * page has no section the list forgot — which is how a half-written list
+ * passes every other assertion in this file while describing half a page.
+ */
+function sectionsRenderedBy(page: string): string[] {
+  const source = stripComments(readFileSync(page, 'utf8'))
+  const sectionComponents = new Set(
+    readdirSync('src/sections')
+      .filter((f) => f.endsWith('.astro'))
+      .map((f) => f.replace('.astro', '')),
+  )
+  const components = [...source.matchAll(/<([A-Z][A-Za-z0-9]*)[\s/>]/g)]
+    .map((m) => m[1])
+    .filter((name) => sectionComponents.has(name))
+    .map((name) => `src/sections/${name}.astro`)
+  const inline = [...source.matchAll(/<section[^>]*class="([a-z0-9 -]+)"/g)].map(
+    (m) => `${page}:.${m[1].trim().split(/\s+/)[0]}`,
+  )
+  return [...new Set([...components, ...inline])]
+}
+
+describe.each(PAGE_SEQUENCES)('$page keeps the ground rhythm', ({ page, blocks }) => {
+  const grounds = blocks.map((b) => ({ ...b, ground: groundOfPath(b.path, b.selector) }))
+
+  it('reads a real list of blocks (guards the four assertions below)', () => {
+    // A page registered with an empty list would satisfy every rule here
+    // while asserting nothing about the page — the vacuous pass this file
+    // exists to refuse. A floor of one, not of "enough": the assertion that
+    // makes a list non-vacuous is the completeness check below, which forces
+    // it to name every section the page renders. A number here would only
+    // be a weaker restatement of that, and one somebody would have to guess
+    // for each new page.
+    expect(blocks.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('renders every block in its list, in the order the list gives', () => {
+    const positions = renderPositions(page, blocks)
+    const outOfOrder = positions.filter((p, i) => i > 0 && p.at < positions[i - 1].at)
+    expect(outOfOrder.map((p) => p.block)).toEqual([])
+  })
+
+  it('lists every section the page renders — nothing omitted', () => {
+    const listed = new Set(blocks.map((b) => (b.path === page ? `${page}:${b.selector}` : b.path)))
+    const unlisted = sectionsRenderedBy(page).filter((s) => !listed.has(s))
+    expect(unlisted).toEqual([])
+  })
+
+  it('never puts two consecutive blocks on the same ground', () => {
+    for (let i = 1; i < grounds.length; i += 1) {
+      expect(
+        grounds[i].ground,
+        `blocks ${grounds[i - 1].block} and ${grounds[i].block} share a ground`,
+      ).not.toBe(grounds[i - 1].ground)
+    }
+  })
+
+  it('still alternates with its conditional blocks absent', () => {
+    /*
+     * Task 7 fix round, W-1. THE SEQUENCE A VISITOR LOADS TODAY.
+     *
+     * MeetHelpers and Reviews render nothing while their collections are
+     * empty, so any page rendering one shows the list MINUS those blocks. The
+     * rule above judges the full list; this judges the page as it is served.
+     *
+     * It existed only inside the homepage's describe, against a hand-typed
+     * set of two homepage block IDs. Here it is derived (see
+     * conditionalSelectorsIn) and it runs for every registered page, which is
+     * what closes the hole: a page putting a conditional block between two
+     * cream sections shipped cream → cream to every visitor with the suite
+     * green.
+     *
+     * ALL the conditional blocks at once, not every subset of them. Both
+     * homepage blocks are absent together today and populate together
+     * (neither collection has an entry), and the intermediate states are a
+     * genuinely different design question — 09/10b are both cream, so
+     * "10a alone absent" is a collision the approved homepage sequence has
+     * always carried and this rule has never claimed to forbid. Asserting the
+     * two states that actually exist is what it did before and what it does
+     * now, for every page instead of one.
+     */
+    const conditional = conditionalBlocksOf(blocks)
+    const rendered = grounds.filter((g) => !conditional.has(g.block))
+    for (let i = 1; i < rendered.length; i += 1) {
+      expect(
+        rendered[i].ground,
+        `with ${[...conditional].join('/') || 'nothing'} absent, blocks ${rendered[i - 1].block} and ${rendered[i].block} collide`,
+      ).not.toBe(rendered[i - 1].ground)
+    }
+  })
+
+  it('grounds at most one section in the brand wash', () => {
+    // Per page, never site-wide: --color-surface-teal gives #00a4a6 real
+    // area without putting it behind text, and rarity WITHIN ONE SCROLL is
+    // what makes that register change land. Two on one page is wallpaper.
+    const teal = grounds.filter((g) => g.ground === '--color-surface-teal').map((g) => g.block)
+    expect(teal.length).toBeLessThanOrEqual(1)
+  })
+
+  it('shifts palette register at most once', () => {
+    /*
+     * Task 7. The equivalent rule for --color-deep, and until now it
+     * existed ONLY inside the homepage's describe below — scoped to
+     * BLOCKS, which enumerates homepage sections by hand. That is the same
+     * shape of hole G-5 found in the brand-wash rule: a rule named after a
+     * site-wide property, asserted against one page's list, passing by
+     * omission on every other page.
+     *
+     * It went unnoticed because no page but the homepage rendered a
+     * --color-deep section. /why-directhired is the first that does (spec
+     * §3.2 lists TwoSidedMatch in its composition), so the rule has to be
+     * stated where it can be checked for every page, including ones nobody
+     * has written yet.
+     *
+     * AT MOST ONE, not exactly one, and not "only the homepage". Spec §6
+     * says block 07's --color-deep remains the only palette REGISTER SHIFT
+     * — a rule about how many times ONE SCROLL changes register, which is
+     * what makes the change land. A page reusing block 07 itself keeps
+     * that; a page painting a second dark band of its own does not, and
+     * fails here. Most pages have none at all, which is also fine.
+     *
+     * The footer is --color-deep on every page and is deliberately outside
+     * this: it is not a section in any page's rhythm, and the homepage
+     * describe's own comment has always read "block 07 and the footer".
+     */
+    const deep = grounds.filter((g) => g.ground === '--color-deep').map((g) => g.block)
+    expect(deep.length, `${page} shifts register more than once: ${deep.join(', ')}`).toBeLessThanOrEqual(1)
+  })
+})
+
+describe('the page register covers the pages that exist', () => {
+  it('registers every page in src/pages', () => {
+    /*
+     * The register is only worth having if a new page cannot skip it. This
+     * is the assertion a Phase B page task will meet first: build the page,
+     * run the suite, and this fails until its sequence is written down.
+     *
+     * Deliberately NOT derived from dist/ — a page's ground rhythm is a
+     * source decision (see this file's header), and a page that fails to
+     * build should fail here too rather than quietly leave the register.
+     */
+    const walk = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        // Astro does not route anything prefixed with "_".
+        if (entry.name.startsWith('_')) return []
+        const full = `${dir}/${entry.name}`
+        return entry.isDirectory() ? walk(full) : [full]
+      })
+    const pageFiles = walk('src/pages').filter((f) => f.endsWith('.astro'))
+    const unregistered = pageFiles.filter((f) => !PAGE_SEQUENCES.some((s) => s.page === f))
+    expect(unregistered).toEqual([])
+  })
+
+  it('registers no page twice, and none that does not exist', () => {
+    const registered = PAGE_SEQUENCES.map((s) => s.page)
+    expect(new Set(registered).size).toBe(registered.length)
+    for (const page of registered) {
+      expect(() => readFileSync(page, 'utf8'), `${page} is registered but missing`).not.toThrow()
+    }
+  })
+})
+
+describe('the conditional-block derivation', () => {
+  /*
+   * The register rule "still alternates with its conditional blocks absent"
+   * is only as strong as this derivation. A regex that matched nothing would
+   * make it pass on every page by omission — the exact failure mode this file
+   * keeps finding — so what it finds is asserted by name, in both directions.
+   */
+  it('finds the two guarded sections that exist, by name', () => {
+    expect([...conditionalSelectorsIn('src/sections/MeetHelpers.astro')]).toContain('.meet-helpers')
+    expect([...conditionalSelectorsIn('src/sections/Reviews.astro')]).toContain('.reviews')
+  })
+
+  it('does not mistake an always-on section for a conditional one', () => {
+    // Without this, a derivation that returned every section would also
+    // "pass" the rule — by deleting the whole sequence rather than by
+    // alternating. Services renders unconditionally; FinalCta takes props and
+    // renders on four pages.
+    expect([...conditionalSelectorsIn('src/sections/Services.astro')]).toEqual([])
+    expect([...conditionalSelectorsIn('src/sections/FinalCta.astro')]).toEqual([])
+  })
+
+  it('derives exactly 10a and 10b for the homepage — the set that used to be typed by hand', () => {
+    const homepage = PAGE_SEQUENCES.find((s) => s.page === 'src/pages/index.astro')!
+    expect([...conditionalBlocksOf(homepage.blocks)].sort()).toEqual(['10a', '10b'])
+  })
+
+  it('is exercised by at least one registered page (the rule has a subject)', () => {
+    const withConditionals = PAGE_SEQUENCES.filter(
+      (s) => conditionalBlocksOf(s.blocks).size > 0,
+    ).map((s) => s.page)
+    expect(withConditionals.length).toBeGreaterThan(0)
+  })
+})
 
 describe('the homepage ground sequence alternates', () => {
   const grounds = BLOCKS.map((b) => ({ ...b, ground: groundOf(b.file, b.selector) }))
@@ -181,20 +671,17 @@ describe('the homepage ground sequence alternates', () => {
     }
   })
 
-  it('still alternates with the two conditional blocks absent', () => {
-    // 10a and 10b render nothing until their collections are populated, so
-    // the sequence a visitor sees TODAY skips them. Both the full sequence
-    // and the current one have to hold, or the page reads as one flat field
-    // right up until the day real profiles land.
-    const rendered = grounds.filter((g) => !CONDITIONAL.has(g.block))
-    for (let i = 1; i < rendered.length; i += 1) {
-      expect(
-        rendered[i].ground,
-        `with 10a/10b absent, blocks ${rendered[i - 1].block} and ${rendered[i].block} collide`,
-      ).not.toBe(rendered[i - 1].ground)
-    }
-  })
-
+  /*
+   * "still alternates with the two conditional blocks absent" USED TO BE HERE,
+   * scoped to a hand-typed `CONDITIONAL = new Set(['10a', '10b'])`. It is now
+   * in the register loop above, derived from the guard in each section's
+   * source, and therefore runs for this page and every other one — see W-1 in
+   * conditionalSelectorsIn's docblock for the /why-directhired scenario that
+   * passed the whole suite while shipping cream → cream. Nothing was dropped:
+   * the same assertion still runs over this page's list, and the derivation
+   * still producing exactly 10a and 10b for it is asserted below, so the
+   * generalisation cannot quietly become an empty set.
+   */
   it('shifts palette register exactly once', () => {
     // --color-deep is block 07 and the footer, and nowhere else. The
     // register shift works BECAUSE it is rare; a third dark surface makes
@@ -310,6 +797,493 @@ describe('the /pricing ground sequence alternates', () => {
       expect(p.path).toBe(`src/sections/${h.file}.astro`)
       expect(p.selector).toBe(h.selector)
     }
+  })
+})
+
+describe('the /find-your-helper ground sequence alternates', () => {
+  /*
+   * The generic rules in the register above already hold for this page:
+   * the list is tied to the page, no two consecutive blocks share a ground,
+   * at most one section sits in the brand wash, and nothing the page
+   * renders is left off the list. What they cannot say is which sequence
+   * was CHOSEN — a page could satisfy every one of them with white / teal /
+   * cream / white and still not be the arrangement anybody approved.
+   *
+   * So the sequence is stated here, the way the homepage's and /pricing's
+   * are. Changing one entry changes at least two adjacencies; re-derive the
+   * whole thing rather than editing a line.
+   */
+  const grounds = FIND_YOUR_HELPER_BLOCKS.map((b) => ({
+    ...b,
+    ground: groundOfPath(b.path, b.selector),
+  }))
+
+  it('is exactly the approved sequence', () => {
+    expect(grounds.map((g) => `${g.block} ${g.ground}`)).toEqual([
+      'F1 --color-surface',
+      'F2 --color-surface-teal',
+      'F3 --color-surface-raised',
+      'F4 --color-surface',
+    ])
+  })
+
+  it('adds no second dark band', () => {
+    // TwoSidedMatch is not rendered on this page, and this is the assertion
+    // that keeps it that way by consequence rather than by convention:
+    // block 07 of the homepage is the site's only --color-deep section, and
+    // spec §6 requires a second one to be justified on its own terms.
+    expect(grounds.filter((g) => g.ground === '--color-deep')).toEqual([])
+  })
+
+  it('shares Process and FinalCta with the homepage rather than copying them', () => {
+    /*
+     * The coupling this page is built on, asserted the same way /pricing
+     * asserts its own: `heading` and `lede` props exist so a page can
+     * reframe these two sections without duplicating them (spec §3.1), and
+     * the four process steps must never need changing twice — they went
+     * from five to four on 2026-08-16.
+     *
+     * A page-local copy of either would keep every ground assertion above
+     * passing while quietly breaking that guarantee, so the file paths are
+     * what is checked, not the grounds. (Comparing grounds here would be
+     * x === x: both sides would call the same reader on the same file —
+     * the mistake caught in /pricing's equivalent test.)
+     */
+    const shared = [
+      ['F2', '05'],
+      ['F4', '12'],
+    ] as const
+    for (const [pageBlock, homeBlock] of shared) {
+      const p = FIND_YOUR_HELPER_BLOCKS.find((b) => b.block === pageBlock)!
+      const h = BLOCKS.find((b) => b.block === homeBlock)!
+      expect(p.path).toBe(`src/sections/${h.file}.astro`)
+      expect(p.selector).toBe(h.selector)
+    }
+  })
+})
+
+describe('the /why-directhired ground sequence alternates', () => {
+  /*
+   * The generic rules in the register above already hold for this page.
+   * What they cannot say is which sequence was CHOSEN — a page could
+   * satisfy every one of them with white / cream / deep / cream / white and
+   * still not be the arrangement anybody approved. So the sequence is
+   * stated here, the way the homepage's, /pricing's and
+   * /find-your-helper's are. Changing one entry changes at least two
+   * adjacencies; re-derive the whole thing rather than editing a line.
+   */
+  const grounds = WHY_DIRECTHIRED_BLOCKS.map((b) => ({
+    ...b,
+    ground: groundOfPath(b.path, b.selector),
+  }))
+
+  it('is exactly the approved sequence', () => {
+    expect(grounds.map((g) => `${g.block} ${g.ground}`)).toEqual([
+      'W1 --color-surface',
+      'W2 --color-surface-raised',
+      'W3 --color-deep',
+      'W4 --color-surface-raised',
+      'W5 --color-surface',
+    ])
+  })
+
+  it('shifts palette register exactly once, and it is TwoSidedMatch that does it', () => {
+    /*
+     * The counterpart to /pricing's and /find-your-helper's "adds no second
+     * dark band". Those two pages have none; this one has exactly one, and
+     * the thing worth asserting is WHICH block it is.
+     *
+     * A page-local section painting itself --color-deep would satisfy "at
+     * most one" in the register above while being precisely the second dark
+     * band spec §6 requires to be justified on its own terms. Naming the
+     * block means only the shared component can be it.
+     */
+    const deep = grounds.filter((g) => g.ground === '--color-deep')
+    expect(deep.map((g) => g.block)).toEqual(['W3'])
+    expect(deep[0].path).toBe('src/sections/TwoSidedMatch.astro')
+  })
+
+  it('grounds no section in the brand wash', () => {
+    // Not an oversight. The page already spends its one register change on
+    // the deep band; a teal wash as well would give one scroll two special
+    // grounds and neither would read as the exception. Stated so that
+    // adding one is a decision somebody takes here rather than a ground
+    // flipped in the page file.
+    expect(grounds.filter((g) => g.ground === '--color-surface-teal')).toEqual([])
+  })
+
+  it('shares TwoSidedMatch and FinalCta with the homepage rather than copying them', () => {
+    /*
+     * The coupling this page is built on, asserted the way /pricing and
+     * /find-your-helper assert theirs. TwoSidedMatch is reused UNCHANGED
+     * (spec §3.1) — it is not parameterised, and a page-local copy of it
+     * would be the second dark band the assertion above exists to refuse
+     * while still passing every ground check, because the copy would be
+     * a --color-deep block named W3.
+     *
+     * File paths, not grounds: comparing grounds here would be x === x,
+     * both sides calling the same reader on the same file — the mistake
+     * caught in /pricing's equivalent test.
+     */
+    const shared = [
+      ['W3', '07'],
+      ['W5', '12'],
+    ] as const
+    for (const [pageBlock, homeBlock] of shared) {
+      const p = WHY_DIRECTHIRED_BLOCKS.find((b) => b.block === pageBlock)!
+      const h = BLOCKS.find((b) => b.block === homeBlock)!
+      expect(p.path).toBe(`src/sections/${h.file}.astro`)
+      expect(p.selector).toBe(h.selector)
+    }
+  })
+})
+
+describe('the /about ground sequence alternates', () => {
+  /*
+   * The generic rules in the register above already hold for this page.
+   * What they cannot say is which sequence was CHOSEN — a page could satisfy
+   * every one of them with white / cream / white / teal / cream and still
+   * not be the arrangement anybody approved. So the sequence is stated here,
+   * the way the four pages before it state theirs. Changing one entry
+   * changes at least two adjacencies; re-derive the whole thing rather than
+   * editing a line.
+   */
+  const grounds = ABOUT_BLOCKS.map((b) => ({ ...b, ground: groundOfPath(b.path, b.selector) }))
+
+  it('is exactly the approved sequence', () => {
+    expect(grounds.map((g) => `${g.block} ${g.ground}`)).toEqual([
+      'A1 --color-surface',
+      'A2 --color-surface-raised',
+      'A3 --color-surface-teal',
+      'A4 --color-surface-raised',
+      'A5 --color-surface',
+    ])
+  })
+
+  it('adds no dark band', () => {
+    // TwoSidedMatch is not rendered on this page — spec §3.2 does not list
+    // it here — and this is the assertion that keeps it that way by
+    // consequence rather than by convention. Block 07 of the homepage,
+    // reused by /why-directhired, remains the site's only --color-deep
+    // section, and spec §6 requires a second one to be justified on its own
+    // terms.
+    expect(grounds.filter((g) => g.ground === '--color-deep')).toEqual([])
+  })
+
+  it('grounds exactly one section in the brand wash, and it is the Singapore block', () => {
+    /*
+     * The register's rule is "at most one". This page has exactly one, and
+     * WHICH block it is was the only ground decision available here (see
+     * ABOUT_BLOCKS' docblock) — so it is named, not counted. Moving the wash
+     * to the record block, or adding a second, is a decision somebody takes
+     * in this file rather than a background flipped in the page.
+     */
+    const teal = grounds.filter((g) => g.ground === '--color-surface-teal')
+    expect(teal.map((g) => g.block)).toEqual(['A3'])
+    expect(teal[0].selector).toBe('.about-singapore')
+  })
+
+  it('shares FinalCta with the homepage rather than copying it', () => {
+    /*
+     * The coupling this page's last two grounds rest on: FinalCta is fixed
+     * at --color-surface because the homepage renders the same component,
+     * and that is what forces A4 white. A page-local copy of the CTA would
+     * keep every ground assertion above passing while quietly breaking the
+     * single-sourced CTA pair (spec §3.1: order, labels and both hrefs are
+     * not parameterised).
+     *
+     * File paths, not grounds: comparing grounds here would be x === x, both
+     * sides calling the same reader on the same file — the mistake caught in
+     * /pricing's equivalent test.
+     */
+    const a5 = ABOUT_BLOCKS.find((b) => b.block === 'A5')!
+    const home12 = BLOCKS.find((b) => b.block === '12')!
+    expect(a5.path).toBe(`src/sections/${home12.file}.astro`)
+    expect(a5.selector).toBe(home12.selector)
+  })
+})
+
+describe('the /faq ground sequence alternates', () => {
+  /*
+   * The generic rules in the register above already hold for this page.
+   * What they cannot say is which sequence was CHOSEN. On this page the
+   * answer is "the only legal one" — see FAQ_BLOCKS' docblock, every ground
+   * is forced by FinalCta being shared with the homepage — but that is
+   * exactly why it is worth writing down: a later change that made a ground
+   * free again should have to come through this file.
+   */
+  const grounds = FAQ_BLOCKS.map((b) => ({ ...b, ground: groundOfPath(b.path, b.selector) }))
+
+  it('is exactly the approved sequence', () => {
+    expect(grounds.map((g) => `${g.block} ${g.ground}`)).toEqual([
+      'Q1 --color-surface',
+      'Q2 --color-surface-raised',
+      'Q3 --color-surface',
+    ])
+  })
+
+  it('adds no dark band', () => {
+    // TwoSidedMatch is not rendered here — spec §3.2 does not list it for
+    // this page — and this holds that by consequence rather than by
+    // convention. Block 07 of the homepage, reused by /why-directhired,
+    // remains the site's only --color-deep section.
+    expect(grounds.filter((g) => g.ground === '--color-deep')).toEqual([])
+  })
+
+  it('grounds no section in the brand wash', () => {
+    // Not an oversight, and not merely "at most one" satisfied by having
+    // three blocks. The page file's header records both candidates and why
+    // neither takes it; putting the wash behind ~1,400px of collapsed
+    // accordion rows is the wallpaper this file's own rule warns about.
+    expect(grounds.filter((g) => g.ground === '--color-surface-teal')).toEqual([])
+  })
+
+  it('shares FinalCta with the homepage rather than copying it', () => {
+    /*
+     * The coupling this page's grounds rest on: FinalCta is fixed at
+     * --color-surface because the homepage renders the same component, and
+     * that is what forces Q2 white. A page-local copy would keep every
+     * ground assertion above passing while quietly breaking the
+     * single-sourced CTA pair (spec §3.1: order, labels and both hrefs are
+     * not parameterised).
+     *
+     * File paths, not grounds: comparing grounds here would be x === x,
+     * both sides calling the same reader on the same file — the mistake
+     * caught in /pricing's equivalent test.
+     */
+    const q3 = FAQ_BLOCKS.find((b) => b.block === 'Q3')!
+    const home12 = BLOCKS.find((b) => b.block === '12')!
+    expect(q3.path).toBe(`src/sections/${home12.file}.astro`)
+    expect(q3.selector).toBe(home12.selector)
+  })
+
+  it('renders FaqGrouped and NOT Faq — one FAQPage block, not two', () => {
+    /*
+     * Spec §4 gives this page the long-tail intent "via FAQPage structured
+     * data across all 14", and FaqGrouped emits exactly one block covering
+     * every entry. Faq.astro emits its OWN block whenever `emitSchema` is
+     * left at its default, so a <Faq /> added to this page — the obvious
+     * thing to reach for, since it is the component every other page uses —
+     * would put two FAQPage blocks on one page. That is a structured-data
+     * defect rather than twice the signal, and it would also render six of
+     * the fourteen questions a second time.
+     *
+     * Asserted in source here so the reason is next to the sequence it
+     * belongs to; tests/faq-grouped.test.ts asserts the built page really
+     * does carry exactly one.
+     */
+    const source = stripComments(readFileSync('src/pages/faq.astro', 'utf8'))
+    expect(source).toMatch(/<FaqGrouped[\s/>]/)
+    expect(source).not.toMatch(/<Faq[\s/>]/)
+  })
+})
+
+describe('the /contact ground sequence alternates', () => {
+  /*
+   * The generic rules in the register above already hold for this page.
+   * What they cannot say is which sequence was CHOSEN — a page could satisfy
+   * every one of them with white / cream / teal / cream and still not be the
+   * arrangement anybody approved. So the sequence is stated here, the way the
+   * five pages before it state theirs. Changing one entry changes at least
+   * two adjacencies; re-derive the whole thing rather than editing a line.
+   */
+  const grounds = CONTACT_BLOCKS.map((b) => ({ ...b, ground: groundOfPath(b.path, b.selector) }))
+
+  it('is exactly the approved sequence', () => {
+    expect(grounds.map((g) => `${g.block} ${g.ground}`)).toEqual([
+      'C1 --color-surface',
+      'C2 --color-surface-raised',
+      'C3 --color-surface-teal',
+      'C4 --color-surface',
+    ])
+  })
+
+  it('adds no dark band', () => {
+    // TwoSidedMatch is not rendered on this page — spec §3.2 does not list
+    // it here — and this holds that by consequence rather than by
+    // convention. Block 07 of the homepage, reused by /why-directhired,
+    // remains the site's only --color-deep section.
+    expect(grounds.filter((g) => g.ground === '--color-deep')).toEqual([])
+  })
+
+  it('grounds exactly one section in the brand wash, and it is the office block', () => {
+    /*
+     * The register's rule is "at most one". This page has exactly one, and
+     * WHICH block it is was the only ground decision available here (see
+     * CONTACT_BLOCKS' docblock) — so it is named, not counted. Moving the
+     * wash to the channels block, or adding a second, is a decision somebody
+     * takes in this file rather than a background flipped in the page.
+     */
+    const teal = grounds.filter((g) => g.ground === '--color-surface-teal')
+    expect(teal.map((g) => g.block)).toEqual(['C3'])
+    expect(teal[0].selector).toBe('.contact-office')
+  })
+
+  it('shares FinalCta with the homepage rather than copying it', () => {
+    /*
+     * The coupling this page's last two grounds rest on: FinalCta is fixed
+     * at --color-surface because the homepage renders the same component,
+     * and that is what forces C3 off cream. A page-local copy of the CTA
+     * would keep every ground assertion above passing while quietly breaking
+     * the single-sourced CTA pair (spec §3.1: order, labels and both hrefs
+     * are not parameterised) — which on THIS page would be the second copy
+     * of a pair the hero already renders, i.e. two chances to drift instead
+     * of one.
+     *
+     * File paths, not grounds: comparing grounds here would be x === x, both
+     * sides calling the same reader on the same file — the mistake caught in
+     * /pricing's equivalent test.
+     */
+    const c4 = CONTACT_BLOCKS.find((b) => b.block === 'C4')!
+    const home12 = BLOCKS.find((b) => b.block === '12')!
+    expect(c4.path).toBe(`src/sections/${home12.file}.astro`)
+    expect(c4.selector).toBe(home12.selector)
+  })
+})
+
+describe('the /404 ground sequence is one block, deliberately', () => {
+  /*
+   * A one-block page satisfies every adjacency rule in the register
+   * vacuously — there is no second block to collide with the first — so the
+   * assertions that matter here are about WHAT IS ABSENT. All three of them
+   * would fail if somebody appended a section to this page without thinking
+   * about which ground it lands on, which is the only way this page's rhythm
+   * can go wrong.
+   */
+  const grounds = NOT_FOUND_BLOCKS.map((b) => ({ ...b, ground: groundOfPath(b.path, b.selector) }))
+
+  it('is exactly the approved sequence', () => {
+    expect(grounds.map((g) => `${g.block} ${g.ground}`)).toEqual(['X1 --color-surface'])
+  })
+
+  it('renders no section component at all — not FinalCta, not TwoSidedMatch', () => {
+    /*
+     * The assertion NOT_FOUND_BLOCKS' docblock is really about. Appending
+     * <FinalCta /> is the obvious thing to reach for on a page that has a
+     * CTA-shaped hole at the bottom, and it is wrong twice over: it is fixed
+     * at --color-surface, which this block already uses, so it would put two
+     * cream sections back to back; and it is the site's designated
+     * conversion surface at --space-section-lg, taller than the entire page
+     * it would be appended to.
+     *
+     * Checked against the page source rather than against the list, because
+     * the list is what a mistake would forget to update.
+     */
+    const source = stripComments(readFileSync('src/pages/404.astro', 'utf8'))
+    const sectionComponents = readdirSync('src/sections')
+      .filter((f) => f.endsWith('.astro'))
+      .map((f) => f.replace('.astro', ''))
+    const rendered = sectionComponents.filter((name) =>
+      new RegExp(`<${name}[\\s/>]`).test(source),
+    )
+    expect(rendered).toEqual([])
+  })
+
+  it('opens on the site page ground, like every other page', () => {
+    // --color-surface is the body ground global.css sets, and every page on
+    // the site opens on it. A 404 painting itself white or teal would be the
+    // one page that announces itself as a different kind of surface, which
+    // is the opposite of what it should do: it is the site, minus the page
+    // that was asked for.
+    expect(grounds[0].ground).toBe('--color-surface')
+  })
+
+  it('adds neither a dark band nor a brand wash', () => {
+    expect(grounds.filter((g) => g.ground === '--color-deep')).toEqual([])
+    expect(grounds.filter((g) => g.ground === '--color-surface-teal')).toEqual([])
+  })
+})
+
+/**
+ * Every top-level or nested rule body a selector has in one file's <style>,
+ * in source order.
+ *
+ * groundOfPath() above reads ONE declaration out of ONE top-level rule,
+ * which is all a section ground needs. A measured layout fix can live inside
+ * an @media block and can share its selector with a rule outside one — both
+ * are true of `.presence` — so this returns every body and lets the caller
+ * say which it means.
+ *
+ * The leading `(?:^|[\s}])` is what keeps `.presence` from matching inside
+ * `.presence-copy`; the trailing `\s*\{` does the rest of that work, since a
+ * compound selector never ends at the brace.
+ */
+function ruleBodies(path: string, selector: string): string[] {
+  const css = stripComments(readFileSync(path, 'utf8'))
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return [...css.matchAll(new RegExp(`(?:^|[\\s}])${escaped}\\s*\\{([^}]*)\\}`, 'g'))].map((m) =>
+    m[1].replace(/\s+/g, ' ').trim(),
+  )
+}
+
+describe('the /about layout numbers that were measured in a browser', () => {
+  /*
+   * THE FIFTH DEFECT ON THIS PROJECT VISIBLE ONLY IN A BROWSER, and the
+   * reason this describe exists at all.
+   *
+   * Both fixes below were found by opening /about in real Chrome, and NEITHER
+   * was asserted anywhere. Reverting either scored 455/455 green — nothing in
+   * the suite referenced `presence`, `about-address`, `20ch`, `record-row` or
+   * `tenet` at all. A measurement that cost a browser session to take and
+   * that no test can see is a measurement that comes back the first time
+   * somebody tidies the stylesheet.
+   *
+   * These are static source assertions for this file's standing reason (see
+   * its header): a max-width and a grid geometry are both decided at author
+   * time, and a jsdom re-measurement would only be as trustworthy as its
+   * layout engine. The rendered numbers behind them were taken in real Chrome
+   * and are recorded in src/pages/about.astro beside the declarations.
+   */
+  const ABOUT = 'src/pages/about.astro'
+
+  it('reads real rule bodies out of the page (guards both assertions below)', () => {
+    // A reader that returned nothing would make both checks below fail
+    // loudly rather than pass quietly, but a reader that returned the WRONG
+    // rule would not — `.presence` and `.presence-copy` are one character
+    // apart and both exist. So the shapes are pinned here.
+    expect(ruleBodies(ABOUT, '.presence')).toHaveLength(2)
+    expect(ruleBodies(ABOUT, '.presence-copy')).toHaveLength(1)
+    expect(ruleBodies(ABOUT, '.about-company h1')).toHaveLength(1)
+  })
+
+  it("holds the <h1> at 20ch, not the 16-18ch the other page heroes use", () => {
+    /*
+     * MEASURED, NOT CHOSEN. This headline is one 45-character sentence. At
+     * 18ch — and a fortiori at the 16ch a tidy-up reaches for, which is the
+     * revert the review ran — it breaks to THREE lines in Chrome at 1280 with
+     * "DirectHired" alone on the first, which reads as a label above a
+     * heading rather than as the sentence it is. 20ch (819px at
+     * --size-h1's 64px) breaks it once,
+     * after "Singapore", and holds at 1920 because the display size does not
+     * grow past 1280.
+     *
+     * The value is asserted rather than a range, because the range is the
+     * thing that is wrong: 16ch and 18ch are both inside "what the other
+     * heroes use" and both produce the orphan. Re-measure if --size-h1
+     * changes, and change this line in the same commit.
+     */
+    expect(ruleBodies(ABOUT, '.about-company h1')[0]).toContain('max-width: 20ch')
+  })
+
+  it('gives the Singapore block a second column at tablet and up', () => {
+    /*
+     * MEASURED, NOT CHOSEN. Single-column, the brand wash ran 546px tall at
+     * 1280 with all of its content in the left 60% and nothing beside it —
+     * which made the one section on this page that spends the brand ground
+     * look like the one section that had nothing to put in it. The address is
+     * a fact rather than a sentence, so it takes the second column.
+     *
+     * `minmax(0, 1fr)` on the first track is load-bearing and not decoration:
+     * a bare `1fr` cannot shrink below its content's min-content width, so a
+     * long unbroken string in the prose column pushes the row wider than the
+     * container. Asserted with the geometry it belongs to.
+     *
+     * The nested rule, not the top-level one — `.presence` exists in both,
+     * and the top-level rule carries only the single-column stack.
+     */
+    const nested = ruleBodies(ABOUT, '.presence')[1]
+    expect(nested).toContain('grid-template-columns: minmax(0, 1fr) 20rem')
+    expect(nested).toContain('align-items: start')
   })
 })
 

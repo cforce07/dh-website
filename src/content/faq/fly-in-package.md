@@ -1,8 +1,8 @@
 ---
 question: What is included in the fly-in package?
-surfaces: [home, faq]
+surfaces: [faq]
 category: cost
-order: 2
+order: 20
 ---
 
 The fly-in package with replacement (**$1,640.10**) covers:
@@ -11,7 +11,7 @@ The fly-in package with replacement (**$1,640.10**) covers:
 - MOM — $70
 - Insurance — $425.10
 - SIP — $77
-- Medical — $60
+- Medical checkup — $60
 - Handling & transport — $120
 - 1 replacement within 6 months
 

@@ -76,6 +76,32 @@ const faq = defineCollection({
     // Required, no default. /faq groups by this; a default would silently
     // dump miscategorised entries into one bucket.
     category: z.enum(['cost', 'sources', 'process', 'replacement']),
+    /*
+     * MULTIPLES OF TEN. Task 9 (M-5) renumbered all 14 entries in one pass
+     * and this is the convention that renumber established.
+     *
+     * The values were `1, 2, 2.1, 2.2, 3, 4, 5, 5.1, 6, 6.2, 6.3, 6.4, 7, 8`
+     * — integers from the original six, then fractions accreted as the eight
+     * Task 3 entries were slotted between them. That is not a cosmetic
+     * problem: by the time a scheme reaches 6.2 / 6.3 / 6.4 there is no
+     * obvious place to put the next entry, and the next author either
+     * invents 6.35 or renumbers the whole file mid-task. `10, 20, 30, …`
+     * leaves nine free slots between any two neighbours, which is enough
+     * that this should not need doing again.
+     *
+     * The renumber preserved the existing sequence exactly — no entry moved
+     * relative to any other, on any surface — which was verified by building
+     * before and after and diffing dist/ (byte-identical).
+     *
+     * ORDER IS GLOBAL, AND IT HAPPENS TO BE CATEGORY-CONTIGUOUS. Faq.astro
+     * sorts the whole collection by this one field for its flat list, and
+     * FaqGrouped.astro sorts within each category bucket. Today the four
+     * categories occupy contiguous runs (cost 10–40, sources 50–60, process
+     * 70–120, replacement 130–140), so /faq's groups read in the same order
+     * as the raw sequence. Nothing enforces that and nothing needs to: an
+     * entry ordered outside its category's run still lands in the right
+     * group, just at a different position inside it.
+     */
     order: z.number(),
   }),
 })

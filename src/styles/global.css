@@ -89,6 +89,90 @@ ul, ol {
   padding: 0;
 }
 
+/* ---------------------------------------------------------------------
+ * .rich-text — the container for markup this site did not write.
+ * ---------------------------------------------------------------------
+ *
+ * WHY THIS IS THE ONE CLASS IN A FILE OF ELEMENT SELECTORS, AND WHY IT IS
+ * HERE RATHER THAN IN A COMPONENT.
+ *
+ * Four places render a content collection's markdown through Astro's
+ * <Content />: the FAQ answer in Faq.astro and in FaqGrouped.astro, the
+ * helper bio in MeetHelpers.astro, and the review quote in Reviews.astro.
+ * Those elements are produced by the markdown renderer, so no component can
+ * style them without a `:global` escape hatch — and every one of the four
+ * wrote its own, badly. All four carried `p:first-child { margin-top: 0 }`
+ * and `p:last-child { margin-bottom: 0 }`, which zero margins that the
+ * `* { margin: 0 }` reset above has ALREADY zeroed, and not one of them
+ * restored spacing BETWEEN blocks. A two-paragraph answer rendered as one
+ * unbroken block — measured in Chrome at 320px on the live homepage, both
+ * paragraphs of faq/cost.md computing 0px.
+ *
+ * It shipped on / and /pricing. It did NOT ship from MeetHelpers or
+ * Reviews only because both collections are deliberately empty, so the same
+ * defect was waiting to arrive as a rendering fault in content nobody
+ * changed, on the day DirectHired supplies helper profiles or reviews, with
+ * no diff to connect it to.
+ *
+ * FOUR COPIES OF A RULE IS WHY THERE WERE FOUR COPIES OF A BUG. So the
+ * treatment is defined ONCE, here, and each surface opts in by putting
+ * `rich-text` on the element it hands to <Content />. A fifth
+ * markdown surface inherits it by adding the class; it cannot inherit the
+ * bug by forgetting a rule, because there is no longer a rule to forget.
+ *
+ * Global rather than component-scoped because the elements it styles are
+ * global by construction — they carry no component's scope attribute. This
+ * file already owns exactly that job for `p`, `a` and `ul, ol` above.
+ *
+ * WHAT IT DELIBERATELY DOES NOT SET: measure, colour, type face, size and
+ * padding. Those differ per surface and stay with the surface — an FAQ
+ * answer is 60ch of muted body text, a review quote is 34ch of the display
+ * face at lede size. This class is block rhythm and link treatment, which
+ * are the two things every markdown surface needs and none of them should
+ * decide separately.
+ */
+.rich-text > * + * {
+  /*
+   * The owl, not `p { margin-block: --space-4 0 }` plus a `:first-child`
+   * override. A margin that only exists BETWEEN siblings cannot leave a
+   * stray gap above the first block or below the last, so the two rules
+   * that used to zero those are not merely unnecessary — they are
+   * unwritable, and that is the point. It also spaces a <ul> after a <p>,
+   * and a heading after either, which the paragraph-only version did not.
+   */
+  margin-top: var(--space-4);
+}
+
+.rich-text li + li {
+  /* Tighter than the block gap: items in one list are one thought. */
+  margin-top: var(--space-2);
+}
+
+/*
+ * --color-accent (5.83:1 on white, 6.03:1 on cream, 5.54:1 on the teal
+ * wash), never --color-brand-teal, which measures 2.89:1 and carries no
+ * text anywhere on this site.
+ *
+ * This rule is the reason the class carries link treatment at all. Only
+ * FaqGrouped.astro declared it, so the SAME FAQ answer rendered its link
+ * in rgb(4,106,108) with a bordered underline on /faq and in rgb(77,77,77)
+ * with a plain underline on / and /pricing, inheriting --color-ink-muted
+ * from the answer container through `a { color: inherit }` above. A link
+ * that changes colour depending on which page the answer is quoted on is
+ * not a styling preference; it is the same defect as the missing margins,
+ * in a different property.
+ */
+.rich-text a {
+  color: var(--color-accent);
+  text-decoration: none;
+  border-bottom: 1px solid var(--color-accent);
+}
+
+.rich-text a:hover {
+  color: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+}
+
 /* Accessible focus ring — never remove outline without replacing it. */
 :focus-visible {
   outline: 2px solid var(--color-accent);

@@ -30,6 +30,58 @@
  * through <BaseLayout><Faq /></BaseLayout> since Faq isn't given any
  * children to slot in the first place. Google's structured-data guidance
  * permits JSON-LD anywhere in <head> or <body>, so this is valid as-is.
+ *
+ * ---------------------------------------------------------------------
+ * FIXED 2026-08-16: MULTI-PARAGRAPH ANSWERS RAN TOGETHER, AND ANSWER LINKS
+ * RENDERED A DIFFERENT COLOUR HERE THAN ON /faq.
+ * ---------------------------------------------------------------------
+ *
+ * global.css resets `* { margin: 0 }`, and the only paragraph rules this
+ * file carried were `p:first-child { margin-top: 0 }` and `p:last-child
+ * { margin-bottom: 0 }` — which zero margins that were already zero.
+ * Nothing restored spacing BETWEEN blocks, so an answer with more than one
+ * rendered as an unbroken block. Measured in Chrome at 320px on the live
+ * homepage: both paragraphs of faq/cost.md computed 0px. Separately, a link
+ * inside an answer rendered rgb(4,106,108) with a bordered underline on
+ * /faq and rgb(77,77,77) with a plain underline here — the same answer, two
+ * link treatments, decided by which page quoted it.
+ *
+ * Task 9 found the spacing half while building /faq and deliberately did
+ * not fix it, because the standing ruling for that task was that / and
+ * /pricing come out byte-identical from a full-file diff of dist/. It added
+ * rules to FaqGrouped.astro instead, for /faq alone — which is what created
+ * the link divergence. THAT RULING HAS SINCE BEEN NARROWED BY THE PERSON
+ * WHO MADE IT: the byte-identical bar existed to stop an EXTRACTION
+ * REFACTOR silently altering live pages, not to freeze this component
+ * against a deliberate correction.
+ *
+ * A NOTE THAT USED TO SIT HERE SAID THE TWO SURFACES DIFFERED "IN ONE
+ * RESPECT". That was wrong — there were three (block margins, `li + li`,
+ * and the link rules) — and being wrong is why it is worth recording: a
+ * hand-written claim about how far a divergence extends is exactly the kind
+ * that goes stale the next time somebody adds to one side of it.
+ *
+ * THE FIX IS NOT IN THIS FILE. All four surfaces that render a content
+ * collection's markdown through <Content /> — this one, FaqGrouped.astro,
+ * MeetHelpers.astro's helper bio and Reviews.astro's review quote — carried
+ * the same two useless `:global` rules and the same missing block spacing.
+ * The treatment now lives once, as `.rich-text` in src/styles/global.css,
+ * and each surface opts in by putting the class on the element it hands to
+ * <Content />. See that file for the whole argument; the short version is
+ * that four copies of a rule is why there were four copies of a bug.
+ *
+ * WHAT CHANGES ON THE TWO LIVE PAGES, stated because this is an intended
+ * change and the diff must be visible rather than discovered: every block
+ * after an answer's first gains --space-4 above it, list items gain
+ * --space-2 between them, and a link inside an answer becomes accent-
+ * coloured with a bordered underline instead of inheriting the muted body
+ * colour. Nothing outside `.faq-answer` moves.
+ *
+ * The list RESET is deliberately untouched. `ul, ol { list-style: none;
+ * padding: 0 }` in global.css means a bulleted answer still renders as
+ * unmarked stacked lines rather than as a bulleted list, here and on /faq
+ * alike. That is a decision about the site's list treatment, it affects
+ * markup far beyond this component, and this fix does not smuggle it in.
  */
 import { getCollection } from 'astro:content'
 import Container from '../components/Container.astro'
@@ -111,7 +163,7 @@ const faqSchema = emitSchema
               <span>{entry.data.question}</span>
               <span class="faq-icon" aria-hidden="true" />
             </summary>
-            <div class="faq-answer">
+            <div class="faq-answer rich-text">
               <Content />
             </div>
           </details>
@@ -224,14 +276,14 @@ const faqSchema = emitSchema
     color: var(--color-ink-muted);
   }
 
-  .faq-answer :global(p:first-child) {
-    margin-top: 0;
-  }
-
-  .faq-answer :global(p:last-child) {
-    margin-bottom: 0;
-  }
-
+  /*
+   * NO :global() PROSE RULES HERE, AND THAT IS THE FIX. The block rhythm
+   * and the link treatment for everything <Content /> renders come from
+   * `.rich-text` in src/styles/global.css, which the answer div carries.
+   * This file styles the CONTAINER — measure, colour, face, padding — and
+   * nothing inside it. See global.css for why four copies of a `:global`
+   * rule turned into four copies of a bug.
+   */
   .faq-more {
     margin-top: var(--space-8);
   }

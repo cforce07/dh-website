@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs'
 import { join, extname } from 'node:path'
+import { company } from '../src/data/company'
+import { navItems, footerItems, legalItems } from '../src/lib/nav'
 
 // dist/ is built once by tests/global-setup.ts, before any file here is
 // collected. This suite used to run `npm run build:dev` in its own
@@ -109,20 +111,56 @@ describe('CTA integrity', () => {
  */
 const DEFERRED_ROUTES: readonly string[] = [
   // --- Phase B of THIS sub-project (core pages), spec §1 ---
-  '/find-your-helper',
-  '/why-directhired',
-  '/about',
-  '/faq',
+  //
+  // '/find-your-helper' was here until Task 6 shipped it. Deleted in the
+  // same commit as the page, which the "no enumerated deferred route has
+  // already been built" assertion below insists on: an entry left behind
+  // for a route that now exists would exempt that route from ever having
+  // to resolve again, so a later regression deleting the page would not
+  // fail this suite. '/why-directhired' went the same way when Task 7
+  // shipped it, and '/about' when Task 8 did. The last one goes the same
+  // way as its task lands.
+  //
+  // '/faq' went the same way when Task 9 shipped it, in the same commit as
+  // the page. That empties the Phase B section of this list: every core
+  // page spec §1 names now resolves, and everything below belongs to
+  // sub-project 3.
 
   // --- Sub-project 3: the two family index pages, spec §1 ---
-  '/services',
-  '/helpers',
+  //
+  // '/services' and '/helpers' WERE HERE AND ARE NOT ANY MORE, 2026-08-17.
+  //
+  // Both were in the header nav and the mobile panel on all 8 built pages —
+  // 16 broken links — and this enumeration is what made that legal. Worse,
+  // the third assertion below ("every enumerated deferred route is actually
+  // linked") REQUIRED them to stay linked, so the suite was actively
+  // enforcing two broken nav items. DirectHired chose to remove them from the
+  // navigation until sub-project 3 ships the index pages
+  // (src/lib/nav.ts records the decision), and the prose link to '/helpers'
+  // in src/content/faq/helper-sources.md went with them.
+  //
+  // WHY THEY ARE DROPPED FROM THE ENUMERATION RATHER THAN MOVED TO A SECOND,
+  // "RESERVED" LIST. This array means one thing: "linked before it exists".
+  // Nothing links these two now, so by the array's own definition they do not
+  // belong in it, and the third assertion below would fail if they stayed —
+  // correctly, since an entry nothing links is "an exemption granted in
+  // advance", which is that assertion's own wording. A parallel
+  // reserved-and-unlinked list would be a list of routes with no assertions
+  // attached, i.e. a comment with array syntax.
+  //
+  // THE PROPERTY THIS PRESERVES — and it is preserved STRICTLY MORE STRONGLY
+  // than before: a link to a route that does not exist fails. Today a link to
+  // '/services' is not allowlisted by anything, so the first assertion below
+  // fails on it. Before this change it was allowlisted and could not fail.
+  // Sub-project 3 adds the entries back in the same commit as the links, and
+  // deletes them again as soon as the pages resolve, which the second
+  // assertion insists on.
 
   // --- Sub-project 3: the 6 service detail pages ---
   '/services/direct-hire-processing',
   '/services/maid-insurance',
   '/services/maid-replacement',
-  '/services/medical-examination',
+  '/services/medical-checkup',
   '/services/new-helper-placement',
   '/services/transfer-helper',
 
@@ -206,6 +244,88 @@ describe('internal link resolution', () => {
   })
 })
 
+// --- the internal linking triangle --------------------------------------
+//
+// Core-pages design spec §4: "Pricing ↔ Find Your Helper ↔ FAQ, all three ↔
+// the requirement form." Foundation spec §7 asked for it and sub-project 1
+// could not build it, because there was nowhere to link.
+//
+// IN <main>, NOT ANYWHERE ON THE PAGE, and that is the whole assertion. The
+// header, the footer and the mobile CTA bar already link every page to every
+// other page from every page — so a triangle check over the raw HTML would
+// pass on a site with no editorial links at all, which is the vacuous form
+// of this guard and the only form worth avoiding. What §4 is asking for is
+// a link a reader meets inside the argument, placed where the question it
+// answers arises. Only those count here.
+//
+// WHAT THIS GUARD MUST NOT BECOME. A link added to satisfy a test rather
+// than to serve a reader is worse than no link: it is furniture, it dilutes
+// the ones that mean something, and it is exactly what an assertion like
+// this one invites. Five of these six edges existed before the assertion did
+// — this was written to stop them being deleted, not to force them into
+// existence. If a page ever legitimately loses its reason to carry one, the
+// answer is to argue the change here, not to leave a bare anchor behind.
+
+/** The `<main>` of a built page: nav, footer and mobile CTA bar excluded. */
+function mainOf(html: string): string {
+  return html.match(/<main[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? ''
+}
+
+describe('the internal linking triangle (spec §4)', () => {
+  const requirementForm = company.requirementFormUrl
+
+  /** The three corners, by the route each page is served at. */
+  const CORNERS = ['/pricing', '/find-your-helper', '/faq'] as const
+
+  const mainByRoute = new Map(
+    builtHtmlFiles().map((file) => [
+      file.replace(/^dist/, '').replace(/\/index\.html$/, '').replace(/\.html$/, '') || '/',
+      mainOf(readFileSync(file, 'utf8')),
+    ]),
+  )
+
+  const linksTo = (from: string, target: string) => {
+    const main = mainByRoute.get(from)
+    if (main === undefined) throw new Error(`no built page at ${from}`)
+    // Trailing slash optional: the site writes href="/pricing" today, and
+    // href="/pricing/" would be the same link.
+    return new RegExp(`href="${target}/?"`).test(main)
+  }
+
+  it('reads the body of each corner, not the whole page (guards the assertions below)', () => {
+    for (const corner of CORNERS) {
+      const main = mainByRoute.get(corner)
+      expect(main, `no built page at ${corner}`).toBeDefined()
+      expect(main!.length, `${corner} has an empty <main>`).toBeGreaterThan(2_000)
+      // The header links every corner to every other one. If <main> ever
+      // started including it, every assertion below would pass for free.
+      expect(main!).not.toContain('site-header')
+    }
+  })
+
+  for (const from of CORNERS) {
+    for (const to of CORNERS) {
+      if (from === to) continue
+      it(`${from} links to ${to} from inside its own body`, () => {
+        expect(linksTo(from, to)).toBe(true)
+      })
+    }
+  }
+
+  for (const corner of CORNERS) {
+    it(`${corner} links to the requirement form from inside its own body`, () => {
+      expect(mainByRoute.get(corner)).toContain(requirementForm)
+    })
+  }
+
+  it('a corner that dropped an edge would be caught (the matcher is not always true)', () => {
+    // The matcher must be able to say no. /pricing does not link to
+    // /contact from its body — nothing on this site does except the footer,
+    // which is exactly what mainOf() excludes.
+    expect(linksTo('/pricing', '/contact')).toBe(false)
+  })
+})
+
 // --- conditional-block content-cache guard ------------------------------
 //
 // Task 17 audit found that `node_modules/.astro/data-store.json` — Astro's
@@ -246,12 +366,199 @@ describe('internal link resolution', () => {
 // catches things a bare count cannot (e.g. a renamed section that
 // coincidentally keeps the total at 11 by also removing an unrelated
 // section elsewhere on the same build).
+//
+// --- Task 5B, G-4 ------------------------------------------------------
+//
+// THE PAGE. Every check here read `dist/index.html` BY NAME, so it covered
+// the homepage and nothing else — green on any other page, watching
+// nothing, guarding a defect that actually shipped once. So the two
+// class-string checks now run over EVERY built page, derived from dist/ the
+// way every other page-scoped guard in this suite is. Same assertions,
+// wider corpus: strictly stronger, and nothing was removed to make room.
+//
+// THIS PARAGRAPH USED TO JUSTIFY ITSELF WITH A PREDICTION, AND THE
+// PREDICTION WAS WRONG. It said "MeetHelpers moves to /find-your-helper and
+// Reviews to /why-directhired in Phase B, and on the day they do…". Phase B
+// shipped all six pages; both components stayed on the homepage, and
+// src/pages/index.astro is still the only file that renders either. Task 11
+// corrected the wording rather than the code, because nothing depends on
+// the prediction: the guard was generalised to every page in dist/, so it
+// covers both components wherever they are rendered and would cover them if
+// they moved tomorrow. A comment that says WHY a check is general is worth
+// keeping; one that dates it to a move that never happened teaches the next
+// reader that the file is describing a site that does not exist.
+//
+// THE NAMES. The coupling warning above turned out to be describing
+// something that had already happened. `class="review-card"` and
+// `class="reviews-grid"` appear nowhere in src/ — Reviews.astro renders
+// .quote-wall, .quote, .review-stars, .review-body and .review-meta. Two
+// of the four child-class assertions were checking for the absence of
+// strings that were absent by construction and could not fail. They are
+// replaced below by classes DERIVED from the component itself, which is
+// the only version of this check that cannot drift: rename a class in
+// Reviews.astro and the assertion renames with it.
+//
+// The 11-section count further down stays exactly as it is, homepage and
+// all. It is a reviewed literal about one page's composition (see its own
+// comment), not a page list that should have been derived — and the
+// derived checks above it are what cover the pages it does not.
+
+/** A section whose entire <section> is gated on a content collection. */
+interface ConditionalSection {
+  file: string
+  /** The collection name passed to getCollection(). */
+  collection: string
+  /** The directory that collection reads from. */
+  directory: string
+  /** The class on its top-level <section>. */
+  sectionClass: string
+  /** Classes this component uses and no other .astro file does. */
+  ownClasses: string[]
+}
+
+const withoutComments = (source: string) =>
+  source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
+
+function classesIn(source: string): string[] {
+  return [...withoutComments(source).matchAll(/class="([a-z0-9 -]+)"/g)].flatMap((m) =>
+    m[1].split(/\s+/).filter(Boolean),
+  )
+}
+
+/**
+ * Every component that renders its section only when a collection has
+ * entries — discovered from the source, never listed. A new conditional
+ * block gets this guard automatically, which is the difference between a
+ * rule and a habit.
+ */
+function conditionalSections(): ConditionalSection[] {
+  const astroFiles = sources('src').map(normalize).filter((f) => f.endsWith('.astro'))
+  const sourceOf = new Map(astroFiles.map((f) => [f, readFileSync(f, 'utf8')]))
+
+  return astroFiles.flatMap((file) => {
+    const source = withoutComments(sourceOf.get(file)!)
+    const collection = source.match(/getCollection\(\s*['"]([a-z0-9-]+)['"]/i)
+    // The gate itself: `xs.length > 0 &&` wrapping the whole section.
+    if (!collection || !/\.length\s*>\s*0\s*&&/.test(source)) return []
+    const section = source.match(/<section[^>]*class="([a-z0-9-]+)/)
+    if (!section) return []
+
+    const used = new Set(classesIn(sourceOf.get(file)!))
+    const elsewhere = new Set(
+      astroFiles.filter((f) => f !== file).flatMap((f) => classesIn(sourceOf.get(f)!)),
+    )
+    return [
+      {
+        file,
+        collection: collection[1],
+        directory: `src/content/${collection[1]}`,
+        sectionClass: section[1],
+        ownClasses: [...used].filter((c) => !elsewhere.has(c)),
+      },
+    ]
+  })
+}
+
+/** Entries on disk, ignoring the .gitkeep that holds an empty directory. */
+const entriesIn = (dir: string) => readdirSync(dir).filter((f) => f !== '.gitkeep')
+
 describe('conditional block content-cache guard', () => {
   it('helper-profiles and reviews collections are currently empty (precondition for the checks below)', () => {
     const helperProfileFiles = readdirSync('src/content/helper-profiles').filter((f) => f !== '.gitkeep')
     const reviewFiles = readdirSync('src/content/reviews').filter((f) => f !== '.gitkeep')
     expect(helperProfileFiles).toHaveLength(0)
     expect(reviewFiles).toHaveLength(0)
+  })
+
+  it('discovers the conditional blocks from source, and finds the two that exist', () => {
+    /*
+     * Named individually rather than counted. A count would survive the
+     * discovery silently matching two unrelated components — which is the
+     * class of vacuous pass this whole guard exists to prevent, on the one
+     * defect in this repo that reached a build.
+     */
+    const found = conditionalSections()
+    const byFile = new Map(found.map((s) => [s.file, s]))
+
+    const helpers = byFile.get('src/sections/MeetHelpers.astro')
+    expect(helpers, 'MeetHelpers.astro is no longer detected as conditional').toBeDefined()
+    expect(helpers!.collection).toBe('helper-profiles')
+    expect(helpers!.sectionClass).toBe('meet-helpers')
+
+    const reviews = byFile.get('src/sections/Reviews.astro')
+    expect(reviews, 'Reviews.astro is no longer detected as conditional').toBeDefined()
+    expect(reviews!.collection).toBe('reviews')
+    expect(reviews!.sectionClass).toBe('reviews')
+
+    // The derived child classes are what replaced two dead literals, so an
+    // empty list would put the same hole back.
+    //
+    // FIX ROUND, F-4. The directory line read
+    // `expect(entriesIn(block.directory)).toBeDefined()`.
+    // readdirSync().filter() always returns an array, so that assertion
+    // could not fail; it worked only as an implicit "the directory exists"
+    // check, via the exception readdirSync throws on a missing path — which
+    // is not what it read as, and would have surfaced as an error rather
+    // than as a failed expectation. The property it was reaching for is
+    // stated directly instead, because the emptiness check further down
+    // (`entriesIn(s.directory).length === 0`) is only meaningful if the
+    // directory the collection is derived from is really there: a
+    // mis-derived path would otherwise read as "empty collection" and make
+    // the whole guard vacuously green.
+    for (const block of found) {
+      expect(block.ownClasses.length, `${block.file} contributed no distinctive classes`).toBeGreaterThan(2)
+      expect(existsSync(block.directory), `${block.directory} does not exist`).toBe(true)
+    }
+  })
+
+  it('every conditional block is still rendered by some page (the guard has a subject)', () => {
+    // A component nothing renders cannot leak into a build, so the checks
+    // below would be true of it for the wrong reason.
+    const pageSources = sources('src/pages')
+      .filter((f) => f.endsWith('.astro'))
+      .map((f) => readFileSync(f, 'utf8'))
+      .join('\n')
+    const unrendered = conditionalSections()
+      .map((s) => s.file.split('/').pop()!.replace('.astro', ''))
+      .filter((name) => !new RegExp(`<${name}[\\s/>]`).test(pageSources))
+    expect(unrendered).toEqual([])
+  })
+
+  it('NO BUILT PAGE renders a conditional block whose collection is empty', () => {
+    /*
+     * The guard itself, over every page in dist/ rather than over
+     * dist/index.html. This is the check that would have caught the
+     * fabricated "Test Helper" profile a stale
+     * node_modules/.astro/data-store.json rendered into the homepage with
+     * every test green — and it keeps catching it wherever the two
+     * components are rendered. Both are on the homepage today and Phase B
+     * did not move either, which is exactly why the guard is derived from
+     * dist/ rather than pointed at a page: it does not need to know.
+     *
+     * Both halves matter. The <section> class catches the block shipping
+     * whole; the distinctive child classes catch a fragment of it shipping
+     * without its wrapper. Both are read from the component's own source,
+     * so a rename moves the assertion with it.
+     */
+    const empty = conditionalSections().filter((s) => entriesIn(s.directory).length === 0)
+    expect(empty.length, 'no conditional collection is empty — nothing to check').toBeGreaterThan(0)
+
+    const leaks = builtHtmlFiles().flatMap((page) => {
+      const html = readFileSync(page, 'utf8')
+      return empty.flatMap((block) => {
+        const found: string[] = []
+        if (new RegExp(`<section[^>]*class="[^"]*\\b${block.sectionClass}\\b`).test(html)) {
+          found.push(`${page}: <section class="${block.sectionClass}"> from empty ${block.collection}`)
+        }
+        for (const cls of block.ownClasses) {
+          if (new RegExp(`class="[^"]*\\b${cls}\\b`).test(html)) {
+            found.push(`${page}: .${cls} from empty ${block.collection}`)
+          }
+        }
+        return found
+      })
+    })
+    expect(leaks).toEqual([])
   })
 
   it('the BUILT homepage contains no meet-helpers section or profile markup while helper-profiles is empty', () => {
@@ -264,8 +571,13 @@ describe('conditional block content-cache guard', () => {
   it('the BUILT homepage contains no reviews section or review markup while reviews is empty', () => {
     const html = readFileSync('dist/index.html', 'utf8')
     expect(html).not.toMatch(/<section[^>]*class="reviews"/)
-    expect(html).not.toMatch(/class="review-card"/)
-    expect(html).not.toMatch(/class="reviews-grid"/)
+    // .review-card and .reviews-grid used to be asserted here. Neither
+    // string exists anywhere in src/ — Reviews.astro renders .quote-wall
+    // and .quote — so both assertions were unfailable. These are the
+    // classes the component actually uses; the derived check above is what
+    // keeps them from going stale again.
+    expect(html).not.toMatch(/class="quote-wall"/)
+    expect(html).not.toMatch(/class="review-body"/)
   })
 
   // Rename-proof backstop for the two class-string checks above. Those
@@ -297,5 +609,102 @@ describe('conditional block content-cache guard', () => {
     const html = readFileSync('dist/index.html', 'utf8')
     const sectionOpenTags = html.match(/<section[\s>]/g) ?? []
     expect(sectionOpenTags).toHaveLength(11)
+  })
+})
+
+/*
+ * WHAT REMOVING THE TWO NAV ITEMS ACTUALLY BOUGHT — W-9, 2026-08-17.
+ *
+ * DirectHired removed 'Services' and 'Helper Sources' from the navigation
+ * until sub-project 3 ships /services and /helpers. Measured on the build,
+ * before and after:
+ *
+ *                        before   after
+ *   broken link instances   57      41
+ *   per page                 6       4
+ *   homepage                15      13
+ *
+ * ZERO IS NOT REACHED, AND CANNOT BE BY THIS CHANGE. What is left is two
+ * groups, both of them deliberate and neither of them navigation:
+ *
+ *   4 per page  the legal routes in the footer's BOTTOM BAR
+ *               (src/lib/nav.ts's `legalItems`): /privacy-policy, /terms,
+ *               /pdpa, /disclaimer. Sub-project 3 owns them.
+ *   9 on /      the detail links inside two homepage SECTIONS —
+ *               Services.astro's six cards (/services/<slug>) and
+ *               HelperSources.astro's three (/helpers/<slug>).
+ *
+ * Removing those would not be the same kind of change and was not what
+ * DirectHired decided. The nav items were TOP-LEVEL NAVIGATION on every page;
+ * the card links are the content of two sections that would have to be
+ * redesigned to lose them, and the legal links are the four a Singapore
+ * footer is expected to carry. They are reported here rather than fixed, and
+ * they remain enumerated in DEFERRED_ROUTES above, which is what keeps them
+ * from being forgotten.
+ *
+ * SO THE ASSERTIONS BELOW STATE WHAT IS TRUE AND LOAD-BEARING:
+ *   - the navigation itself has zero broken links, with NO allowlist
+ *   - /services and /helpers are linked from nothing, anywhere
+ *   - the residual set is EXACTLY the enumerated deferred routes, so it
+ *     cannot grow by one without a visible diff
+ */
+describe('the navigation links nothing that does not exist', () => {
+  it('every navItems and footerItems href resolves — no allowlist consulted', () => {
+    /*
+     * The strongest statement this change supports, and the reason it is
+     * stated without the allowlist: the allowlist is what let two broken
+     * routes sit in the header for weeks. Navigation is the one surface
+     * where "deferred" is not an excuse a visitor can see.
+     */
+    const unresolved = [...navItems, ...footerItems]
+      .filter(({ href }) => !resolvesInDist(href))
+      .map(({ label, href }) => `${label} → ${href}`)
+    expect(unresolved).toEqual([])
+  })
+
+  it('/services and /helpers are linked from no built page', () => {
+    // Named, because these two are the decision. If either comes back before
+    // its page does, this says so by name rather than as an allowlist diff.
+    const linked = allInternalLinks().filter(({ href }) => href === '/services' || href === '/helpers')
+    expect(linked.map(({ page, href }) => `${page} → ${href}`)).toEqual([])
+  })
+
+  it('neither route is in navItems, footerItems or legalItems', () => {
+    const hrefs = [...navItems, ...footerItems, ...legalItems].map((item) => item.href)
+    expect(hrefs).not.toContain('/services')
+    expect(hrefs).not.toContain('/helpers')
+    // …and the nav still has the pages that DO exist, so this is not passing
+    // because somebody emptied the array.
+    expect(hrefs).toContain('/find-your-helper')
+    expect(hrefs).toContain('/pricing')
+    expect(hrefs).toContain('/faq')
+    expect(hrefs).toContain('/contact')
+  })
+
+  it('the only broken links left are the enumerated deferred routes, exactly', () => {
+    /*
+     * The residual, stated as a set rather than as a count — a count would
+     * break the moment a page is added, which is the defect W-7 records in
+     * tests/pages.test.ts. Set equality cannot go slack in either direction:
+     * a new broken link fails it, and so does a route that quietly stopped
+     * being linked while staying enumerated.
+     */
+    const unresolved = new Set(
+      allInternalLinks()
+        .filter(({ href }) => !resolvesInDist(href))
+        .map(({ href }) => href),
+    )
+    expect([...unresolved].sort()).toEqual([...DEFERRED_ROUTES].sort())
+  })
+
+  it('the residual is legal pages and section detail links, and nothing else', () => {
+    // Named by shape, so the character of what is left is asserted rather
+    // than left to a reader to infer from the list. A broken TOP-LEVEL route
+    // reappearing would not match either shape and fails here.
+    const LEGAL = new Set(['/privacy-policy', '/terms', '/pdpa', '/disclaimer'])
+    const stray = [...DEFERRED_ROUTES].filter(
+      (route) => !LEGAL.has(route) && !/^\/(?:services|helpers)\/[a-z0-9-]+$/.test(route),
+    )
+    expect(stray).toEqual([])
   })
 })

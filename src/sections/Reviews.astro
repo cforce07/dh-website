@@ -58,7 +58,7 @@ const rendered = await Promise.all(
                 {'☆'.repeat(5 - review.data.rating)}
               </span>
 
-              <blockquote class="review-body">
+              <blockquote class="review-body rich-text">
                 <Content />
               </blockquote>
 
@@ -117,13 +117,24 @@ const rendered = await Promise.all(
     text-wrap: pretty;
   }
 
-  .review-body :global(p:first-child) {
-    margin-top: 0;
-  }
-
-  .review-body :global(p:last-child) {
-    margin-bottom: 0;
-  }
+  /*
+   * The quote is markdown, so its block rhythm and link treatment come from
+   * `.rich-text` in src/styles/global.css, which the <blockquote> carries.
+   *
+   * WHAT USED TO BE HERE, 2026-08-16: `p:first-child { margin-top: 0 }` and
+   * `p:last-child { margin-bottom: 0 }` — two rules zeroing margins that
+   * global.css's `* { margin: 0 }` had already zeroed, and nothing at all
+   * restoring space BETWEEN paragraphs. A two-paragraph review would have
+   * rendered as one unbroken block. It never shipped only because
+   * src/content/reviews/ is deliberately empty, which is the worst way for a
+   * defect to wait: it would have arrived as a rendering fault in content
+   * nobody changed, on the day DirectHired supplies reviews, with no diff to
+   * connect it to.
+   *
+   * `.review-body` keeps `margin: 0` above, which the shared class does not
+   * contradict: `.rich-text > * + *` sets a margin on the quote's CHILDREN,
+   * never on the quote itself.
+   */
 
   .review-meta {
     margin: 0;

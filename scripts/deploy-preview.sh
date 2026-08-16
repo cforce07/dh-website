@@ -19,12 +19,23 @@ set -euo pipefail
 BUCKET="directhired-website-preview"
 DIST_ID="EQFX1V1KHG4IS"
 PROFILE="directhired"
-DOMAIN="didceb5na1cjo.cloudfront.net"
+DOMAIN="staging.directhired.com"
 
 cd "$(dirname "$0")/.."
 
-echo "==> Building (gated — fails if any <Tbd> remains)"
-npm run build
+# UNGATED, and that is the point of staging.
+#
+# This used to run `npm run build`, which fails while any <Tbd> placeholder
+# remains in the output. That is right for production and wrong here: staging
+# is precisely where an unverified value should be VISIBLE, so it can be
+# reviewed and chased. Gating it would block you from previewing the one thing
+# you opened staging to look at.
+#
+# .github/workflows/ci.yml already reasons this way about build:dev — the
+# <Tbd> gate is a release check, not a build step. scripts/deploy-production.sh
+# keeps the gated build, which is where it belongs.
+echo "==> Building (ungated — staging shows <Tbd> placeholders on purpose)"
+npm run build:dev
 
 echo
 echo "==> Syncing dist/ to s3://$BUCKET"

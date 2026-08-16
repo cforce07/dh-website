@@ -1,5 +1,45 @@
 import { sumCents } from '../lib/money'
 
+/**
+ * A row on a pricing card: what it is called, and what it costs.
+ *
+ * ONE LINE-ITEM LABEL SAYS MORE THAN THE PRICE LIST DID, AND ONLY ONE.
+ *
+ * DirectHired confirmed on 2026-08-16 (spec §2.6.10, §2.6.11) that
+ * `Medical` and `Insurance` are two different obligations: `Medical`
+ * ($60.00) is the pre-employment medical checkup, and `Insurance`
+ * ($425.10) buys the two policies MOM requires, one of which IS medical
+ * insurance.
+ *
+ * That last clause is the whole problem. A bare `Medical` four rows under
+ * a bare `Insurance` does not merely read as vague — the wrong reading,
+ * "this is the medical part of the insurance", names a real thing in the
+ * same package, and a reader who takes it concludes that a year of
+ * hospitalisation cover cost $60.00. So `Medical` is now `Medical
+ * checkup`: one word, DirectHired's own ("pre-employment medical
+ * checkup"), and it is the smallest edit that makes the row say which
+ * obligation it is.
+ *
+ * `INSURANCE IS DELIBERATELY LEFT ALONE.` It is accurate and complete for
+ * what it buys, and once the row below it stops competing for the word
+ * "medical" it is no longer ambiguous — the distinction is drawn by
+ * disambiguating one label, not two. Expanding it to name both policies
+ * would put policy detail into a price table, duplicate the FAQ answer
+ * that exists for it, and invite a reader to look for a split of the
+ * $425.10 that DirectHired has never supplied.
+ *
+ * NO LAYOUT RISK, and it was checked rather than assumed: `Handling &
+ * transport` is 20 characters and already the longest label these cards
+ * render, so a 15-character one introduces no wrap that the component's
+ * reserved-height notes do not already cover.
+ *
+ * These labels are rendered copy. PricingCard prints them, and both
+ * src/sections/ReplacementTerms.astro and src/pages/pricing.astro DERIVE
+ * their component lists from this array, so a rename here reaches all
+ * three without being retyped. The two FAQ entries that reprint the
+ * breakdown in prose cannot import this file; tests/pricing.test.ts holds
+ * them to it instead.
+ */
 export type LineItem = { readonly label: string; readonly amountCents: number }
 
 /**
@@ -63,7 +103,7 @@ export const packages: readonly Package[] = [
       { label: 'MOM', amountCents: 7000 },
       { label: 'Insurance', amountCents: 42510 },
       { label: 'SIP', amountCents: 7700 },
-      { label: 'Medical', amountCents: 6000 },
+      { label: 'Medical checkup', amountCents: 6000 },
       { label: 'Handling & transport', amountCents: 12000 },
     ],
   },
@@ -98,7 +138,7 @@ export const packages: readonly Package[] = [
       { label: 'MOM', amountCents: 7000 },
       { label: 'Insurance', amountCents: 42510 },
       { label: 'SIP', amountCents: 7700 },
-      { label: 'Medical', amountCents: 6000 },
+      { label: 'Medical checkup', amountCents: 6000 },
       // "Handling & transport" on both cards, per DirectHired 2026-08-16.
       // The supplied breakdown said "Transport"; harmonised so the two cards
       // read as the same line item at the same price, which is what they are.
