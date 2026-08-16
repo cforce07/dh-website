@@ -217,20 +217,27 @@ const description =
           The second half of brief §1: "DirectHired takes the opposite
           approach: Understand first. Recommend second."
 
-          TWO SENTENCES, AND THAT IS DELIBERATE. What this order looks like
-          in practice — the list of what is understood before a
-          recommendation, and the consequence that there is no gallery of
-          helpers to browse — is /why-directhired's Better Matching pillar,
-          argued at length. Restating it here would be the second copy of
-          the same argument that this page exists not to be, and the link
-          on the first screen already points at it.
+          ONE SENTENCE, 2026-08-16, DOWN FROM TWO. It used to add "The
+          household is understood before any helper is put forward", which
+          did two things and neither of them well: it paraphrased the
+          heading directly above it, and it restated /why-directhired's "We
+          go through the household before we suggest anyone" in different
+          words. Now that both pages exist, a reader meets the same claim
+          twice — and this page's whole discipline is that it STATES while
+          that page ARGUES. So the argument's sentence stays there and this
+          keeps only what this page can say about it: that the order is
+          DirectHired's own.
+
+          It is shorter than the tenet beside it and that is not an
+          oversight. What this order looks like in practice — the list of
+          what is understood before a recommendation, and the consequence
+          that there is no gallery of helpers to browse — is
+          /why-directhired's Better Matching pillar, argued at length, and
+          the link on the first screen already points at it.
         */}
         <div class="tenet">
           <h3>Understand first. Recommend second.</h3>
-          <p>
-            The order the work runs in, in DirectHired’s own words. The household is understood
-            before any helper is put forward.
-          </p>
+          <p>The order the work runs in, in DirectHired’s own words.</p>
         </div>
       </div>
     </Container>
@@ -260,9 +267,19 @@ const description =
       */}
       <div class="presence">
         <div class="presence-copy">
+          {/*
+            "…and so is the office" — full stop, 2026-08-16.
+
+            It read "and so is the office those placements are handled from",
+            which inferred two things from an address string: that there is
+            ONE office, and that placements are handled there. Nobody has
+            supplied either. The clause is the natural next sentence and
+            that is exactly why it had to go — an office an About page
+            describes is an office somebody will later be asked about.
+          */}
           <p class="about-body">
             DirectHired is a Singapore business. The families it works with are here, the helpers it
-            places work in households here, and so is the office those placements are handled from.
+            places work in households here, and so is the office.
           </p>
 
           <p class="about-body">
@@ -282,7 +299,23 @@ const description =
   <section class="about-record">
     <Container>
       <h2 class="section-title">The company on record</h2>
-      <p class="record-lede">DirectHired’s particulars, as registered and published.</p>
+      {/*
+        "as the company gives them", not "as registered and published",
+        2026-08-16.
+
+        "Registered" was untrue of the track-record row — a count of
+        placements is registered nowhere — and it presumed a registration
+        nobody in this repository has read. Every value in this block comes
+        from DirectHired: the entity name and the UEN were confirmed by them
+        on 2026-08-16, the licence number was supplied with the brief, and
+        the count is their own basis sentence. src/data/company.ts records
+        that verification was attempted for the first two and failed.
+
+        Saying so is not a hedge on a trust page. The one value a family can
+        independently check is the licence, and the note beside it already
+        says where: MOM's public register.
+      */}
+      <p class="record-lede">DirectHired’s particulars, as the company gives them.</p>
 
       {/*
         EVERY VALUE COMES FROM src/data/company.ts. Not one is retyped:
