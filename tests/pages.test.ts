@@ -653,6 +653,9 @@ const ROUTES_WITHOUT_BREADCRUMBS: readonly string[] = [
   // BreadcrumbList must fail until it is enumerated here, so the gap cannot
   // widen silently. Task 11 shrinks this list to empty.
   '/about/',
+  // Added by Task 9 in the same commit that created the route, for the same
+  // reason as '/about/' above.
+  '/faq/',
   '/find-your-helper/',
   '/pricing/',
   '/why-directhired/',

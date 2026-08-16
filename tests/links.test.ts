@@ -118,7 +118,11 @@ const DEFERRED_ROUTES: readonly string[] = [
   // fail this suite. '/why-directhired' went the same way when Task 7
   // shipped it, and '/about' when Task 8 did. The last one goes the same
   // way as its task lands.
-  '/faq',
+  //
+  // '/faq' went the same way when Task 9 shipped it, in the same commit as
+  // the page. That empties the Phase B section of this list: every core
+  // page spec §1 names now resolves, and everything below belongs to
+  // sub-project 3.
 
   // --- Sub-project 3: the two family index pages, spec §1 ---
   '/services',

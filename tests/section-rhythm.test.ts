@@ -324,6 +324,34 @@ const ABOUT_BLOCKS = [
   { block: 'A5', path: 'src/sections/FinalCta.astro', selector: '.final-cta' },
 ] as const
 
+/**
+ * Section files in the order src/pages/faq.astro renders them.
+ *
+ * Task 9, and the shortest sequence on the site: three blocks, of which
+ * only the first is defined in the page file. This page has almost no prose
+ * of its own — the content is the faq collection — so the page file owns the
+ * hero and nothing else.
+ *
+ * THE GROUNDS ARE ENTIRELY FORCED, and that is worth stating because it
+ * means there was no ground decision to take here. FinalCta is fixed at
+ * --color-surface because the homepage renders the same component; opening
+ * on cream is what all four earlier Phase B pages do; and those two fix the
+ * middle block white.
+ *
+ * NO BRAND WASH, deliberately — see the page file's header. The only two
+ * candidates are the hero (which would make /faq the one page that does not
+ * open on the page ground) and the list (which would put --color-surface-teal
+ * behind ~1,400px of collapsed accordion rows, which is the wallpaper this
+ * file's own rule warns about). The "grounds no section in the brand wash"
+ * assertion in this page's describe holds that as a decision rather than as
+ * an accident of a three-block page.
+ */
+const FAQ_BLOCKS = [
+  { block: 'Q1', path: 'src/pages/faq.astro', selector: '.faq-intro' },
+  { block: 'Q2', path: 'src/sections/FaqGrouped.astro', selector: '.faq-grouped' },
+  { block: 'Q3', path: 'src/sections/FinalCta.astro', selector: '.final-cta' },
+] as const
+
 const PAGE_SEQUENCES: PageSequence[] = [
   {
     page: 'src/pages/index.astro',
@@ -341,6 +369,7 @@ const PAGE_SEQUENCES: PageSequence[] = [
   { page: 'src/pages/find-your-helper.astro', blocks: FIND_YOUR_HELPER_BLOCKS },
   { page: 'src/pages/why-directhired.astro', blocks: WHY_DIRECTHIRED_BLOCKS },
   { page: 'src/pages/about.astro', blocks: ABOUT_BLOCKS },
+  { page: 'src/pages/faq.astro', blocks: FAQ_BLOCKS },
 ]
 
 /**
@@ -918,6 +947,81 @@ describe('the /about ground sequence alternates', () => {
     const home12 = BLOCKS.find((b) => b.block === '12')!
     expect(a5.path).toBe(`src/sections/${home12.file}.astro`)
     expect(a5.selector).toBe(home12.selector)
+  })
+})
+
+describe('the /faq ground sequence alternates', () => {
+  /*
+   * The generic rules in the register above already hold for this page.
+   * What they cannot say is which sequence was CHOSEN. On this page the
+   * answer is "the only legal one" — see FAQ_BLOCKS' docblock, every ground
+   * is forced by FinalCta being shared with the homepage — but that is
+   * exactly why it is worth writing down: a later change that made a ground
+   * free again should have to come through this file.
+   */
+  const grounds = FAQ_BLOCKS.map((b) => ({ ...b, ground: groundOfPath(b.path, b.selector) }))
+
+  it('is exactly the approved sequence', () => {
+    expect(grounds.map((g) => `${g.block} ${g.ground}`)).toEqual([
+      'Q1 --color-surface',
+      'Q2 --color-surface-raised',
+      'Q3 --color-surface',
+    ])
+  })
+
+  it('adds no dark band', () => {
+    // TwoSidedMatch is not rendered here — spec §3.2 does not list it for
+    // this page — and this holds that by consequence rather than by
+    // convention. Block 07 of the homepage, reused by /why-directhired,
+    // remains the site's only --color-deep section.
+    expect(grounds.filter((g) => g.ground === '--color-deep')).toEqual([])
+  })
+
+  it('grounds no section in the brand wash', () => {
+    // Not an oversight, and not merely "at most one" satisfied by having
+    // three blocks. The page file's header records both candidates and why
+    // neither takes it; putting the wash behind ~1,400px of collapsed
+    // accordion rows is the wallpaper this file's own rule warns about.
+    expect(grounds.filter((g) => g.ground === '--color-surface-teal')).toEqual([])
+  })
+
+  it('shares FinalCta with the homepage rather than copying it', () => {
+    /*
+     * The coupling this page's grounds rest on: FinalCta is fixed at
+     * --color-surface because the homepage renders the same component, and
+     * that is what forces Q2 white. A page-local copy would keep every
+     * ground assertion above passing while quietly breaking the
+     * single-sourced CTA pair (spec §3.1: order, labels and both hrefs are
+     * not parameterised).
+     *
+     * File paths, not grounds: comparing grounds here would be x === x,
+     * both sides calling the same reader on the same file — the mistake
+     * caught in /pricing's equivalent test.
+     */
+    const q3 = FAQ_BLOCKS.find((b) => b.block === 'Q3')!
+    const home12 = BLOCKS.find((b) => b.block === '12')!
+    expect(q3.path).toBe(`src/sections/${home12.file}.astro`)
+    expect(q3.selector).toBe(home12.selector)
+  })
+
+  it('renders FaqGrouped and NOT Faq — one FAQPage block, not two', () => {
+    /*
+     * Spec §4 gives this page the long-tail intent "via FAQPage structured
+     * data across all 14", and FaqGrouped emits exactly one block covering
+     * every entry. Faq.astro emits its OWN block whenever `emitSchema` is
+     * left at its default, so a <Faq /> added to this page — the obvious
+     * thing to reach for, since it is the component every other page uses —
+     * would put two FAQPage blocks on one page. That is a structured-data
+     * defect rather than twice the signal, and it would also render six of
+     * the fourteen questions a second time.
+     *
+     * Asserted in source here so the reason is next to the sequence it
+     * belongs to; tests/faq-grouped.test.ts asserts the built page really
+     * does carry exactly one.
+     */
+    const source = stripComments(readFileSync('src/pages/faq.astro', 'utf8'))
+    expect(source).toMatch(/<FaqGrouped[\s/>]/)
+    expect(source).not.toMatch(/<Faq[\s/>]/)
   })
 })
 
