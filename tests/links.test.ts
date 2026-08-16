@@ -246,12 +246,174 @@ describe('internal link resolution', () => {
 // catches things a bare count cannot (e.g. a renamed section that
 // coincidentally keeps the total at 11 by also removing an unrelated
 // section elsewhere on the same build).
+//
+// --- Task 5B, G-4 ------------------------------------------------------
+//
+// THE PAGE. Every check here read `dist/index.html` BY NAME. MeetHelpers
+// moves to /find-your-helper and Reviews to /why-directhired in Phase B,
+// and on the day they do this guard goes on inspecting a page that no
+// longer renders either of them — green, watching nothing, guarding a
+// defect that actually shipped once. So the two class-string checks now
+// run over EVERY built page, derived from dist/ the way every other
+// page-scoped guard in this suite is. Same assertions, wider corpus:
+// strictly stronger, and nothing was removed to make room.
+//
+// THE NAMES. The coupling warning above turned out to be describing
+// something that had already happened. `class="review-card"` and
+// `class="reviews-grid"` appear nowhere in src/ — Reviews.astro renders
+// .quote-wall, .quote, .review-stars, .review-body and .review-meta. Two
+// of the four child-class assertions were checking for the absence of
+// strings that were absent by construction and could not fail. They are
+// replaced below by classes DERIVED from the component itself, which is
+// the only version of this check that cannot drift: rename a class in
+// Reviews.astro and the assertion renames with it.
+//
+// The 11-section count further down stays exactly as it is, homepage and
+// all. It is a reviewed literal about one page's composition (see its own
+// comment), not a page list that should have been derived — and the
+// derived checks above it are what cover the pages it does not.
+
+/** A section whose entire <section> is gated on a content collection. */
+interface ConditionalSection {
+  file: string
+  /** The collection name passed to getCollection(). */
+  collection: string
+  /** The directory that collection reads from. */
+  directory: string
+  /** The class on its top-level <section>. */
+  sectionClass: string
+  /** Classes this component uses and no other .astro file does. */
+  ownClasses: string[]
+}
+
+const withoutComments = (source: string) =>
+  source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
+
+function classesIn(source: string): string[] {
+  return [...withoutComments(source).matchAll(/class="([a-z0-9 -]+)"/g)].flatMap((m) =>
+    m[1].split(/\s+/).filter(Boolean),
+  )
+}
+
+/**
+ * Every component that renders its section only when a collection has
+ * entries — discovered from the source, never listed. A new conditional
+ * block gets this guard automatically, which is the difference between a
+ * rule and a habit.
+ */
+function conditionalSections(): ConditionalSection[] {
+  const astroFiles = sources('src').map(normalize).filter((f) => f.endsWith('.astro'))
+  const sourceOf = new Map(astroFiles.map((f) => [f, readFileSync(f, 'utf8')]))
+
+  return astroFiles.flatMap((file) => {
+    const source = withoutComments(sourceOf.get(file)!)
+    const collection = source.match(/getCollection\(\s*['"]([a-z0-9-]+)['"]/i)
+    // The gate itself: `xs.length > 0 &&` wrapping the whole section.
+    if (!collection || !/\.length\s*>\s*0\s*&&/.test(source)) return []
+    const section = source.match(/<section[^>]*class="([a-z0-9-]+)/)
+    if (!section) return []
+
+    const used = new Set(classesIn(sourceOf.get(file)!))
+    const elsewhere = new Set(
+      astroFiles.filter((f) => f !== file).flatMap((f) => classesIn(sourceOf.get(f)!)),
+    )
+    return [
+      {
+        file,
+        collection: collection[1],
+        directory: `src/content/${collection[1]}`,
+        sectionClass: section[1],
+        ownClasses: [...used].filter((c) => !elsewhere.has(c)),
+      },
+    ]
+  })
+}
+
+/** Entries on disk, ignoring the .gitkeep that holds an empty directory. */
+const entriesIn = (dir: string) => readdirSync(dir).filter((f) => f !== '.gitkeep')
+
 describe('conditional block content-cache guard', () => {
   it('helper-profiles and reviews collections are currently empty (precondition for the checks below)', () => {
     const helperProfileFiles = readdirSync('src/content/helper-profiles').filter((f) => f !== '.gitkeep')
     const reviewFiles = readdirSync('src/content/reviews').filter((f) => f !== '.gitkeep')
     expect(helperProfileFiles).toHaveLength(0)
     expect(reviewFiles).toHaveLength(0)
+  })
+
+  it('discovers the conditional blocks from source, and finds the two that exist', () => {
+    /*
+     * Named individually rather than counted. A count would survive the
+     * discovery silently matching two unrelated components — which is the
+     * class of vacuous pass this whole guard exists to prevent, on the one
+     * defect in this repo that reached a build.
+     */
+    const found = conditionalSections()
+    const byFile = new Map(found.map((s) => [s.file, s]))
+
+    const helpers = byFile.get('src/sections/MeetHelpers.astro')
+    expect(helpers, 'MeetHelpers.astro is no longer detected as conditional').toBeDefined()
+    expect(helpers!.collection).toBe('helper-profiles')
+    expect(helpers!.sectionClass).toBe('meet-helpers')
+
+    const reviews = byFile.get('src/sections/Reviews.astro')
+    expect(reviews, 'Reviews.astro is no longer detected as conditional').toBeDefined()
+    expect(reviews!.collection).toBe('reviews')
+    expect(reviews!.sectionClass).toBe('reviews')
+
+    // The derived child classes are what replaced two dead literals, so an
+    // empty list would put the same hole back.
+    for (const block of found) {
+      expect(block.ownClasses.length, `${block.file} contributed no distinctive classes`).toBeGreaterThan(2)
+      expect(entriesIn(block.directory)).toBeDefined()
+    }
+  })
+
+  it('every conditional block is still rendered by some page (the guard has a subject)', () => {
+    // A component nothing renders cannot leak into a build, so the checks
+    // below would be true of it for the wrong reason.
+    const pageSources = sources('src/pages')
+      .filter((f) => f.endsWith('.astro'))
+      .map((f) => readFileSync(f, 'utf8'))
+      .join('\n')
+    const unrendered = conditionalSections()
+      .map((s) => s.file.split('/').pop()!.replace('.astro', ''))
+      .filter((name) => !new RegExp(`<${name}[\\s/>]`).test(pageSources))
+    expect(unrendered).toEqual([])
+  })
+
+  it('NO BUILT PAGE renders a conditional block whose collection is empty', () => {
+    /*
+     * The guard itself, over every page in dist/ rather than over
+     * dist/index.html. This is the check that would have caught the
+     * fabricated "Test Helper" profile a stale
+     * node_modules/.astro/data-store.json rendered into the homepage with
+     * every test green — and it keeps catching it after Phase B moves
+     * MeetHelpers to /find-your-helper and Reviews to /why-directhired.
+     *
+     * Both halves matter. The <section> class catches the block shipping
+     * whole; the distinctive child classes catch a fragment of it shipping
+     * without its wrapper. Both are read from the component's own source,
+     * so a rename moves the assertion with it.
+     */
+    const empty = conditionalSections().filter((s) => entriesIn(s.directory).length === 0)
+    expect(empty.length, 'no conditional collection is empty — nothing to check').toBeGreaterThan(0)
+
+    const leaks = builtHtmlFiles().flatMap((page) => {
+      const html = readFileSync(page, 'utf8')
+      return empty.flatMap((block) => {
+        const found: string[] = []
+        if (new RegExp(`<section[^>]*class="[^"]*\\b${block.sectionClass}\\b`).test(html)) {
+          found.push(`${page}: <section class="${block.sectionClass}"> from empty ${block.collection}`)
+        }
+        for (const cls of block.ownClasses) {
+          if (new RegExp(`class="[^"]*\\b${cls}\\b`).test(html)) {
+            found.push(`${page}: .${cls} from empty ${block.collection}`)
+          }
+        }
+        return found
+      })
+    })
+    expect(leaks).toEqual([])
   })
 
   it('the BUILT homepage contains no meet-helpers section or profile markup while helper-profiles is empty', () => {
@@ -264,8 +426,13 @@ describe('conditional block content-cache guard', () => {
   it('the BUILT homepage contains no reviews section or review markup while reviews is empty', () => {
     const html = readFileSync('dist/index.html', 'utf8')
     expect(html).not.toMatch(/<section[^>]*class="reviews"/)
-    expect(html).not.toMatch(/class="review-card"/)
-    expect(html).not.toMatch(/class="reviews-grid"/)
+    // .review-card and .reviews-grid used to be asserted here. Neither
+    // string exists anywhere in src/ — Reviews.astro renders .quote-wall
+    // and .quote — so both assertions were unfailable. These are the
+    // classes the component actually uses; the derived check above is what
+    // keeps them from going stale again.
+    expect(html).not.toMatch(/class="quote-wall"/)
+    expect(html).not.toMatch(/class="review-body"/)
   })
 
   // Rename-proof backstop for the two class-string checks above. Those
