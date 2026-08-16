@@ -50,6 +50,41 @@ import FinalCta from '../sections/FinalCta.astro'
   <Services />
   <MeetHelpers />
   <Reviews />
+  {/*
+    <Faq /> with every default, as always. What changed on 2026-08-16 is
+    which entries the default `surface="home"` selects, and it changed in
+    the CONTENT rather than here: src/content/faq/fly-in-package.md is no
+    longer tagged `home`.
+
+    WHY. "What is included in the fly-in package?" answered itself by
+    reprinting the six line items — Agent fees, MOM, Insurance, SIP, Medical
+    checkup, Handling & transport — and both totals, to a reader who had
+    already scrolled past all eight of those figures on the two PricingCards
+    in block 06 of this same page. It then closed by restating §2.4's
+    advance-and-recover framing in near-identical words to
+    PricingSection.astro's qualifier directly under those cards, AND to
+    faq/cost.md, which renders immediately above it in this accordion —
+    roughly 628 characters apart. One page, one formula, three times.
+
+    THE PRECEDENT IS THIS REPO'S OWN, and it is recorded in
+    src/pages/pricing.astro: that page untagged this entry and cost.md for
+    exactly this reason, because its cards sit a screen above. The homepage
+    carries the same cards. The remedy is the same one, and the reason it is
+    UNTAGGING rather than deleting is also the same: neither entry is cut,
+    and both still serve /faq, where the reader has not just read the cards.
+
+    NEITHER HALF OF §2.4 IS LOST ANYWHERE. The framing still reaches a
+    homepage reader twice — in PricingSection's qualifier under the cards,
+    and in cost.md's answer, which is the entry whose question is about
+    cost. fly-in-package.md's own closing is unchanged and still carries
+    both halves, on /faq. Spec §2.6.4's finding that families re-ask for
+    reassurance is not a licence for near-verbatim adjacent repetition;
+    that entry says so itself.
+
+    The list is still six long — submit-requirements.md (order 90) moves up
+    into the sixth slot — so nothing about this block's height or ground
+    rhythm changes.
+  */}
   <Faq />
   <FinalCta />
 </BaseLayout>
