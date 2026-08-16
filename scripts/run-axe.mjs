@@ -68,6 +68,36 @@
  * noted at that assertion. If titles ever stop being unique, this needs a
  * different marker (a per-route canonical URL is the obvious candidate)
  * BEFORE that happens, not after.
+ *
+ * WHICH CHROME AND WHICH CHROMEDRIVER (fix round 3, F-1).
+ *
+ * This script's preflight proved the URLs were right, and the audit still
+ * never ran once in CI. `@axe-core/cli` bundles its own `chromedriver`, and
+ * that driver is pinned to a Chrome major; the Chrome preinstalled on
+ * `ubuntu-latest` moves on its own schedule. The two drifted apart and every
+ * CI run since sub-project 1 died before auditing anything:
+ *
+ *   Error: session not created: This version of ChromeDriver only supports
+ *   Chrome version 152. Current browser version is 151.0.7922.108
+ *
+ * The fix is to stop letting the pairing drift: CI installs a matched
+ * Chrome + ChromeDriver pair (both at one Chrome-for-Testing build ID) and
+ * passes their paths in through AXE_CHROME_PATH / AXE_CHROMEDRIVER_PATH,
+ * which become `--chrome-path` / `--chromedriver-path`.
+ *
+ * The variables are OPTIONAL by design. Unset — every local run — this
+ * script spawns axe with exactly the arguments it did before, and axe uses
+ * its bundled driver against the developer's own Chrome. That pairing works
+ * locally because a developer's Chrome auto-updates to current stable,
+ * which is what the bundled driver targets; it is the frozen CI image that
+ * does not hold that property.
+ *
+ * Set but wrong, they are a HARD FAILURE here rather than a silent fallback
+ * to the bundled driver. A stale-driver fallback is precisely the outcome
+ * being designed out: it would either re-raise the same session error or,
+ * worse, quietly audit with an unintended browser, and the whole point of
+ * this round is that a green accessibility step which audited nothing is
+ * indistinguishable from one that audited everything.
  */
 import { spawn } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
@@ -208,6 +238,33 @@ for (const url of urls) console.log(`  ${url}`)
 
 const axeBin = require.resolve('@axe-core/cli/dist/src/bin/cli.js')
 
+/**
+ * Browser/driver overrides, off unless the environment supplies them.
+ *
+ * Each is validated before use: an override naming a path that does not
+ * exist is a broken CI step, and the only safe thing to do with a broken CI
+ * step is stop. Falling through to the bundled driver would hide it.
+ */
+const browserArgs = []
+for (const [variable, flag] of [
+  ['AXE_CHROMEDRIVER_PATH', '--chromedriver-path'],
+  ['AXE_CHROME_PATH', '--chrome-path'],
+]) {
+  const value = process.env[variable]?.trim()
+  if (!value) continue
+  if (!existsSync(value)) {
+    console.error(
+      `\naxe: ${variable} is set to "${value}", which does not exist.\n` +
+        `Refusing to fall back to the bundled chromedriver: that is how a ` +
+        `mismatched pair turns into an audit of nothing.\n`,
+    )
+    await server.stop()
+    process.exit(1)
+  }
+  console.log(`axe: ${flag} ${value} (from ${variable})`)
+  browserArgs.push(flag, value)
+}
+
 // One invocation for all URLs: the CLI takes `<url...>` variadically and
 // reuses a single chromedriver session across them, which matters because
 // starting the driver is most of the wall time. It still reports and exits
@@ -229,6 +286,9 @@ const exitCode = await new Promise((resolve) => {
       // Required for Chrome under a container/CI user; harmless locally.
       '--chrome-options',
       'no-sandbox,disable-dev-shm-usage,disable-gpu',
+      // Empty unless AXE_CHROME_PATH / AXE_CHROMEDRIVER_PATH are set, so a
+      // local run spawns the identical command line it always did.
+      ...browserArgs,
     ],
     { stdio: 'inherit' },
   )

@@ -46,6 +46,91 @@ jobs:
       - name: Build (dev, gate skipped)
         run: npm run build:dev
 
+      # WHY CHROME IS INSTALLED HERE RATHER THAN USING THE PREINSTALLED ONE.
+      #
+      # This step is new because the axe step below had never once run. Every
+      # CI run since sub-project 1 died before auditing anything:
+      #
+      #   Error: session not created: This version of ChromeDriver only
+      #   supports Chrome version 152. Current browser version is
+      #   151.0.7922.108 with binary path /opt/google/chrome/chrome
+      #
+      # @axe-core/cli bundles a `chromedriver` pinned to a Chrome major; the
+      # Chrome baked into the ubuntu-latest image moves on GitHub's schedule.
+      # Nothing held the two together, so "Chrome is preinstalled on
+      # ubuntu-latest — no extra setup" (the claim this comment replaces) was
+      # true only for as long as the two happened to agree.
+      #
+      # browser-driver-manager installs Chrome and ChromeDriver at ONE
+      # Chrome-for-Testing build ID, so they cannot disagree by construction,
+      # and writes both paths to ~/.browser-driver-manager/.env in the form
+      # (verified by reading its source, not assumed):
+      #
+      #   CHROME_TEST_PATH="/home/runner/.browser-driver-manager/chrome/..."
+      #   CHROMEDRIVER_TEST_PATH="/home/runner/.browser-driver-manager/..."
+      #   CHROME_TEST_VERSION="152.0.0000.0"
+      #
+      # The version check below is the part that matters. A mismatched pair
+      # must stop the job HERE, loudly, with both versions printed — never be
+      # papered over by letting axe fall back to its bundled driver. An
+      # accessibility step that is green because it audited nothing is the
+      # exact defect this step exists to remove, and it is invisible unless
+      # something refuses to continue.
+      #
+      # The major pin (@2) is deliberate: this step parses that .env, so it
+      # is coupled to a file format, and a major bump is where a format
+      # changes.
+      - name: Install a matched Chrome + ChromeDriver pair
+        run: |
+          set -euo pipefail
+          npx --yes browser-driver-manager@2 install chrome
+
+          env_file="$HOME/.browser-driver-manager/.env"
+          if [ ! -f "$env_file" ]; then
+            echo "::error::browser-driver-manager wrote no $env_file — no paths to hand to axe."
+            exit 1
+          fi
+          echo "--- $env_file ---"
+          cat "$env_file"
+
+          read_var() { sed -n "s/^$1=\"\(.*\)\"\$/\1/p" "$env_file"; }
+          chrome_path="$(read_var CHROME_TEST_PATH)"
+          driver_path="$(read_var CHROMEDRIVER_TEST_PATH)"
+
+          if [ -z "$chrome_path" ] || [ -z "$driver_path" ]; then
+            echo "::error::Could not parse CHROME_TEST_PATH / CHROMEDRIVER_TEST_PATH out of $env_file."
+            exit 1
+          fi
+          if [ ! -x "$chrome_path" ] || [ ! -x "$driver_path" ]; then
+            echo "::error::Not executable: chrome=$chrome_path driver=$driver_path"
+            exit 1
+          fi
+
+          # Ask the binaries themselves, not the file that claims to describe
+          # them. The whole failure being fixed was a driver and a browser
+          # that each worked and did not agree.
+          chrome_version="$("$chrome_path" --version | grep -oE '[0-9]+(\.[0-9]+){2,3}' | head -1)"
+          driver_version="$("$driver_path" --version | grep -oE '[0-9]+(\.[0-9]+){2,3}' | head -1)"
+          echo "chrome:       $chrome_version  ($chrome_path)"
+          echo "chromedriver: $driver_version  ($driver_path)"
+
+          if [ -z "$chrome_version" ] || [ -z "$driver_version" ]; then
+            echo "::error::Could not read a version out of one of the binaries."
+            exit 1
+          fi
+          # Selenium only refuses on a MAJOR mismatch, which is what killed
+          # every previous run. Both come from one build ID, so anything
+          # beyond a major difference would mean the install did something
+          # unexpected and is worth stopping for too — hence full equality,
+          # with the majors reported separately if it ever needs relaxing.
+          if [ "$chrome_version" != "$driver_version" ]; then
+            echo "::error::Chrome $chrome_version and ChromeDriver $driver_version are not the same build. axe would abort mid-session (majors: ${chrome_version%%.*} vs ${driver_version%%.*})."
+            exit 1
+          fi
+
+          echo "AXE_CHROME_PATH=$chrome_path" >> "$GITHUB_ENV"
+          echo "AXE_CHROMEDRIVER_PATH=$driver_path" >> "$GITHUB_ENV"
+
       # Core-pages design spec §6: "axe at zero violations" on EVERY page.
       # @axe-core/cli was installed as a devDependency but nothing invoked
       # it, so the requirement was declared and never met; then the script
@@ -55,11 +140,11 @@ jobs:
       # a new page is audited the moment it is built and nobody has to
       # remember to add it here. It serves the built dist/ via Astro's
       # preview server and audits every route with axe-core in headless
-      # Chrome (bundled chromedriver — no extra setup, Chrome is
-      # preinstalled on ubuntu-latest). It exits non-zero on ANY WCAG 2.1
-      # A/AA violation on ANY page, which fails this job. Runs after the
-      # build step above because it audits the built output, not the dev
-      # server.
+      # Chrome — the matched pair installed by the step above, passed in as
+      # AXE_CHROME_PATH / AXE_CHROMEDRIVER_PATH. It exits non-zero on ANY
+      # WCAG 2.1 A/AA violation on ANY page, which fails this job. Runs
+      # after the build step above because it audits the built output, not
+      # the dev server.
       - name: Run axe (accessibility)
         run: npm run axe
 
