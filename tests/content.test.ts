@@ -480,8 +480,84 @@ describe('faq pricing figures stay in sync with pricing.ts', () => {
     // zero, the check above means nothing. Asserted across the whole build
     // rather than per page, because a Phase B page with no prices on it is
     // legitimate — /about and /contact will both be one.
+    //
+    // A global floor is the right shape for "the sweep found something",
+    // and the WRONG shape for "this particular page still shows prices".
+    // See the /pricing floor below, which is not redundant with it.
     const total = builtPages().reduce((n, { text }) => n + (text.match(dollarPattern) ?? []).length, 0)
     expect(total).toBeGreaterThanOrEqual(20)
+  })
+
+  it('/pricing still prints prices', () => {
+    /*
+     * Fix round 2, G-1 — a regression this suite introduced and then
+     * failed to notice.
+     *
+     * Before F-2 the money check read dist/pricing/index.html by name and
+     * carried `found.length >= 10`, so it asserted two things at once:
+     * every figure on /pricing is real, AND /pricing has figures.
+     * Generalising the sweep to all pages correctly fixed the first and
+     * silently dropped the second — the replacement floor is global, and
+     * the homepage alone prints 24 figures, so /pricing could have
+     * rendered zero and the whole suite would still have been green.
+     * Nothing else covered it: tests/pricing.test.ts asserts totals
+     * against the DATA, not against the built page, and
+     * tests/compliance-gate.test.ts reads that page for other properties
+     * entirely. A property that was asserted before the commit was not
+     * asserted after it.
+     *
+     * Naming one page here does not contradict "derive the page list from
+     * dist/". Derivation exists so that UNKNOWN future pages are covered
+     * without anyone remembering them; it is not a rule against asserting
+     * something specific about a page whose entire job is the thing being
+     * asserted. /pricing showing no prices is a page-specific catastrophe
+     * and needs a page-specific guard.
+     *
+     * A floor of 10, not today's 28: the coarse check restored verbatim
+     * from before F-2, so it fails when the prices go rather than when the
+     * copy is edited. The sharp check is the assertion below it, which is
+     * derived and needs no chosen number at all.
+     */
+    const pricing = builtPages().find((p) => p.file === 'dist/pricing/index.html')
+    expect(pricing, 'dist/pricing/index.html was not built').toBeDefined()
+    const found = pricing!.text.match(dollarPattern) ?? []
+    expect(found.length).toBeGreaterThanOrEqual(10)
+  })
+
+  it('/pricing prints every distinct figure pricing.ts holds', () => {
+    /*
+     * The sharp half of G-1, and the reason the floor above is not left to
+     * do this on its own.
+     *
+     * /pricing prints 28 figures, but only 14 of them come from the two
+     * package cards — the pricing-tagged FAQ answers repeat 10 more in
+     * prose, and the carry-forward example adds 3. So a count floor loose
+     * enough not to break on a copy edit is also loose enough to survive
+     * both cards disappearing, which is the regression that actually
+     * matters on this page.
+     *
+     * This asserts the property instead: every distinct amount in
+     * pricing.ts is printed somewhere on the page. It needs no chosen
+     * number, it tracks the data, and it is not satisfiable by the FAQ
+     * prose alone — $388.00, the without-replacement agent fee, appears
+     * only on the cards. Both renderings of a whole-dollar amount are
+     * accepted, for the same reason the FAQ drift guard accepts both:
+     * formatSgd always emits cents, prose does not.
+     */
+    const pricing = builtPages().find((p) => p.file === 'dist/pricing/index.html')
+    expect(pricing, 'dist/pricing/index.html was not built').toBeDefined()
+
+    const distinct = [...new Set(amountsCents)]
+    expect(distinct.length, 'no figures in pricing.ts to look for').toBeGreaterThan(0)
+
+    // Tokenised, not substring-matched: `$70` is a substring of `$700.00`,
+    // and a guard that accepted that would pass on the wrong figure.
+    const printed = new Set(pricing!.text.match(dollarPattern) ?? [])
+    const missing = distinct
+      .map(formatSgd)
+      .filter((amount) => !printed.has(amount))
+      .filter((amount) => !(amount.endsWith('.00') && printed.has(amount.slice(0, -3))))
+    expect(missing).toEqual([])
   })
 })
 

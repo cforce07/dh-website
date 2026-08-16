@@ -59,6 +59,15 @@
  * fallback port, and a route that resolves to the wrong page. This is the
  * same class of defect as the compliance gate reading a stale build — a
  * check reporting on something other than what it claims to check.
+ *
+ * THE MARKER BORROWS A GUARANTEE FROM THE TEST SUITE (fix round 2, G-3).
+ * A <title> only identifies a route while titles are UNIQUE per page. That
+ * is enforced by tests/pages.test.ts's "every <title> is distinct", not by
+ * anything here — two routes sharing a title would let a mis-resolved route
+ * satisfy this preflight. The dependency runs the other way too and is
+ * noted at that assertion. If titles ever stop being unique, this needs a
+ * different marker (a per-route canonical URL is the obvious candidate)
+ * BEFORE that happens, not after.
  */
 import { spawn } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'

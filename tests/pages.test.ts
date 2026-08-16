@@ -208,6 +208,17 @@ describe('page metadata is unique across the site', () => {
   // Duplicate titles or descriptions across pages are a direct SEO defect
   // (spec §4 requires a distinct pair per page) and the exact thing that
   // happens when a new page is built by copying an existing one.
+  //
+  // SOMETHING ELSE DEPENDS ON THE TITLE ASSERTION (fix round 2, G-3).
+  // scripts/run-axe.mjs's preflight proves the preview server is serving
+  // OUR build of a given route by matching that route's <title> against the
+  // fetched body. That marker is only discriminating while titles are
+  // unique: two routes sharing one would let a mis-resolved route — a
+  // fallback port, a squatter, a bad rewrite — pass the preflight and be
+  // audited as though it were the right page. So relaxing the assertion
+  // below to a subset check, or dropping it for a page, silently weakens
+  // the accessibility run of every page on the site. Do not weaken it
+  // without giving run-axe.mjs a different marker first.
   it('every <title> is distinct', () => {
     const titles = pages.map((p) => p.html.match(/<title>([\s\S]*?)<\/title>/)?.[1].trim() ?? '')
     expect(new Set(titles).size).toBe(pages.length)
@@ -328,12 +339,27 @@ const APPROVED_DURATIONS = new Map<string, string>([
   ['2 week', 'spec §2.2 — a helper coming from a source country, after confirmation'],
   ['1 week', 'spec §2.2 — a transfer helper already in Singapore'],
   ['one month', "spec §2.3 — the placement fee, fixed at one month's salary"],
-  ['24 hour', 'src/data/company.ts openingHours — the footer, not a timeline'],
+  [
+    '24 hour',
+    'master brief, Opening Hours (line 345) — the stated availability, carried by company.ts openingHours into the footer. Not a timeline.',
+  ],
   [
     '1 business day',
-    'faq/response-time.md and faq/submit-requirements.md — the supplied response commitment. Renders on /faq, not on the two pages built so far.',
+    'master brief, Opening Hours (line 353), cited as §10/§74 by foundation spec §235 — "a target response within 1 business day", with an explicit instruction not to claim instant human response. Published in faq/response-time.md and faq/submit-requirements.md; renders on /faq.',
   ],
 ])
+
+/*
+ * Fix round 2, G-2. These strings exist so that the next person meeting a
+ * red here finds an AUTHORITY and can decide whether the new duration has
+ * one — so each must name the document that SUPPLIED the figure, never the
+ * file that publishes it. The '1 business day' entry cited
+ * faq/response-time.md, which is output: following it would have led to a
+ * page repeating the number rather than to the brief that authorised it,
+ * and "it already appears on the site" is precisely the reasoning this
+ * allowlist exists to refuse. Publication files are named after the
+ * authority, if at all, and never instead of it.
+ */
 
 /*
  * "2 business days" is deliberately NOT here. The only response figure
