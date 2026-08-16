@@ -30,7 +30,7 @@
  * text at y=40.
  */
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 
 /** Section files in the order src/pages/index.astro renders them. */
 const BLOCKS = [
@@ -135,6 +135,167 @@ function renderPositions(
     return { block: b.block, at }
   })
 }
+
+/* -------------------------------------------------------------------------
+ * THE PAGE REGISTER — read this before adding a page.
+ *
+ * Task 5B, G-5. Five core pages ship next: /find-your-helper,
+ * /why-directhired, /about, /faq and /contact. Their sequences are not
+ * invented here — nobody has designed them yet — but the SHAPE a page task
+ * has to fill in is settled now, before the pages exist, so that adding one
+ * is a list rather than an archaeology exercise.
+ *
+ * TO ADD A PAGE: write its block list in the same shape as PRICING_BLOCKS
+ * ({ block, path, selector }, in render order), add one entry to
+ * PAGE_SEQUENCES below, and that is all that is REQUIRED. Everything in
+ * "every registered page keeps the rhythm" then applies to it: the list is
+ * tied to the page it claims to describe, consecutive blocks may not share a
+ * ground, the brand wash appears at most once, and the list must account for
+ * every section the page renders.
+ *
+ * Then decide whether the page also wants its own describe stating its exact
+ * approved sequence, the way the homepage and /pricing do below. That is the
+ * assertion that makes a sequence a DECISION rather than merely a legal
+ * arrangement, and it is the one that cannot be written generically because
+ * the sequence is the design.
+ *
+ * WHY A REGISTER RATHER THAN A COPIED DESCRIBE. Both existing lists say "in
+ * the order <page> renders them", and renderPositions() exists because a
+ * review proved a list could be right about grounds and wrong about the
+ * page. A register makes that tie automatic: a list that is never registered
+ * is never tied, and an unregistered page is the failure this whole file is
+ * about. Nothing is derived from dist/ here on purpose — a ground is decided
+ * in source at author time, and this file's header says why it is asserted
+ * there.
+ *
+ * The two existing describes are unchanged and still run. They carry the
+ * per-page reasoning and the exact sequences; this carries the rules that
+ * hold for any page, including ones nobody has written yet.
+ * ---------------------------------------------------------------------- */
+
+interface PageSequence {
+  page: string
+  blocks: readonly { block: string; path: string; selector: string }[]
+}
+
+const PAGE_SEQUENCES: PageSequence[] = [
+  {
+    page: 'src/pages/index.astro',
+    // BLOCKS uses the `file` shorthand because every homepage block is a
+    // section component. Expanded to the `path` shape the register speaks,
+    // so a page task meets ONE shape rather than two.
+    blocks: BLOCKS.map((b) => ({
+      block: b.block,
+      path: `src/sections/${b.file}.astro`,
+      selector: b.selector,
+    })),
+  },
+  { page: 'src/pages/pricing.astro', blocks: PRICING_BLOCKS },
+  // --- Phase B: one entry per page, in the shape above. ---
+]
+
+/**
+ * Every section the page actually renders, as the register would name it:
+ * a section component by its file path, an inline <section> by
+ * `<page>:<selector>`.
+ *
+ * This is the direction renderPositions() does not cover. That function
+ * proves every LISTED block is on the page and in order; this proves the
+ * page has no section the list forgot — which is how a half-written list
+ * passes every other assertion in this file while describing half a page.
+ */
+function sectionsRenderedBy(page: string): string[] {
+  const source = stripComments(readFileSync(page, 'utf8'))
+  const sectionComponents = new Set(
+    readdirSync('src/sections')
+      .filter((f) => f.endsWith('.astro'))
+      .map((f) => f.replace('.astro', '')),
+  )
+  const components = [...source.matchAll(/<([A-Z][A-Za-z0-9]*)[\s/>]/g)]
+    .map((m) => m[1])
+    .filter((name) => sectionComponents.has(name))
+    .map((name) => `src/sections/${name}.astro`)
+  const inline = [...source.matchAll(/<section[^>]*class="([a-z0-9 -]+)"/g)].map(
+    (m) => `${page}:.${m[1].trim().split(/\s+/)[0]}`,
+  )
+  return [...new Set([...components, ...inline])]
+}
+
+describe.each(PAGE_SEQUENCES)('$page keeps the ground rhythm', ({ page, blocks }) => {
+  const grounds = blocks.map((b) => ({ ...b, ground: groundOfPath(b.path, b.selector) }))
+
+  it('reads a real list of blocks (guards the four assertions below)', () => {
+    // A page registered with an empty list would satisfy every rule here
+    // while asserting nothing about the page — the vacuous pass this file
+    // exists to refuse. A floor of one, not of "enough": the assertion that
+    // makes a list non-vacuous is the completeness check below, which forces
+    // it to name every section the page renders. A number here would only
+    // be a weaker restatement of that, and one somebody would have to guess
+    // for each new page.
+    expect(blocks.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('renders every block in its list, in the order the list gives', () => {
+    const positions = renderPositions(page, blocks)
+    const outOfOrder = positions.filter((p, i) => i > 0 && p.at < positions[i - 1].at)
+    expect(outOfOrder.map((p) => p.block)).toEqual([])
+  })
+
+  it('lists every section the page renders — nothing omitted', () => {
+    const listed = new Set(blocks.map((b) => (b.path === page ? `${page}:${b.selector}` : b.path)))
+    const unlisted = sectionsRenderedBy(page).filter((s) => !listed.has(s))
+    expect(unlisted).toEqual([])
+  })
+
+  it('never puts two consecutive blocks on the same ground', () => {
+    for (let i = 1; i < grounds.length; i += 1) {
+      expect(
+        grounds[i].ground,
+        `blocks ${grounds[i - 1].block} and ${grounds[i].block} share a ground`,
+      ).not.toBe(grounds[i - 1].ground)
+    }
+  })
+
+  it('grounds at most one section in the brand wash', () => {
+    // Per page, never site-wide: --color-surface-teal gives #00a4a6 real
+    // area without putting it behind text, and rarity WITHIN ONE SCROLL is
+    // what makes that register change land. Two on one page is wallpaper.
+    const teal = grounds.filter((g) => g.ground === '--color-surface-teal').map((g) => g.block)
+    expect(teal.length).toBeLessThanOrEqual(1)
+  })
+})
+
+describe('the page register covers the pages that exist', () => {
+  it('registers every page in src/pages', () => {
+    /*
+     * The register is only worth having if a new page cannot skip it. This
+     * is the assertion a Phase B page task will meet first: build the page,
+     * run the suite, and this fails until its sequence is written down.
+     *
+     * Deliberately NOT derived from dist/ — a page's ground rhythm is a
+     * source decision (see this file's header), and a page that fails to
+     * build should fail here too rather than quietly leave the register.
+     */
+    const walk = (dir: string): string[] =>
+      readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+        // Astro does not route anything prefixed with "_".
+        if (entry.name.startsWith('_')) return []
+        const full = `${dir}/${entry.name}`
+        return entry.isDirectory() ? walk(full) : [full]
+      })
+    const pageFiles = walk('src/pages').filter((f) => f.endsWith('.astro'))
+    const unregistered = pageFiles.filter((f) => !PAGE_SEQUENCES.some((s) => s.page === f))
+    expect(unregistered).toEqual([])
+  })
+
+  it('registers no page twice, and none that does not exist', () => {
+    const registered = PAGE_SEQUENCES.map((s) => s.page)
+    expect(new Set(registered).size).toBe(registered.length)
+    for (const page of registered) {
+      expect(() => readFileSync(page, 'utf8'), `${page} is registered but missing`).not.toThrow()
+    }
+  })
+})
 
 describe('the homepage ground sequence alternates', () => {
   const grounds = BLOCKS.map((b) => ({ ...b, ground: groundOf(b.file, b.selector) }))
