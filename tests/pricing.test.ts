@@ -22,7 +22,7 @@ describe('fly-in with replacement', () => {
       { label: 'MOM', amountCents: 7000 },
       { label: 'Insurance', amountCents: 42510 },
       { label: 'SIP', amountCents: 7700 },
-      { label: 'Medical', amountCents: 6000 },
+      { label: 'Medical checkup', amountCents: 6000 },
       { label: 'Handling & transport', amountCents: 12000 },
     ])
   })
@@ -196,7 +196,7 @@ describe('fly-in without replacement', () => {
       { label: 'MOM', amountCents: 7000 },
       { label: 'Insurance', amountCents: 42510 },
       { label: 'SIP', amountCents: 7700 },
-      { label: 'Medical', amountCents: 6000 },
+      { label: 'Medical checkup', amountCents: 6000 },
       { label: 'Handling & transport', amountCents: 12000 },
     ])
   })
@@ -233,6 +233,71 @@ describe('the two packages', () => {
     const strip = (p: typeof withReplacement) =>
       p.lineItems.filter((i) => i.label !== 'Agent fees')
     expect(strip(withoutReplacement)).toEqual(strip(withReplacement))
+  })
+})
+
+describe('the FAQ entries that reprint the breakdown use the same labels', () => {
+  /*
+   * Two markdown entries retype the package components in prose:
+   * fly-in-package.md lists all six with their amounts, and
+   * replacement-what-covered.md lists the five that recur on a
+   * replacement. Markdown cannot import pricing.ts, so those lists are
+   * unavoidable duplication and nothing held them to the data.
+   *
+   * The .astro surfaces are safe by construction — PricingCard prints the
+   * labels, and both ReplacementTerms.astro and pricing.astro DERIVE their
+   * component lists from `packages` — so renaming a label reaches every
+   * rendered surface automatically and silently leaves the two markdown
+   * copies behind. That is exactly what happened on 2026-08-16 when
+   * `Medical` became `Medical checkup` (spec §2.6.10), and it is why this
+   * exists: the cards would have said "Medical checkup" while the FAQ two
+   * screens down said "Medical", about the same $60.00 row.
+   *
+   * The same class of defect the amounts already have a guard for in
+   * tests/content.test.ts — a figure typed into markdown going stale
+   * against pricing.ts. This is the labels half of it.
+   */
+  const itemised = packages.filter((pkg) => pkg.kind === 'itemised')
+
+  const read = (file: string) => readFileSync(`src/content/faq/${file}`, 'utf8')
+
+  it('has itemised packages whose labels can be checked (sanity check)', () => {
+    // Both assertions below iterate labels, so an empty set would pass them
+    // on nothing.
+    expect(itemised.length).toBeGreaterThanOrEqual(1)
+    for (const pkg of itemised) {
+      if (pkg.kind !== 'itemised') throw new Error('unreachable')
+      expect(pkg.lineItems.length).toBeGreaterThanOrEqual(6)
+    }
+  })
+
+  it('the package breakdown entry names every line item exactly as the cards do', () => {
+    const content = read('fly-in-package.md')
+    for (const pkg of itemised) {
+      if (pkg.kind !== 'itemised') throw new Error('unreachable')
+      for (const { label } of pkg.lineItems) {
+        expect(content, `fly-in-package.md does not name "${label}" as pricing.ts spells it`)
+          .toContain(label)
+      }
+    }
+  })
+
+  it('the replacement entry names the recurring components, and not the agent fee', () => {
+    const content = read('replacement-what-covered.md')
+    const withRep = packages.find((p) => p.id === 'fly-in-with-replacement')
+    if (!withRep || withRep.kind !== 'itemised') throw new Error('unreachable')
+
+    // The same filter ReplacementTerms.astro applies to build its list, so
+    // the prose entry and the section a screen above it cannot disagree.
+    for (const { label } of withRep.lineItems.filter((i) => i.label !== 'Agent fees')) {
+      expect(content, `replacement-what-covered.md omits "${label}"`).toContain(label)
+    }
+    // "Our agent fee is not charged a second time" is the entry's point.
+    // Listing `Agent fees` among the recurring components would contradict
+    // the sentence directly beneath the list.
+    expect(content, 'the replacement entry lists the agent fee as recurring').not.toContain(
+      'Agent fees',
+    )
   })
 })
 

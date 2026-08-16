@@ -11,7 +11,7 @@ The fly-in package with replacement (**$1,640.10**) covers:
 - MOM — $70
 - Insurance — $425.10
 - SIP — $77
-- Medical — $60
+- Medical checkup — $60
 - Handling & transport — $120
 - 1 replacement within 6 months
 
