@@ -12,8 +12,27 @@ Generated status of missing content: `docs/INFORMATION-REQUIRED-BEFORE-PRODUCTIO
 
 | | What's needed | Why it blocks |
 |---|---|---|
-| **Replacement terms** | The detailed conditions behind "1 replacement within 6 months" | Category C. The site states the headline term and nothing else. Blocks the pricing page in sub-project 2. |
+| **Compliance sign-off on loan repayment** | Written confirmation that the repayment terms you gave us on 2026-08-16 may be published as-is | You told us repayment runs **1 to 7 months**, comes from the helper's **basic salary**, and that she receives **off-day compensation** during it. None of it is on the site. It describes a salary-deduction arrangement on a licensed agency's public website, in an area MOM regulates closely — so it waits for your sign-off rather than your say-so. A test now fails the build if any of it appears, in those words or paraphrased. |
 | **Production form URL** | The live URL for the employer requirement form | Every primary CTA points at `company.requirementFormUrl`, which 404s today. One constant, one edit — but nothing converts until it resolves. |
+
+### One question, and it needs only a yes or a no
+
+**Are these five facts the whole of your replacement terms?**
+
+1. You request it — no justification needed
+2. The only exclusion is a breach of the Employment Act or abuse of the helper
+3. One replacement, within 6 months of the deployment date
+4. You re-pay MOM, insurance, SIP, medical, handling & transport — **our agent fee is not charged again**
+5. Any outstanding loan balance from the replaced helper is subtracted from what you advance for the new one
+
+`/pricing` now publishes all five, so the checklist has stopped asking for
+"detailed replacement terms" — that item is closed. If your actual terms
+contain anything beyond these five — what happens if the replaced helper is
+already deployed, refund treatment, how long a replacement takes to arrange —
+**it is now nowhere on the site and nothing is asking for it.**
+
+That is the one direction this checklist must not fail in, which is why it is
+here as a question rather than quietly resolved.
 
 ---
 
