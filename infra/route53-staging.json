@@ -1,0 +1,14 @@
+{
+  "Comment": "staging.directhired.com -> preview distribution, plus its ACM validation CNAME (PERMANENT - ACM re-reads it to auto-renew).",
+  "Changes": [
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "_7d930ee30be0f0c791347cafd32cef84.staging.directhired.com.", "Type": "CNAME", "TTL": 300,
+        "ResourceRecords": [{ "Value": "_2e19a4956c282ca4481149ca9d38f38b.jkddzztszm.acm-validations.aws." }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "staging.directhired.com", "Type": "A",
+        "AliasTarget": { "HostedZoneId": "Z2FDTNDATAQYW2", "DNSName": "didceb5na1cjo.cloudfront.net", "EvaluateTargetHealth": false } } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "staging.directhired.com", "Type": "AAAA",
+        "AliasTarget": { "HostedZoneId": "Z2FDTNDATAQYW2", "DNSName": "didceb5na1cjo.cloudfront.net", "EvaluateTargetHealth": false } } }
+  ]
+}
