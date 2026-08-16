@@ -460,15 +460,63 @@ describe('the licence number, the registered entity and the UEN are never retype
     expect(offenders).toEqual([])
   })
 
+  /**
+   * The registered entity, in any spelling a human would type.
+   *
+   * THE OLD PATTERN WAS CASE-INSENSITIVE AND NOTHING ELSE, so it matched
+   * only the punctuated form. Hand-typing `Direct Hired Pte Ltd` — no full
+   * stops — into a rendered element scored 455/455 green, and that is not a
+   * contrived variant: it is the exact string company.ts's own docblock
+   * records the public search returning against licence 23C1443, which makes
+   * it the likeliest thing a writer copies in.
+   *
+   * DERIVED FROM company.registeredName, never re-typed here, so the guard
+   * cannot describe a name the site no longer publishes. Three relaxations,
+   * each for a spelling that is the same second copy:
+   *
+   *   full stops optional   PTE. LTD.  ·  PTE LTD
+   *   comma optional        Pte. Ltd.  ·  Pte., Ltd.
+   *   any gap, or none      Direct Hired  ·  DirectHired
+   *
+   * The last one cannot false-positive on the brand name alone: the pattern
+   * still requires PTE and LTD after it, and "DirectHired Pte Ltd" is a
+   * retyping of the entity by any reading.
+   */
+  const entityNeedle = new RegExp(
+    company.registeredName
+      .trim()
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      .replace(/\\\./g, '\\.?')
+      .replace(/\s+/g, '\\s*,?\\s*'),
+    'i',
+  )
+
+  it('the entity pattern reads every spelling of the name (guards the check below)', () => {
+    /*
+     * The assertion below is a negative one over a corpus that contains none
+     * of these, so a pattern that had quietly stopped matching would report
+     * nothing forever. These four spellings are asserted directly against the
+     * pattern instead — the punctuated form the site publishes, the
+     * unpunctuated form the public search returns, the title-cased form a
+     * writer reaches for, and the shouted unpunctuated one.
+     */
+    for (const spelling of [
+      'DIRECT HIRED PTE. LTD.',
+      'Direct Hired Pte Ltd',
+      'Direct Hired Pte. Ltd.',
+      'DIRECT HIRED PTE LTD',
+      'Direct Hired Pte., Ltd.',
+      'DirectHired Pte Ltd',
+    ]) {
+      expect(entityNeedle.test(`<dd class="record-value">${spelling}</dd>`), spelling).toBe(true)
+    }
+    // ...and it must not match the brand name, which is on every page.
+    expect(entityNeedle.test('DirectHired is a Singapore employment agency.')).toBe(false)
+  })
+
   it('no authored surface types the registered entity as a literal', () => {
-    // Case-insensitive: "Direct Hired Pte. Ltd." is the same second copy as
-    // the shouted form, and it is the spelling a writer reaches for.
-    const needle = new RegExp(
-      company.registeredName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'),
-      'i',
-    )
     const offenders = authoredSurfaces()
-      .filter(({ text }) => needle.test(text))
+      .filter(({ text }) => entityNeedle.test(text))
       .map(({ file }) => file)
     expect(offenders).toEqual([])
   })
