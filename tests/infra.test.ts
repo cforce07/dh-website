@@ -159,3 +159,85 @@ describe('directory index rewriting is unchanged', () => {
     expect(handler(event(uri, CANONICAL_HOST)).uri).toBe(expected)
   })
 })
+
+/*
+ * COST AND TLS GUARDS ON THE PRODUCTION DISTRIBUTION CONFIG.
+ *
+ * These assert a committed JSON file, not live AWS, so they cannot prove what
+ * is currently deployed — `aws cloudfront get-distribution-config` does that,
+ * and the runbook records the result. What they DO prevent is the config in
+ * this repository quietly regressing, which is how the deployed one would come
+ * to be wrong on the next `create-distribution`.
+ *
+ * The SSLSupportMethod case is the one with money attached. See its comment.
+ */
+describe('production distribution config', () => {
+  const dist = JSON.parse(readFileSync('infra/prod-distribution.json', 'utf8'))
+
+  /*
+   * `vip` provisions dedicated IP addresses at every CloudFront edge and bills
+   * roughly US$600 PER MONTH. `sni-only` is free and is supported by every
+   * browser released since about 2010.
+   *
+   * This is not a hypothetical. The PREVIEW distribution's live config carries
+   * `SSLSupportMethod: "vip"` to this day. It costs nothing there only because
+   * that distribution uses the default *.cloudfront.net certificate, and the
+   * field is inert until a CUSTOM certificate is attached. The production
+   * config was written by mirroring preview — so copying that one field
+   * without reading it would have started a $600/month charge silently, with
+   * no error and no warning, the moment the distribution deployed.
+   */
+  it('uses sni-only, never vip — vip costs ~US$600/month', () => {
+    expect(dist.ViewerCertificate.SSLSupportMethod).toBe('sni-only')
+  })
+
+  it('does not fall back to the default CloudFront certificate', () => {
+    expect(dist.ViewerCertificate.ACMCertificateArn).toMatch(
+      /^arn:aws:acm:us-east-1:\d+:certificate\//,
+    )
+  })
+
+  /*
+   * CloudFront reads certificates from us-east-1 ONLY, whatever region the
+   * origin bucket is in. Ours is in ap-southeast-1, which makes this an easy
+   * thing to "correct" wrongly.
+   */
+  it('takes its certificate from us-east-1, as CloudFront requires', () => {
+    expect(dist.ViewerCertificate.ACMCertificateArn).toContain(':us-east-1:')
+  })
+
+  it('requires a modern TLS floor', () => {
+    expect(dist.ViewerCertificate.MinimumProtocolVersion).toBe('TLSv1.2_2021')
+  })
+
+  /*
+   * PriceClass_100 is cheaper and would be a tempting cost saving. It excludes
+   * the Singapore edge locations entirely, so requests from the actual
+   * audience would be served from the US or Europe. That is the wrong trade
+   * for a Singapore agency whose LCP budget is 2.5s on mid-range Android.
+   */
+  it('keeps the price class that includes Singapore edges', () => {
+    expect(dist.PriceClass).toBe('PriceClass_200')
+  })
+
+  /*
+   * A private S3 origin behind OAC answers a missing key with 403, not 404,
+   * because CloudFront is granted s3:GetObject but not s3:ListBucket. Without
+   * this mapping, src/pages/404.astro never renders and crawlers see an
+   * access-denied page instead of a 404.
+   */
+  it('maps 403 and 404 to the built 404 page with a 404 status', () => {
+    const byCode = Object.fromEntries(
+      dist.CustomErrorResponses.Items.map((e: any) => [e.ErrorCode, e]),
+    )
+    for (const code of [403, 404]) {
+      expect(byCode[code]).toBeDefined()
+      expect(byCode[code].ResponsePagePath).toBe('/404.html')
+      expect(byCode[code].ResponseCode).toBe('404')
+    }
+  })
+
+  it('serves both hostnames', () => {
+    expect(dist.Aliases.Items.sort()).toEqual(['directhired.com', 'www.directhired.com'])
+  })
+})
