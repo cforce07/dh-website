@@ -1025,6 +1025,99 @@ describe('the /faq ground sequence alternates', () => {
   })
 })
 
+/**
+ * Every top-level or nested rule body a selector has in one file's <style>,
+ * in source order.
+ *
+ * groundOfPath() above reads ONE declaration out of ONE top-level rule,
+ * which is all a section ground needs. A measured layout fix can live inside
+ * an @media block and can share its selector with a rule outside one — both
+ * are true of `.presence` — so this returns every body and lets the caller
+ * say which it means.
+ *
+ * The leading `(?:^|[\s}])` is what keeps `.presence` from matching inside
+ * `.presence-copy`; the trailing `\s*\{` does the rest of that work, since a
+ * compound selector never ends at the brace.
+ */
+function ruleBodies(path: string, selector: string): string[] {
+  const css = stripComments(readFileSync(path, 'utf8'))
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return [...css.matchAll(new RegExp(`(?:^|[\\s}])${escaped}\\s*\\{([^}]*)\\}`, 'g'))].map((m) =>
+    m[1].replace(/\s+/g, ' ').trim(),
+  )
+}
+
+describe('the /about layout numbers that were measured in a browser', () => {
+  /*
+   * THE FIFTH DEFECT ON THIS PROJECT VISIBLE ONLY IN A BROWSER, and the
+   * reason this describe exists at all.
+   *
+   * Both fixes below were found by opening /about in real Chrome, and NEITHER
+   * was asserted anywhere. Reverting either scored 455/455 green — nothing in
+   * the suite referenced `presence`, `about-address`, `20ch`, `record-row` or
+   * `tenet` at all. A measurement that cost a browser session to take and
+   * that no test can see is a measurement that comes back the first time
+   * somebody tidies the stylesheet.
+   *
+   * These are static source assertions for this file's standing reason (see
+   * its header): a max-width and a grid geometry are both decided at author
+   * time, and a jsdom re-measurement would only be as trustworthy as its
+   * layout engine. The rendered numbers behind them were taken in real Chrome
+   * and are recorded in src/pages/about.astro beside the declarations.
+   */
+  const ABOUT = 'src/pages/about.astro'
+
+  it('reads real rule bodies out of the page (guards both assertions below)', () => {
+    // A reader that returned nothing would make both checks below fail
+    // loudly rather than pass quietly, but a reader that returned the WRONG
+    // rule would not — `.presence` and `.presence-copy` are one character
+    // apart and both exist. So the shapes are pinned here.
+    expect(ruleBodies(ABOUT, '.presence')).toHaveLength(2)
+    expect(ruleBodies(ABOUT, '.presence-copy')).toHaveLength(1)
+    expect(ruleBodies(ABOUT, '.about-company h1')).toHaveLength(1)
+  })
+
+  it("holds the <h1> at 20ch, not the 16-18ch the other page heroes use", () => {
+    /*
+     * MEASURED, NOT CHOSEN. This headline is one 45-character sentence. At
+     * 18ch — and a fortiori at the 16ch a tidy-up reaches for, which is the
+     * revert the review ran — it breaks to THREE lines in Chrome at 1280 with
+     * "DirectHired" alone on the first, which reads as a label above a
+     * heading rather than as the sentence it is. 20ch (819px at
+     * --size-h1's 64px) breaks it once,
+     * after "Singapore", and holds at 1920 because the display size does not
+     * grow past 1280.
+     *
+     * The value is asserted rather than a range, because the range is the
+     * thing that is wrong: 16ch and 18ch are both inside "what the other
+     * heroes use" and both produce the orphan. Re-measure if --size-h1
+     * changes, and change this line in the same commit.
+     */
+    expect(ruleBodies(ABOUT, '.about-company h1')[0]).toContain('max-width: 20ch')
+  })
+
+  it('gives the Singapore block a second column at tablet and up', () => {
+    /*
+     * MEASURED, NOT CHOSEN. Single-column, the brand wash ran 546px tall at
+     * 1280 with all of its content in the left 60% and nothing beside it —
+     * which made the one section on this page that spends the brand ground
+     * look like the one section that had nothing to put in it. The address is
+     * a fact rather than a sentence, so it takes the second column.
+     *
+     * `minmax(0, 1fr)` on the first track is load-bearing and not decoration:
+     * a bare `1fr` cannot shrink below its content's min-content width, so a
+     * long unbroken string in the prose column pushes the row wider than the
+     * container. Asserted with the geometry it belongs to.
+     *
+     * The nested rule, not the top-level one — `.presence` exists in both,
+     * and the top-level rule carries only the single-column stack.
+     */
+    const nested = ruleBodies(ABOUT, '.presence')[1]
+    expect(nested).toContain('grid-template-columns: minmax(0, 1fr) 20rem')
+    expect(nested).toContain('align-items: start')
+  })
+})
+
 describe("block 07's crossbar connects the two uprights", () => {
   const source = stripComments(read('TwoSidedMatch'))
 

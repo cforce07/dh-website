@@ -404,6 +404,11 @@ const description =
      * than as the sentence it is. 20ch (819px at --size-h1's 64px) breaks
      * it once, after "Singapore", and holds at 1920 because the display
      * size does not grow past 1280. Re-measure if --size-h1 changes.
+     *
+     * ASSERTED in tests/section-rhythm.test.ts. Reverting this line to 16ch
+     * used to score 455/455 green — nothing in the suite read `20ch` at all —
+     * which is how a number that cost a browser session comes back. Change
+     * the test in the same commit as the value, or not at all.
      */
     max-width: 20ch;
     font-family: var(--font-display);
@@ -663,7 +668,11 @@ const description =
 
     /* Prose left, the address right. `minmax(0, 1fr)` on the first track
        lets it shrink below its content's min-content width instead of
-       pushing the row wider than the container. */
+       pushing the row wider than the container.
+
+       ASSERTED in tests/section-rhythm.test.ts. Deleting this rule returned
+       the block to the measured 546px with its content in the left 60% and
+       scored 455/455 green — nothing in the suite read `presence` at all. */
     .presence {
       grid-template-columns: minmax(0, 1fr) 20rem;
       column-gap: var(--space-12);
