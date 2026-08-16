@@ -368,9 +368,22 @@ describe('conditional block content-cache guard', () => {
 
     // The derived child classes are what replaced two dead literals, so an
     // empty list would put the same hole back.
+    //
+    // FIX ROUND, F-4. The directory line read
+    // `expect(entriesIn(block.directory)).toBeDefined()`.
+    // readdirSync().filter() always returns an array, so that assertion
+    // could not fail; it worked only as an implicit "the directory exists"
+    // check, via the exception readdirSync throws on a missing path — which
+    // is not what it read as, and would have surfaced as an error rather
+    // than as a failed expectation. The property it was reaching for is
+    // stated directly instead, because the emptiness check further down
+    // (`entriesIn(s.directory).length === 0`) is only meaningful if the
+    // directory the collection is derived from is really there: a
+    // mis-derived path would otherwise read as "empty collection" and make
+    // the whole guard vacuously green.
     for (const block of found) {
       expect(block.ownClasses.length, `${block.file} contributed no distinctive classes`).toBeGreaterThan(2)
-      expect(entriesIn(block.directory)).toBeDefined()
+      expect(existsSync(block.directory), `${block.directory} does not exist`).toBe(true)
     }
   })
 
