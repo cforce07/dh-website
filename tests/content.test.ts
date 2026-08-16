@@ -217,8 +217,15 @@ describe('services', () => {
 describe('faq categories', () => {
   // Task 1 (core-pages): `category` groups /faq's grouped layout. Required,
   // no default — a default would let a miscategorised entry silently land
-  // in the wrong bucket. This table is the source of truth for the six
-  // existing entries; it must fail loudly if an entry's category drifts.
+  // in the wrong bucket. This table is the source of truth for every
+  // entry; it must fail loudly if an entry's category drifts.
+  //
+  // Task 3 added the eight entries below the rule. The table is exhaustive
+  // BY DESIGN — `toEqual` on the directory listing means a new entry
+  // cannot be dropped into src/content/faq without someone stating its
+  // category here, which is the only reason this assertion catches
+  // anything. Extend it when the collection grows; do not relax it to a
+  // subset check.
   const EXPECTED_CATEGORIES: Record<string, string> = {
     'cost.md': 'cost',
     'fly-in-package.md': 'cost',
@@ -226,9 +233,18 @@ describe('faq categories', () => {
     'how-matching-works.md': 'process',
     'new-vs-transfer.md': 'sources',
     'submit-requirements.md': 'process',
+    // --- Task 3 (core-pages), authored from design spec §2 ---
+    'helper-loan-placement-fee.md': 'cost',
+    'insurance.md': 'cost',
+    'how-long-does-it-take.md': 'process',
+    'response-time.md': 'process',
+    'medical-examination.md': 'process',
+    'direct-hire-processing.md': 'process',
+    'replacement-six-months.md': 'replacement',
+    'replacement-what-covered.md': 'replacement',
   }
 
-  it('has the six current entries, each carrying the category from the table', () => {
+  it('has the 14 current entries, each carrying the category from the table', () => {
     const files = readdirSync('src/content/faq')
     expect(files.sort()).toEqual(Object.keys(EXPECTED_CATEGORIES).sort())
 
