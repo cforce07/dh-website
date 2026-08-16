@@ -275,12 +275,68 @@ describe('the licence number, the registered entity and the UEN are never retype
    * up BY, so a second copy that drifts by one character does not merely
    * misstate the company, it points at a different one or at nothing.
    *
-   * src/data/company.ts is the single definition, and it is excluded by not
-   * being walked at all rather than by a filter: this sweep reads the four
-   * markup directories and src/content, which is the corpus that can put a
-   * value in front of a visitor. src/data and src/lib are deliberately
-   * outside it, exactly as tests/content.test.ts's renderedCopy() leaves
-   * them out for the same reason.
+   * ---------------------------------------------------------------------
+   * THE CORPUS, AND WHY IT IS NO LONGER THE FOUR MARKUP DIRECTORIES ALONE.
+   * ---------------------------------------------------------------------
+   *
+   * This sweep used to read src/components, src/sections, src/layouts,
+   * src/pages and src/content, and its own comment claimed that was "the
+   * corpus that can put a value in front of a visitor", with src/lib and
+   * src/data deliberately outside it. THAT CLAIM WAS FALSE, and the /about
+   * review proved it by measurement rather than by argument: adding
+   *
+   *     identifier: 'MOM Employment Agency Licence 23C1443',
+   *     legalName:  'Direct Hired Pte. Ltd.',
+   *
+   * to employmentAgencySchema() in src/lib/structured-data.ts scored 455/455
+   * green. That function's JSON-LD ships on the homepage TODAY, and spec §3.2
+   * puts EmploymentAgency structured data on /contact — so the one un-swept
+   * file was exactly the file the next task edits. A literal there is worse
+   * than one in a page, not better: it reaches Google rather than a reader,
+   * so nobody ever sees it rendered and nobody ever re-checks it.
+   *
+   * INCLUDED, and what each one is:
+   *
+   *   src/components, src/sections, src/layouts, src/pages — markup.
+   *   src/content/**.md — copy that becomes markup.
+   *   src/lib/*.ts       — the modules that BUILD strings the pages emit:
+   *                        structured-data.ts writes JSON-LD, whatsapp.ts
+   *                        builds the message a visitor sends, nav.ts builds
+   *                        the labels in the header.
+   *   src/data/*.ts      — except company.ts. pricing.ts's package names and
+   *                        line-item labels and images.ts's exported strings
+   *                        are rendered copy that merely happens to live in
+   *                        a data module.
+   *   public/**          — text files only. Everything in public/ is served
+   *                        verbatim at the site root; robots.txt is already
+   *                        asserted to derive its host from company.ts, which
+   *                        settles that public/ is a surface. Fonts and other
+   *                        binaries are filtered by extension rather than
+   *                        read, since they cannot carry a legible literal.
+   *
+   * EXCLUDED, on the record so the next reader does not have to re-derive it:
+   *
+   *   src/data/company.ts — the single definition. Excluded by not being
+   *                        walked rather than by a filter.
+   *   src/data/images.json — a provenance registry with no field that becomes
+   *                        visitor copy; every string in it is `provenance`,
+   *                        `renderedAt`, `depicts`, `notes` or
+   *                        `aiForbiddenReason`. It is documentation in data
+   *                        form — the JSON analogue of the comments this
+   *                        sweep already strips — and its one mention of the
+   *                        licence is inside a prohibition ABOUT that licence
+   *                        ("a claim about a real, licensed business (MOM
+   *                        23C1443) that is simply false"). JSON has no
+   *                        comment syntax to strip it with.
+   *   scripts/           — build and deploy tooling. Nothing under it is
+   *                        served or rendered. generate-info-required.mjs
+   *                        writes a client checklist, which is a document.
+   *   docs/              — and this is the load-bearing exclusion.
+   *                        docs/OPEN-DECISIONS.md must state the entity name
+   *                        and the UEN verbatim, because it is the document
+   *                        that asked DirectHired to confirm them. A sweep
+   *                        that reached docs/ would forbid asking the
+   *                        question.
    */
   function walk(dir: string): string[] {
     return readdirSync(dir).flatMap((entry) => {
@@ -290,15 +346,34 @@ describe('the licence number, the registered entity and the UEN are never retype
   }
 
   /**
-   * Comments stripped: both values are explained in prose above the markup
-   * that renders them, and company.ts's own docblock quotes the licence. A
-   * rule explained next to the code obeying it must not read as a breach.
+   * Comments stripped: all three values are explained in prose above the
+   * markup that renders them, and company.ts's own docblock quotes every one
+   * of them. A rule explained next to the code obeying it must not read as a
+   * breach.
+   *
+   * BLOCK COMMENTS ONLY — `//` line comments are deliberately left in place,
+   * including in the .ts files this sweep now reads. A naive `//` stripper
+   * deletes everything after the `//` in `https://…`, so a literal typed
+   * after a URL on the same line would be erased from the text this sweep
+   * searches. Hiding a retyped licence number is the one failure mode this
+   * file cannot afford, and the cost of not stripping is small: a `//`
+   * comment mentioning one of these values fails here, and the fix is to
+   * write it as a block comment, which is this repo's convention for an
+   * explanation of any length anyway.
    */
   const sourceText = (file: string) =>
     readFileSync(file, 'utf8')
       .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
       .replace(/\/\*[\s\S]*?\*\//g, ' ')
       .replace(/<!--[\s\S]*?-->/g, ' ')
+
+  /**
+   * Files under public/ that could carry a legible literal. Fonts and any
+   * other binary are filtered out by extension rather than read as utf8 —
+   * a woff2 read as text is noise, and noise in a negative sweep is how a
+   * false positive arrives.
+   */
+  const PUBLIC_TEXT = /\.(txt|xml|json|webmanifest|svg|html)$/
 
   /** Every file that can put one of these values in front of a visitor. */
   function authoredSurfaces(): { file: string; text: string }[] {
@@ -309,7 +384,17 @@ describe('the licence number, the registered entity and the UEN are never retype
     const markdown = walk('src/content')
       .filter((f) => f.endsWith('.md'))
       .map((file) => ({ file, text: readFileSync(file, 'utf8') }))
-    return [...markup, ...markdown]
+    // The modules that build strings the pages emit. company.ts is the
+    // single definition and is excluded by name; images.json is excluded by
+    // the .ts filter, which is also what the header says about it.
+    const modules = ['src/lib', 'src/data']
+      .flatMap(walk)
+      .filter((f) => f.endsWith('.ts') && f !== 'src/data/company.ts')
+      .map((file) => ({ file, text: sourceText(file) }))
+    const served = walk('public')
+      .filter((f) => PUBLIC_TEXT.test(f))
+      .map((file) => ({ file, text: readFileSync(file, 'utf8') }))
+    return [...markup, ...markdown, ...modules, ...served]
   }
 
   function builtPages(): { file: string; text: string }[] {
@@ -323,6 +408,30 @@ describe('the licence number, the registered entity and the UEN are never retype
     expect(files.length).toBeGreaterThanOrEqual(20)
     expect(files).toContain('src/sections/TrustBar.astro')
     expect(files).toContain('src/pages/why-directhired.astro')
+    // The corpus extension, named file by file. Every assertion below is a
+    // negative one, so a walk that quietly stopped covering src/lib would
+    // reopen the exact hole this extension closed and report nothing.
+    expect(files).toContain('src/lib/structured-data.ts')
+    expect(files).toContain('src/data/pricing.ts')
+    expect(files).toContain('public/robots.txt')
+  })
+
+  it('does not sweep the single definition, or documentation, or tooling', () => {
+    /*
+     * The other half of the corpus decision, asserted rather than left to a
+     * comment. company.ts quotes all three values and is the source of all
+     * three; docs/OPEN-DECISIONS.md states the entity name and the UEN
+     * verbatim because it is the file that asked DirectHired to confirm
+     * them; images.json quotes the licence inside a prohibition about that
+     * licence. If any of the three ever entered the corpus, the sweep would
+     * fail on a file that is right — and the temptation would be to weaken
+     * the rule rather than to fix the corpus.
+     */
+    const files = authoredSurfaces().map((s) => s.file)
+    expect(files).not.toContain('src/data/company.ts')
+    expect(files).not.toContain('src/data/images.json')
+    expect(files.some((f) => f.startsWith('docs/'))).toBe(false)
+    expect(files.some((f) => f.startsWith('scripts/'))).toBe(false)
   })
 
   it('all three values really are published (the checks below have a subject)', () => {
