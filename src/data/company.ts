@@ -40,6 +40,25 @@ export const company = {
   // and verify it against the official MOM source before publication.
   momLicence: '23C1443',
 
+  // The registered entity the licence above is held in — supplied with that
+  // licence for /about, which master brief §45 requires to be about the
+  // COMPANY rather than a personal-founder brand. It is the one credential
+  // on that page that names the legal person a family is actually dealing
+  // with, and it appears nowhere else on the site.
+  //
+  // MASTER BRIEF §70'S RULE FOR THE LICENCE NUMBER APPLIES TO THIS WITH IT:
+  // never invent, modify, guess or substitute it, and verify it against the
+  // official MOM source before publication. Half-verified today — a public
+  // search returns "Direct Hired Pte Ltd" against licence 23C1443, which
+  // corroborates the NAME, but MOM's own directory entry was not reachable
+  // from this environment, so the exact registered FORM (capitalisation, and
+  // the two full stops) rests on the value as supplied. DirectHired is asked
+  // to confirm it in docs/OPEN-DECISIONS.md.
+  //
+  // No UEN. Nobody has supplied one, and a company registration number is
+  // not a thing to derive from a licence number.
+  registeredName: 'DIRECT HIRED PTE. LTD.',
+
   // The form is built but not yet wired to the production domain.
   // This is the ONLY definition of the destination. Repoint here at launch.
   requirementFormUrl: 'https://www.directhired.com/employer-requirement',

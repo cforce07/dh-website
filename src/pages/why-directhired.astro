@@ -100,8 +100,17 @@ import { defaultWhatsappUrl } from '../lib/whatsapp'
 const whatsappHref = defaultWhatsappUrl()
 
 const title = 'Why DirectHired — Understand First, Recommend Second'
+/*
+ * Task 8. The licence number was a LITERAL here — '23C1443' typed into the
+ * meta description while the credentials block below read the same value
+ * from company.ts. Two copies of a regulator-issued identifier, and the
+ * copy in the <head> is the one nobody re-checks because nobody sees it
+ * rendered. Master brief §70 forbids modifying or substituting this value,
+ * and a second copy is how a modification happens by halves. Resolved from
+ * the single definition, and guarded site-wide in tests/company.test.ts.
+ */
 const description =
-  'Why families choose DirectHired: a licensed Singapore maid agency (MOM licence 23C1443) ' +
+  `Why families choose DirectHired: a licensed Singapore maid agency (MOM licence ${company.momLicence}) ` +
   'that understands your household before recommending a helper, with both packages itemised.'
 ---
 

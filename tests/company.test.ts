@@ -17,6 +17,15 @@ describe('company data', () => {
     expect(company.placementCount).toBe('500+')
   })
 
+  it('carries the MOM licence and the entity it is held in', () => {
+    // Master brief §70: never invent, modify, guess or substitute the
+    // licence. Pinning it here means a stray edit to src/data/company.ts —
+    // the one file the "never retyped" sweep below deliberately exempts —
+    // still has to be a deliberate change to two files.
+    expect(company.momLicence).toBe('23C1443')
+    expect(company.registeredName).toBe('DIRECT HIRED PTE. LTD.')
+  })
+
   it('exposes exactly one requirement-form URL', () => {
     expect(company.requirementFormUrl).toMatch(/^https?:\/\//)
   })
@@ -215,6 +224,105 @@ describe('the placement count is published that way on EVERY surface', () => {
     // literal typed into a page is how a revision half-lands.
     const offenders = authoredSurfaces()
       .filter(({ text }) => /\b\d[\d,]*\+\s*(?:placement|helper|famil|client|customer)/i.test(text))
+      .map(({ file }) => file)
+    expect(offenders).toEqual([])
+  })
+})
+
+describe('the licence number and the registered entity are never retyped', () => {
+  /*
+   * Task 8. The placement count has had a "never retyped" sweep since G-2,
+   * for a good reason: it was revised once and a literal on a page is how a
+   * revision half-lands. THE LICENCE NUMBER HAD NONE, and it is the value
+   * master brief §70 is strictest about — "never invent, modify, guess or
+   * substitute", verified against MOM's own source before publication.
+   *
+   * It was already retyped when this was written: src/pages/why-directhired
+   * .astro's meta description carried the literal '23C1443' while the same
+   * page's credentials block read it from company.ts. Two copies of a
+   * regulator-issued identifier, one of them invisible in the rendered page
+   * and therefore the one nobody would re-check. Fixed in the same commit as
+   * this guard.
+   *
+   * The registered entity joins it because /about publishes it and because
+   * it has the same property: one authoritative source, no reason for a
+   * second copy, and a typo in it is a misstatement about a legal person.
+   *
+   * src/data/company.ts is the single definition, and it is excluded by not
+   * being walked at all rather than by a filter: this sweep reads the four
+   * markup directories and src/content, which is the corpus that can put a
+   * value in front of a visitor. src/data and src/lib are deliberately
+   * outside it, exactly as tests/content.test.ts's renderedCopy() leaves
+   * them out for the same reason.
+   */
+  function walk(dir: string): string[] {
+    return readdirSync(dir).flatMap((entry) => {
+      const full = join(dir, entry).split('\\').join('/')
+      return statSync(full).isDirectory() ? walk(full) : [full]
+    })
+  }
+
+  /**
+   * Comments stripped: both values are explained in prose above the markup
+   * that renders them, and company.ts's own docblock quotes the licence. A
+   * rule explained next to the code obeying it must not read as a breach.
+   */
+  const sourceText = (file: string) =>
+    readFileSync(file, 'utf8')
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/<!--[\s\S]*?-->/g, ' ')
+
+  /** Every file that can put one of these values in front of a visitor. */
+  function authoredSurfaces(): { file: string; text: string }[] {
+    const markup = ['src/components', 'src/sections', 'src/layouts', 'src/pages']
+      .flatMap(walk)
+      .filter((f) => f.endsWith('.astro'))
+      .map((file) => ({ file, text: sourceText(file) }))
+    const markdown = walk('src/content')
+      .filter((f) => f.endsWith('.md'))
+      .map((file) => ({ file, text: readFileSync(file, 'utf8') }))
+    return [...markup, ...markdown]
+  }
+
+  function builtPages(): { file: string; text: string }[] {
+    return walk('dist')
+      .filter((f) => f.endsWith('.html'))
+      .map((file) => ({ file, text: readFileSync(file, 'utf8') }))
+  }
+
+  it('sweeps real surfaces (guards the sweep itself)', () => {
+    const files = authoredSurfaces().map((s) => s.file)
+    expect(files.length).toBeGreaterThanOrEqual(20)
+    expect(files).toContain('src/sections/TrustBar.astro')
+    expect(files).toContain('src/pages/why-directhired.astro')
+  })
+
+  it('the licence really is published (the checks below have a subject)', () => {
+    // A guard against retyping a value nothing prints would be green
+    // forever and mean nothing. The trust bar carries the licence on every
+    // page; the registered entity is published by /about alone, and its
+    // equivalent assertion lands with that page.
+    const pages = builtPages()
+    expect(pages.some((p) => p.text.includes(company.momLicence))).toBe(true)
+  })
+
+  it('no authored surface types the licence number as a literal', () => {
+    const offenders = authoredSurfaces()
+      .filter(({ text }) => text.includes(company.momLicence))
+      .map(({ file }) => file)
+    expect(offenders).toEqual([])
+  })
+
+  it('no authored surface types the registered entity as a literal', () => {
+    // Case-insensitive: "Direct Hired Pte. Ltd." is the same second copy as
+    // the shouted form, and it is the spelling a writer reaches for.
+    const needle = new RegExp(
+      company.registeredName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'),
+      'i',
+    )
+    const offenders = authoredSurfaces()
+      .filter(({ text }) => needle.test(text))
       .map(({ file }) => file)
     expect(offenders).toEqual([])
   })
