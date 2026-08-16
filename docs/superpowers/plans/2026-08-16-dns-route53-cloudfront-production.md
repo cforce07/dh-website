@@ -4,21 +4,33 @@
 
 **Goal:** Serve the built Astro site at `https://www.directhired.com` from a new private S3 + CloudFront production stack, with DNS authority moved from Exabytes to AWS Route 53 and Google Workspace mail carried across untouched.
 
-**Architecture:** A new `directhired-website-prod` bucket in `ap-southeast-1`, private and reachable only through Origin Access Control, sits behind a new CloudFront distribution carrying an ACM certificate from `us-east-1` and both hostnames as aliases. The existing shared `directhired-directory-index` viewer-request function gains a host-guarded 301 from the apex to `www`, placed above its directory-index logic. A Route 53 hosted zone replaces the Exabytes zone, using ALIAS records — the only legal way to point a zone apex at CloudFront — and copies the single Google `MX` record verbatim. The nameserver change at Exabytes is the last step and the only public-facing one.
+**Architecture:** DNS authority moves **first**, as a no-op: the initial Route 53 zone reproduces exactly what Exabytes serves today, so the nameserver change alters no answer a resolver can see. Everything afterwards — certificate validation, and the go-live switch itself — happens inside Route 53, under direct control, on short TTLs. A new `directhired-website-prod` bucket in `ap-southeast-1`, private behind Origin Access Control, sits under a new CloudFront distribution carrying an ACM certificate from `us-east-1` and both hostnames as aliases. The shared `directhired-directory-index` viewer-request function gains a host-guarded 301 from apex to `www`. Go-live is one atomic Route 53 batch swapping the placeholder `A` records for CloudFront ALIAS records.
 
 **Tech Stack:** AWS CLI v2 (profile `directhired`, account `354918409802`), Amazon S3, CloudFront (+ CloudFront Functions, `cloudfront-js-2.0`), AWS Certificate Manager, Route 53, Astro 5 static build, Vitest, Bash.
 
 **Spec:** `docs/superpowers/specs/2026-08-16-dns-route53-cloudfront-production-design.md`
 
+## Why this order (supersedes the spec's §7.1)
+
+The spec sequences the nameserver flip **last**, so that flip both moves DNS and takes the site live. This plan inverts it. The spec's decisions (§3) are unchanged; only the ordering is.
+
+Two reasons, either sufficient:
+
+1. **`docs/OPEN-DECISIONS.md` lists launch blockers that are still open** — compliance sign-off on the loan repayment terms, and a production form URL, without which every primary CTA 404s. Publishing the site is therefore *not* today's goal; having the infrastructure ready to publish is. Coupling the two into one event would publish a site its own checklist says is not ready.
+2. **Go-live becomes controllable.** Under the spec's order, publication rides on a `.com` delegation change with a 48-hour tail nobody can shorten. Here, publication is a Route 53 record swap on a 300-second TTL, atomic and revertible in five minutes.
+
+The 48-hour delegation tail still exists — it now lands on the step where both nameserver sets return **identical answers**, so it is undetectable. The risk is moved to where it costs nothing.
+
 ## Global Constraints
 
+- **The initial Route 53 zone is a byte-identical copy of what Exabytes serves**, with one deliberate exception: web-record TTLs are lowered to 300 so the go-live swap propagates quickly. A TTL affects only how long an answer is cached, never the answer.
 - **The ACM certificate MUST be requested in `us-east-1`.** CloudFront reads certificates from that region only, regardless of the origin bucket's region.
 - **`SSLSupportMethod` MUST be `sni-only`.** `vip` provisions dedicated IPs and bills approximately **US$600/month**. The preview distribution's inert `vip` value must not be copied.
 - **`MinimumProtocolVersion` MUST be `TLSv1.2_2021`.**
-- **The `MX` record is copied verbatim: `1 smtp.google.com`, TTL 3600.** It is the domain's entire mail configuration.
+- **The `MX` record is copied verbatim: `1 smtp.google.com`, TTL 3600.** It is the domain's entire mail configuration and the only record here with no cheap undo.
 - **No `TXT`, `SPF`, `DKIM`, `DMARC` or `CAA` record is created.** Spec §8 (decision D-E). The only `TXT`-adjacent records added are ACM's validation `CNAME`s.
 - **The apex host test in the CloudFront Function MUST be an exact equality match**, never a suffix or substring test, so `www.directhired.com` and `didceb5na1cjo.cloudfront.net` never match.
-- **Nothing at Exabytes is deleted or cancelled during this work**, and the hosting must remain live for at least one week after the nameserver flip (spec §7.3).
+- **Nothing at Exabytes is deleted or cancelled during this work.** Under this ordering the hosting at `103.7.9.45` serves live traffic *through the new zone* until Task 10, so it must stay up until at least one week after go-live.
 - **Existing resource identifiers** (verified 2026-08-16): preview bucket `directhired-website-preview`, preview distribution `EQFX1V1KHG4IS` (`didceb5na1cjo.cloudfront.net`), OAC `E2JJP00VJVN9QQ`, function `directhired-directory-index`, cache policy `658327ea-f89d-4fab-a63d-7e88639e58f6` (CachingOptimized), response headers policy `67f7725c-6f97-4210-82d7-5512b31e9d03` (Managed-SecurityHeadersPolicy), CloudFront's fixed ALIAS hosted-zone ID `Z2FDTNDATAQYW2`.
 - **Old Exabytes nameservers, for rollback:** `ns135.sgcloudhosting.cloud`, `ns136.sgcloudhosting.cloud`.
 
@@ -27,36 +39,38 @@
 | File | Responsibility |
 |---|---|
 | `infra/cloudfront-directory-index.js` | *Modified.* The single viewer-request function shared by both distributions. Gains the apex→www 301 above the existing directory-index rewrite. |
-| `tests/infra.test.ts` | *Created.* Executes the function source in-process and asserts both the redirect and the preserved rewrite behaviour, plus that the redirect target cannot drift from `company.siteUrl`. |
+| `tests/infra.test.ts` | *Created.* Executes the function source in-process; asserts the redirect, the preserved rewrite behaviour, and that the redirect target cannot drift from `company.siteUrl`. |
 | `scripts/deploy-cloudfront-function.sh` | *Modified.* New positive and negative redirect test cases; invalidates both distributions. |
-| `scripts/deploy-production.sh` | *Created.* Gated build, two-pass cache-control sync to the prod bucket, invalidation, typed confirmation prompt. |
-| `infra/prod-distribution.json` | *Created.* The distribution configuration, kept in the repo so the deployed shape is reviewable and reproducible. |
-| `infra/prod-bucket-policy.json` | *Created.* The OAC bucket policy, scoped by `AWS:SourceArn`. |
-| `docs/runbooks/2026-08-16-dns-cutover.md` | *Created.* Resource identifiers, the Exabytes zone backup, the verification checklist and the rollback procedure. Appended to as tasks complete. |
-| `docs/OPEN-DECISIONS.md` | *Modified.* Records email hardening as an outstanding task. |
+| `scripts/deploy-production.sh` | *Created.* Gated build, two-pass cache-control sync, invalidation, typed confirmation prompt. |
+| `infra/prod-distribution.json` | *Created.* Distribution configuration, kept in-repo so the deployed shape is reviewable. |
+| `infra/prod-bucket-policy.json` | *Created.* OAC bucket policy, scoped by `AWS:SourceArn`. |
+| `infra/route53-zone-initial.json` | *Created.* The verbatim record copy applied in Task 1. |
+| `infra/route53-golive.json` | *Created.* The atomic go-live batch applied in Task 10. |
+| `docs/runbooks/2026-08-16-dns-cutover.md` | *Created.* Identifiers, zone backup, verification results, rollback. Appended to as tasks complete. |
+| `docs/OPEN-DECISIONS.md` | *Modified.* Records email hardening as outstanding, and go-live as a pending trigger. |
 
-**Task dependency order.** Task 1 starts the certificate clock and its wait overlaps Tasks 2–3. Task 4 needs Task 1 issued plus Task 3. Tasks 5–6 need Task 4. Task 7 gates Task 9. Task 8 needs Task 4.
+**Dependency order.** Tasks 1–2 move DNS (invisible). Task 3 starts the certificate clock; Tasks 4–5 run during its wait. Task 6 needs Task 3 issued plus Task 5. Tasks 7–8 need Task 6. Task 9 gates Task 10. Task 10 is go-live and may be deferred indefinitely.
 
 ---
 
-### Task 1: Back up the Exabytes zone and request the certificate
+### Task 1: Route 53 zone — a verbatim copy of today
 
-Started first because certificate issuance is the longest-latency item on the critical path. Tasks 2 and 3 proceed while it validates.
+Creating the zone changes nothing publicly; the domain is still delegated to Exabytes throughout this task.
 
 **Files:**
-- Create: `docs/runbooks/2026-08-16-dns-cutover.md`
+- Create: `docs/runbooks/2026-08-16-dns-cutover.md`, `infra/route53-zone-initial.json`
 
 **Interfaces:**
 - Consumes: nothing
-- Produces: `CERT_ARN` — the ACM certificate ARN, an `arn:aws:acm:us-east-1:354918409802:certificate/<uuid>` string used by Task 4.
+- Produces: `ZONE_ID`, and the four Route 53 nameservers used in Task 2.
 
 - [ ] **Step 1: Export the Exabytes zone (human action)**
 
-In the Exabytes client area / cPanel **Zone Editor** for `directhired.com`, export or screenshot the complete record list. Save the raw text into the runbook created in Step 2.
+In **cPanel → Zone Editor → Manage** for `directhired.com`, export or copy the complete record list.
 
-This is insurance, not ceremony. A zone transfer is refused to the public, so records can only be found by guessing names. The spec's §2.1 inventory is thorough but cannot prove a negative — a verification `TXT` for some third-party service would be invisible to it.
+This is insurance. A zone transfer is refused to the public, so records can only be found by guessing names. The spec's §2.1 inventory is thorough but cannot prove a negative — a verification `TXT` for some third-party service would be invisible to it. **If the export shows any record not in the table below, stop and tell me before continuing.**
 
-- [ ] **Step 2: Create the runbook with the measured starting state**
+- [ ] **Step 2: Create the runbook**
 
 Create `docs/runbooks/2026-08-16-dns-cutover.md`:
 
@@ -65,6 +79,7 @@ Create `docs/runbooks/2026-08-16-dns-cutover.md`:
 
 Date: 2026-08-16
 Spec: `docs/superpowers/specs/2026-08-16-dns-route53-cloudfront-production-design.md`
+Plan: `docs/superpowers/plans/2026-08-16-dns-route53-cloudfront-production.md`
 
 ## Rollback (read this first)
 
@@ -76,9 +91,14 @@ Set the domain's nameservers at Exabytes back to:
 The old zone is intact — nothing at Exabytes is deleted or cancelled by this
 work. Propagation applies in reverse, up to 48h for the `.com` delegation TTL.
 
-**Do not cancel Exabytes DNS or hosting until at least 2026-08-23.** Resolvers
-still holding the old delegation reach the domain — including its mail — only
-through those nameservers.
+**After go-live (Task 10), the faster rollback is a Route 53 record swap, not a
+nameserver change:** re-point the apex and `www` A records at `103.7.9.45`.
+TTL is 300, so that takes effect in five minutes.
+
+**Do not cancel Exabytes DNS or hosting until at least one week after go-live.**
+Under this ordering `103.7.9.45` serves live traffic through the new zone until
+Task 10, and resolvers still holding the old delegation reach the domain —
+including its mail — only through the old nameservers.
 
 ## Starting state (authoritative, measured 2026-08-16)
 
@@ -105,17 +125,181 @@ PASTE THE EXPORT HERE
 | Resource | Value |
 |---|---|
 | AWS account | `354918409802` |
-| Certificate ARN | _(Task 1)_ |
+| Route 53 hosted zone ID | _(Task 1)_ |
+| Route 53 nameservers | _(Task 1)_ |
+| Certificate ARN | _(Task 3)_ |
 | Prod bucket | `directhired-website-prod` (`ap-southeast-1`) |
-| Prod distribution ID | _(Task 4)_ |
-| Prod distribution domain | _(Task 4)_ |
-| Route 53 hosted zone ID | _(Task 8)_ |
-| Route 53 nameservers | _(Task 8)_ |
+| Prod distribution ID | _(Task 6)_ |
+| Prod distribution domain | _(Task 6)_ |
 ```
 
-- [ ] **Step 3: Request the certificate**
+- [ ] **Step 3: Create the hosted zone**
 
-Run:
+```bash
+ZONE_ID=$(aws route53 create-hosted-zone \
+  --name directhired.com \
+  --caller-reference "directhired-2026-08-16-01" \
+  --hosted-zone-config Comment="DirectHired production" \
+  --profile directhired \
+  --query 'HostedZone.Id' --output text | sed 's|/hostedzone/||')
+echo "$ZONE_ID"
+
+aws route53 get-hosted-zone --id "$ZONE_ID" --profile directhired \
+  --query 'DelegationSet.NameServers' --output table
+```
+
+Expected: a zone ID, and four `ns-*.awsdns-*.{com,net,org,co.uk}` nameservers. Record all five in the runbook — **the four nameservers are what goes into Exabytes in Task 2.**
+
+- [ ] **Step 4: Write the verbatim record copy**
+
+Create `infra/route53-zone-initial.json`:
+
+```json
+{
+  "Comment": "Verbatim copy of the Exabytes zone as measured 2026-08-16. Web TTLs lowered to 300 so the go-live swap propagates quickly; every VALUE is unchanged.",
+  "Changes": [
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "directhired.com", "Type": "A", "TTL": 300,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "www.directhired.com", "Type": "CNAME", "TTL": 300,
+        "ResourceRecords": [{ "Value": "directhired.com" }] } },
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "directhired.com", "Type": "MX", "TTL": 3600,
+        "ResourceRecords": [{ "Value": "1 smtp.google.com" }] } },
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "mail.directhired.com", "Type": "CNAME", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "directhired.com" }] } },
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "webmail.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "cpanel.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "ftp.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "autodiscover.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "autoconfig.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } }
+  ]
+}
+```
+
+The six cPanel names are reproduced rather than dropped, even though spec D-B retires them. Dropping them here would make the Task 2 nameserver change a *behaviour* change, and the entire safety argument for flipping first is that it is not one. They are removed in Task 10, once nothing depends on being able to compare the two zones.
+
+- [ ] **Step 5: Apply**
+
+```bash
+aws route53 change-resource-record-sets --hosted-zone-id "$ZONE_ID" \
+  --change-batch "file://infra/route53-zone-initial.json" --profile directhired \
+  --query 'ChangeInfo.{Id:Id,Status:Status}' --output table
+```
+
+Expected: a change ID with status `PENDING`.
+
+- [ ] **Step 6: Prove the new zone answers identically to the old one**
+
+This is the gate on Task 2. The zone is not yet delegated, so a normal resolver still answers from Exabytes — querying each nameserver **by name** compares them directly.
+
+```bash
+NS_AWS=$(aws route53 get-hosted-zone --id "$ZONE_ID" --profile directhired \
+  --query 'DelegationSet.NameServers[0]' --output text)
+NS_OLD="ns135.sgcloudhosting.cloud"
+
+for Q in "MX directhired.com" "A directhired.com" "CNAME www.directhired.com"; do
+  set -- $Q
+  echo "--- $1 $2 ---"
+  echo -n "  exabytes: "; nslookup -type=$1 $2 $NS_OLD | tail -4 | tr -s ' \n' ' '; echo
+  echo -n "  route53 : "; nslookup -type=$1 $2 $NS_AWS | tail -4 | tr -s ' \n' ' '; echo
+done
+```
+
+Expected: the two lines agree on every value for all three queries. TTLs may differ — that is the deliberate exception in Step 4.
+
+**The `MX` comparison is the one that matters.** It must read preference `1`, exchange `smtp.google.com`. If it does not, fix the zone before Task 2 — flipping delegation with a wrong `MX` takes email down, and it is the only step here with no cheap undo.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add docs/runbooks/2026-08-16-dns-cutover.md infra/route53-zone-initial.json
+git commit -m "Route 53 zone: verbatim copy of the Exabytes zone, verified record by record"
+```
+
+---
+
+### Task 2: Nameserver change — the invisible flip
+
+Every answer is already identical (Task 1, Step 6), so this changes *who* replies, not *what* they reply.
+
+**Files:**
+- Modify: `docs/runbooks/2026-08-16-dns-cutover.md`
+
+**Interfaces:**
+- Consumes: the four Route 53 nameservers (Task 1)
+- Produces: `directhired.com` delegated to Route 53
+
+- [ ] **Step 1: Change the nameservers at Exabytes (human action)**
+
+In the Exabytes **domain management** area — *not* the Zone Editor — replace:
+
+```
+ns135.sgcloudhosting.cloud
+ns136.sgcloudhosting.cloud
+```
+
+with the four Route 53 nameservers from Task 1. Enter all four.
+
+**Change nothing else. Do not cancel or delete the hosting, the DNS zone, or the domain.** `103.7.9.45` still serves the site through the new zone, and resolvers on the old delegation still need the old zone.
+
+- [ ] **Step 2: Confirm the registry has the change**
+
+```bash
+nslookup -type=NS directhired.com 8.8.8.8
+```
+
+Expected: the four `ns-*.awsdns-*` servers. Typically 5–60 minutes. Re-run until it changes; a stale answer is a cache, not a failure.
+
+- [ ] **Step 3: Confirm nothing visibly changed**
+
+```bash
+nslookup -type=MX directhired.com 8.8.8.8
+nslookup -type=MX directhired.com 1.1.1.1
+curl -sS -o /dev/null -w 'site %{http_code}\n' https://www.directhired.com/
+```
+
+Expected: `MX` returns `1 smtp.google.com` from both resolvers; the site returns `200` and still shows the placeholder. **Anything else means roll back** (runbook, top).
+
+- [ ] **Step 4: Send and receive a real test message (human action)**
+
+Send a message **to** `hello@directhired.com` from an outside address and confirm arrival. Reply **from** it and confirm the reply arrives.
+
+DNS answers prove the record; only a delivered message proves mail. Record the result in the runbook.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add docs/runbooks/2026-08-16-dns-cutover.md
+git commit -m "Delegation moved to Route 53; mail and site verified unchanged"
+```
+
+---
+
+### Task 3: Certificate
+
+Now that Route 53 is authoritative, validation records are ours to create — no Exabytes involvement.
+
+**Files:**
+- Modify: `docs/runbooks/2026-08-16-dns-cutover.md`
+
+**Interfaces:**
+- Consumes: `ZONE_ID` (Task 1)
+- Produces: `CERT_ARN` — `arn:aws:acm:us-east-1:354918409802:certificate/<uuid>`, used by Task 6.
+
+- [ ] **Step 1: Request the certificate**
 
 ```bash
 CERT_ARN=$(aws acm request-certificate \
@@ -127,11 +311,11 @@ CERT_ARN=$(aws acm request-certificate \
 echo "$CERT_ARN"
 ```
 
-Expected: an ARN of the form `arn:aws:acm:us-east-1:354918409802:certificate/<uuid>`. Record it in the runbook's identifier table.
+Expected: an ARN. Record it in the runbook.
 
-- [ ] **Step 4: Read the two validation records**
+- [ ] **Step 2: Read the validation records**
 
-ACM populates `ResourceRecord` a few seconds after the request, so this may return `None` on the first attempt. Re-run until both rows have values.
+ACM populates `ResourceRecord` a few seconds after the request, so this may return `None` first. Re-run until both rows have values.
 
 ```bash
 aws acm describe-certificate --certificate-arn "$CERT_ARN" \
@@ -140,49 +324,57 @@ aws acm describe-certificate --certificate-arn "$CERT_ARN" \
   --output table
 ```
 
-Expected: two rows — one for `directhired.com`, one for `www.directhired.com` — each with a `_<token>.…` name and a `_<token>.acm-validations.aws.` value.
+Expected: two rows, each with a `_<token>.…` name and a `_<token>.acm-validations.aws.` value.
 
-Record both pairs in the runbook. **Task 8 recreates them in Route 53**; omitting them there breaks automatic renewal silently, roughly eleven months later, and the first symptom is a browser TLS error in production.
+- [ ] **Step 3: Create them in Route 53**
 
-- [ ] **Step 5: Add both validation records at Exabytes (human action)**
+Write `/tmp/validation.json`, substituting the four values from Step 2:
 
-In the Exabytes Zone Editor add two `CNAME` records, using the exact `Name` and `Value` from Step 4. TTL 300 if the panel allows a choice.
+```json
+{
+  "Comment": "ACM validation records. PERMANENT - ACM re-reads these to auto-renew.",
+  "Changes": [
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "VALIDATION_NAME_1", "Type": "CNAME", "TTL": 300,
+        "ResourceRecords": [{ "Value": "VALIDATION_VALUE_1" }] } },
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "VALIDATION_NAME_2", "Type": "CNAME", "TTL": 300,
+        "ResourceRecords": [{ "Value": "VALIDATION_VALUE_2" }] } }
+  ]
+}
+```
 
-⚠️ **Do not query these names before creating them.** The zone's SOA minimum TTL is 86400, so an `NXDOMAIN` observed now can be cached for 24 hours and stall validation for a day.
+```bash
+aws route53 change-resource-record-sets --hosted-zone-id "$ZONE_ID" \
+  --change-batch "file:///tmp/validation.json" --profile directhired \
+  --query 'ChangeInfo.Status' --output text
+```
 
-Some panels append the zone name automatically. If so, enter only the portion of the record name **before** `.directhired.com`. Verify after saving that the resulting record is not doubled (`_x.directhired.com.directhired.com`).
+**These records are permanent, not temporary.** ACM re-reads them to renew the certificate automatically. Deleting them after issuance breaks renewal silently, roughly eleven months later, and the first symptom is a browser TLS error in production.
 
-- [ ] **Step 6: Wait for issuance**
-
-Run:
+- [ ] **Step 4: Wait for issuance**
 
 ```bash
 aws acm wait certificate-validated --certificate-arn "$CERT_ARN" \
   --region us-east-1 --profile directhired && echo ISSUED
 ```
 
-Expected: `ISSUED`, typically within 5–30 minutes. The command polls and exits non-zero on timeout; re-run it if it times out while the records are correct.
+Expected: `ISSUED`, typically 5–30 minutes. The command polls and exits non-zero on timeout; re-run it if the records are correct.
 
-**Proceed to Tasks 2 and 3 while this runs.** Only Task 4 is blocked on it.
+**Proceed to Tasks 4 and 5 while this runs.** Only Task 6 is blocked on it.
 
-If it stalls beyond ~30 minutes, verify the record resolves:
-
-```bash
-nslookup -type=CNAME <validation-name> 8.8.8.8
-```
-
-- [ ] **Step 7: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add docs/runbooks/2026-08-16-dns-cutover.md
-git commit -m "Runbook: zone backup, starting state and certificate request"
+git commit -m "Runbook: certificate requested and validated via Route 53"
 ```
 
 ---
 
-### Task 2: apex → www redirect in the shared CloudFront Function
+### Task 4: apex → www redirect in the shared CloudFront Function
 
-Pure local work with a real test cycle. No AWS calls — publishing happens in Task 6, after the production distribution exists.
+Pure local work with a real test cycle. No AWS calls; publishing happens in Task 8.
 
 **Files:**
 - Modify: `infra/cloudfront-directory-index.js`
@@ -190,7 +382,7 @@ Pure local work with a real test cycle. No AWS calls — publishing happens in T
 
 **Interfaces:**
 - Consumes: `company.siteUrl` from `src/data/company.ts` (value `https://www.directhired.com`)
-- Produces: `handler(event)` in `infra/cloudfront-directory-index.js` — returns a **response object** `{statusCode, statusDescription, headers}` for apex requests, and the **mutated request object** for every other host, exactly as before.
+- Produces: `handler(event)` — returns a **response object** `{statusCode, statusDescription, headers}` for apex requests, and the **mutated request object** for every other host, exactly as before.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -306,9 +498,7 @@ Expected: FAIL. The apex cases fail because `handler` currently returns the requ
 
 - [ ] **Step 3: Add the redirect to the function**
 
-In `infra/cloudfront-directory-index.js`, extend the header comment and insert the redirect at the top of `handler`, **above** the existing `uri.endsWith('/')` check.
-
-Append to the file's existing block comment:
+In `infra/cloudfront-directory-index.js`, append to the existing block comment:
 
 ```
  * APEX REDIRECT. The distribution serving directhired.com carries both
@@ -325,7 +515,7 @@ Append to the file's existing block comment:
  * target still agrees with company.siteUrl.
 ```
 
-Then the code:
+Then replace `handler` with:
 
 ```js
 function handler(event) {
@@ -387,7 +577,7 @@ Expected: PASS, all cases.
 
 Run: `npm test`
 
-Expected: PASS. The suite builds `dist/` once in `tests/global-setup.ts`; this task changes nothing Astro renders, so no other suite should move.
+Expected: PASS. This task changes nothing Astro renders, so no other suite should move.
 
 - [ ] **Step 6: Commit**
 
@@ -398,18 +588,18 @@ git commit -m "Apex 301 to www in the shared viewer-request function"
 
 ---
 
-### Task 3: Production bucket
+### Task 5: Production bucket
 
 **Files:**
 - Modify: `docs/runbooks/2026-08-16-dns-cutover.md`
 
 **Interfaces:**
 - Consumes: nothing
-- Produces: bucket `directhired-website-prod` in `ap-southeast-1`, private, empty. Its regional endpoint `directhired-website-prod.s3.ap-southeast-1.amazonaws.com` is the origin domain used in Task 4.
+- Produces: bucket `directhired-website-prod` in `ap-southeast-1`, private and empty. Its regional endpoint `directhired-website-prod.s3.ap-southeast-1.amazonaws.com` is the origin domain used in Task 6.
 
 - [ ] **Step 1: Create the bucket**
 
-`ap-southeast-1` is not `us-east-1`, so `LocationConstraint` is required — omitting it creates the bucket in the wrong region or errors.
+`ap-southeast-1` is not `us-east-1`, so `LocationConstraint` is required.
 
 ```bash
 aws s3api create-bucket \
@@ -423,8 +613,6 @@ Expected: JSON containing `"Location"`.
 
 - [ ] **Step 2: Block all public access**
 
-The bucket is served only through OAC. Public access is blocked outright rather than merely unused.
-
 ```bash
 aws s3api put-public-access-block \
   --bucket directhired-website-prod \
@@ -433,7 +621,7 @@ aws s3api put-public-access-block \
   --profile directhired
 ```
 
-- [ ] **Step 3: Verify the posture**
+- [ ] **Step 3: Verify**
 
 ```bash
 aws s3api get-public-access-block --bucket directhired-website-prod --profile directhired
@@ -444,8 +632,6 @@ Expected: all four block flags `true`; `LocationConstraint` is `ap-southeast-1`.
 
 - [ ] **Step 4: Record and commit**
 
-Fill the prod bucket row in the runbook's identifier table, then:
-
 ```bash
 git add docs/runbooks/2026-08-16-dns-cutover.md
 git commit -m "Runbook: production bucket created and locked down"
@@ -453,21 +639,21 @@ git commit -m "Runbook: production bucket created and locked down"
 
 ---
 
-### Task 4: Production distribution and its bucket policy
+### Task 6: Production distribution and its bucket policy
 
-Blocked on Task 1 reporting `ISSUED` and on Task 3.
+Blocked on Task 3 reporting `ISSUED` and on Task 5.
 
 **Files:**
 - Create: `infra/prod-distribution.json`, `infra/prod-bucket-policy.json`
 - Modify: `docs/runbooks/2026-08-16-dns-cutover.md`
 
 **Interfaces:**
-- Consumes: `CERT_ARN` (Task 1), bucket `directhired-website-prod` (Task 3)
-- Produces: `PROD_DIST_ID` (a 13–14 character ID like `E1A2B3C4D5E6F7`) and `PROD_DIST_DOMAIN` (`d<hash>.cloudfront.net`), both used by Tasks 5, 6, 7 and 8.
+- Consumes: `CERT_ARN` (Task 3), bucket `directhired-website-prod` (Task 5)
+- Produces: `PROD_DIST_ID` and `PROD_DIST_DOMAIN` (`d<hash>.cloudfront.net`), used by Tasks 7, 8, 9 and 10.
 
 - [ ] **Step 1: Write the distribution configuration**
 
-Create `infra/prod-distribution.json`. Replace `REPLACE_WITH_CERT_ARN` with the Task 1 value before use.
+Create `infra/prod-distribution.json`:
 
 ```json
 {
@@ -551,7 +737,9 @@ Create `infra/prod-distribution.json`. Replace `REPLACE_WITH_CERT_ARN` with the 
 }
 ```
 
-The `403 → /404.html` mapping is the load-bearing one. A private S3 origin behind OAC is granted `s3:GetObject` but not `s3:ListBucket`, so S3 answers a missing key with `403 AccessDenied` rather than `404 NoSuchKey`. Without this, `src/pages/404.astro` never renders however correct it is, and search engines see an access-denied page instead of a 404.
+The `403 → /404.html` mapping is load-bearing. A private S3 origin behind OAC is granted `s3:GetObject` but not `s3:ListBucket`, so S3 answers a missing key with `403 AccessDenied` rather than `404 NoSuchKey`. Without it, `src/pages/404.astro` never renders however correct it is, and search engines see an access-denied page instead of a 404.
+
+Adding the aliases now is safe: the DNS records still point at `103.7.9.45`, so nothing routes here until Task 10.
 
 - [ ] **Step 2: Create the distribution**
 
@@ -564,9 +752,7 @@ aws cloudfront create-distribution \
   --query 'Distribution.{Id:Id,Domain:DomainName,Status:Status}' --output table
 ```
 
-Expected: an `Id`, a `d<hash>.cloudfront.net` domain, `Status: InProgress`.
-
-Export them:
+Expected: an `Id`, a `d<hash>.cloudfront.net` domain, `Status: InProgress`. Export both:
 
 ```bash
 PROD_DIST_ID=<the Id>
@@ -586,7 +772,7 @@ Expected: `"SSLSupportMethod": "sni-only"`, `"MinimumProtocolVersion": "TLSv1.2_
 
 - [ ] **Step 4: Write and apply the bucket policy**
 
-Create `infra/prod-bucket-policy.json`, replacing `REPLACE_WITH_DIST_ID`:
+Create `infra/prod-bucket-policy.json`:
 
 ```json
 {
@@ -626,8 +812,6 @@ Expected: `DEPLOYED`, typically 5–15 minutes.
 
 - [ ] **Step 6: Record and commit**
 
-Fill the distribution rows in the runbook, then:
-
 ```bash
 git add infra/prod-distribution.json infra/prod-bucket-policy.json docs/runbooks/2026-08-16-dns-cutover.md
 git commit -m "Production CloudFront distribution and OAC bucket policy"
@@ -635,19 +819,19 @@ git commit -m "Production CloudFront distribution and OAC bucket policy"
 
 ---
 
-### Task 5: Production deploy script and first deploy
+### Task 7: Production deploy script and first deploy
 
 **Files:**
 - Create: `scripts/deploy-production.sh`
 - Modify: `docs/runbooks/2026-08-16-dns-cutover.md`
 
 **Interfaces:**
-- Consumes: `PROD_DIST_ID` (Task 4)
+- Consumes: `PROD_DIST_ID` (Task 6)
 - Produces: the built site in `s3://directhired-website-prod/`
 
 - [ ] **Step 1: Write the script**
 
-Create `scripts/deploy-production.sh`. Replace `REPLACE_WITH_DIST_ID` with the Task 4 value.
+Create `scripts/deploy-production.sh`, replacing `REPLACE_WITH_DIST_ID`.
 
 The cache-control split is copied deliberately from `deploy-preview.sh`, including its `*.html` exclusion — that script's comment explains that `index.html` as a pattern matches only the root key and would leave every other page cached `immutable` for a year, unreachable by any invalidation.
 
@@ -720,7 +904,7 @@ echo "    Invalidation takes a minute or two to complete."
 
 Run: `printf 'no\n' | bash scripts/deploy-production.sh`
 
-Expected: `Aborted. Nothing was changed.` and exit status 1. Nothing is built and nothing is uploaded. Confirm with:
+Expected: `Aborted. Nothing was changed.` and exit status 1. Confirm nothing uploaded:
 
 ```bash
 aws s3 ls "s3://directhired-website-prod/" --profile directhired
@@ -730,7 +914,7 @@ Expected: no output — the bucket is still empty.
 
 - [ ] **Step 3: Deploy**
 
-Run: `bash scripts/deploy-production.sh` and type `deploy production` at the prompt.
+Run: `bash scripts/deploy-production.sh` and type `deploy production`.
 
 Expected: the gated build succeeds, two sync passes run, an invalidation ID prints.
 
@@ -757,18 +941,18 @@ git commit -m "Production deploy script, with a typed confirmation gate"
 
 ---
 
-### Task 6: Publish the function and extend its deploy gate
+### Task 8: Publish the function and extend its deploy gate
 
 **Files:**
 - Modify: `scripts/deploy-cloudfront-function.sh`
 
 **Interfaces:**
-- Consumes: `PROD_DIST_ID` (Task 4), the function source from Task 2
+- Consumes: `PROD_DIST_ID` (Task 6), the function source from Task 4
 - Produces: the redirect live on both distributions
 
 - [ ] **Step 1: Extend the deploy script**
 
-In `scripts/deploy-cloudfront-function.sh`, replace the single `DIST_ID` variable with both distributions, replacing `REPLACE_WITH_DIST_ID`:
+Replace the single `DIST_ID` variable with both distributions:
 
 ```bash
 FN_NAME="directhired-directory-index"
@@ -797,7 +981,7 @@ check_redirect() { # uri, host, expected-location
 }
 ```
 
-The existing `check()` calls send no `host` header, which would now take the non-apex path and behave as before — but relying on an absent header to select a code path is exactly the kind of accident this suite exists to catch. Update `check()` to send a host explicitly:
+The existing `check()` calls send no `host` header. They would still pass — an empty host fails to match the apex branch — but relying on an *absent* header to select a code path is exactly the kind of accident this suite exists to catch. Update `check()` to send one explicitly:
 
 ```bash
 check() { # uri, expected-rewritten-uri
@@ -814,19 +998,19 @@ check() { # uri, expected-rewritten-uri
 }
 ```
 
-Add these cases after the existing ones, keeping the file's habit of explaining why a case exists:
+Add these cases after the existing ones:
 
 ```bash
-# The apex redirect. The negative cases below are the important half: this
-# one function serves the preview distribution too, and a host test that
-# matched by suffix would redirect www to itself forever.
+# The apex redirect. The negative case below is the important half: this one
+# function serves the preview distribution too, and a host test that matched
+# by suffix would redirect www to itself forever.
 check_redirect "/"        "directhired.com" "https://www.directhired.com/"
 check_redirect "/pricing" "directhired.com" "https://www.directhired.com/pricing"
 
 check "/pricing"          "/pricing/index.html"   # www: rewritten, never redirected
 ```
 
-Finally, invalidate both distributions instead of one:
+Finally, invalidate both distributions:
 
 ```bash
 echo
@@ -838,9 +1022,9 @@ for D in "$PREVIEW_DIST_ID" "$PROD_DIST_ID"; do
 done
 ```
 
-- [ ] **Step 2: Associate the function with the production distribution**
+- [ ] **Step 2: Confirm the production association**
 
-Already done — `infra/prod-distribution.json` includes the `FunctionAssociations` block, so the production distribution runs the function from creation. No action; confirm with:
+Already configured in `infra/prod-distribution.json`. Confirm:
 
 ```bash
 aws cloudfront get-distribution-config --id "$PROD_DIST_ID" --profile directhired \
@@ -853,7 +1037,7 @@ Expected: `Quantity: 1`, the `directhired-directory-index` ARN, `viewer-request`
 
 Run: `bash scripts/deploy-cloudfront-function.sh`
 
-Expected: every `check` and `check_redirect` line prints `ok`, then the function publishes to LIVE and both distributions are invalidated. **If any line prints `FAIL`, the script exits without publishing and the live function is unchanged** — fix the source and re-run.
+Expected: every `check` and `check_redirect` line prints `ok`, then the function publishes to LIVE and both distributions are invalidated. **If any line prints `FAIL`, the script exits without publishing and the live function is unchanged.**
 
 - [ ] **Step 4: Confirm the preview distribution is unharmed**
 
@@ -875,17 +1059,17 @@ git commit -m "Function deploy gate covers the apex redirect; invalidate both di
 
 ---
 
-### Task 7: Verify against the real hostname, before any DNS changes
+### Task 9: Verify under the real hostnames — the gate on go-live
 
-The gate on Task 9. Everything is proven under the production hostnames while the public DNS still points at Exabytes.
+Everything is proven under the production hostnames while public DNS still points at `103.7.9.45`.
 
-`curl --connect-to` opens the connection to the CloudFront endpoint while sending the real SNI and `Host` header — so this exercises the certificate, the aliases, the redirect and the error mapping exactly as a browser will, with **no `hosts` file edit and no administrator rights**.
+`curl --connect-to` opens the connection to the CloudFront endpoint while sending the real SNI and `Host` header — exercising the certificate, the aliases, the redirect and the error mapping exactly as a browser will, with **no `hosts` file edit and no administrator rights**.
 
 **Files:**
 - Modify: `docs/runbooks/2026-08-16-dns-cutover.md`
 
 **Interfaces:**
-- Consumes: `PROD_DIST_DOMAIN` (Task 4)
+- Consumes: `PROD_DIST_DOMAIN` (Task 6)
 - Produces: a recorded pass/fail checklist
 
 - [ ] **Step 1: Certificate and canonical host**
@@ -946,7 +1130,7 @@ curl -sS -w '\nstatus=%{http_code}\n' \
 
 Expected: `status=404`, and the body is the site's own 404 page — not CloudFront's XML `AccessDenied`.
 
-- [ ] **Step 6: Security headers and cache headers**
+- [ ] **Step 6: Security and cache headers**
 
 ```bash
 curl -sSI --connect-to "www.directhired.com:443:$CF:443" https://www.directhired.com/ \
@@ -962,55 +1146,52 @@ Expected: `strict-transport-security: max-age=31536000`, `x-content-type-options
 
 - [ ] **Step 7: Record the results and commit**
 
-Paste the outputs into the runbook under a "Pre-flip verification" heading.
+Paste the outputs into the runbook under "Pre-go-live verification".
 
-**Do not begin Task 9 unless every check above passed.**
+**Task 10 must not begin unless every check above passed.**
 
 ```bash
 git add docs/runbooks/2026-08-16-dns-cutover.md
-git commit -m "Runbook: pre-flip verification against the production hostnames"
+git commit -m "Runbook: production stack verified under the real hostnames"
 ```
 
 ---
 
-### Task 8: Route 53 hosted zone
+### Task 10: Go live
 
-Creating the zone changes nothing publicly — the domain is still delegated to Exabytes. The zone is built and verified before it is ever authoritative.
+**This is the only step the public sees, and it is deliberately separable from everything above.** Infrastructure is complete and verified after Task 9; this task may run immediately or weeks later.
+
+**Hold until `docs/OPEN-DECISIONS.md` "Blocks launch" is clear** — compliance sign-off on the loan repayment terms, and a production form URL, without which every primary CTA 404s. That is a business decision, not a technical one. The infrastructure does not care when it is taken.
 
 **Files:**
-- Modify: `docs/runbooks/2026-08-16-dns-cutover.md`
+- Create: `infra/route53-golive.json`
+- Modify: `docs/runbooks/2026-08-16-dns-cutover.md`, `docs/OPEN-DECISIONS.md`
 
 **Interfaces:**
-- Consumes: `PROD_DIST_DOMAIN` (Task 4), the two validation record pairs (Task 1)
-- Produces: `ZONE_ID`, and the four Route 53 nameservers used in Task 9
+- Consumes: `ZONE_ID` (Task 1), `PROD_DIST_DOMAIN` (Task 6)
+- Produces: `https://www.directhired.com` serving the Astro site
 
-- [ ] **Step 1: Create the hosted zone**
+- [ ] **Step 1: Confirm the site is ready to be public (human decision)**
 
-```bash
-ZONE_ID=$(aws route53 create-hosted-zone \
-  --name directhired.com \
-  --caller-reference "directhired-2026-08-16-01" \
-  --hosted-zone-config Comment="DirectHired production" \
-  --profile directhired \
-  --query 'HostedZone.Id' --output text | sed 's|/hostedzone/||')
-echo "$ZONE_ID"
+Re-read the "Blocks launch" table in `docs/OPEN-DECISIONS.md`. Proceed only if it is clear, or if you are knowingly accepting what remains. Record which.
 
-aws route53 get-hosted-zone --id "$ZONE_ID" --profile directhired \
-  --query 'DelegationSet.NameServers' --output table
-```
+- [ ] **Step 2: Write the atomic swap**
 
-Expected: a zone ID, and four `ns-*.awsdns-*.{com,net,org,co.uk}` nameservers. Record all five in the runbook — **the nameservers are what you paste into Exabytes in Task 9.**
+Create `infra/route53-golive.json`, substituting `PROD_DIST_DOMAIN`. Route 53 applies a change batch atomically — there is no instant where the apex resolves nowhere.
 
-- [ ] **Step 2: Write the record change batch**
-
-Create `/tmp/records.json`. Substitute `PROD_DIST_DOMAIN` and both validation pairs from the runbook.
-
-`Z2FDTNDATAQYW2` is CloudFront's fixed hosted-zone ID for ALIAS targets — it is the same for every CloudFront distribution in every account, and is not the zone created in Step 1.
+`Z2FDTNDATAQYW2` is CloudFront's fixed hosted-zone ID for ALIAS targets. It is the same for every CloudFront distribution in every account, and is **not** the zone from Task 1.
 
 ```json
 {
-  "Comment": "Production web records, mail carried across verbatim",
+  "Comment": "Go live: placeholder A records become CloudFront ALIAS; retire dead cPanel names.",
   "Changes": [
+    { "Action": "DELETE", "ResourceRecordSet": {
+        "Name": "directhired.com", "Type": "A", "TTL": 300,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "DELETE", "ResourceRecordSet": {
+        "Name": "www.directhired.com", "Type": "CNAME", "TTL": 300,
+        "ResourceRecords": [{ "Value": "directhired.com" }] } },
+
     { "Action": "CREATE", "ResourceRecordSet": {
         "Name": "directhired.com", "Type": "A",
         "AliasTarget": { "HostedZoneId": "Z2FDTNDATAQYW2", "DNSName": "PROD_DIST_DOMAIN", "EvaluateTargetHealth": false } } },
@@ -1023,148 +1204,87 @@ Create `/tmp/records.json`. Substitute `PROD_DIST_DOMAIN` and both validation pa
     { "Action": "CREATE", "ResourceRecordSet": {
         "Name": "www.directhired.com", "Type": "AAAA",
         "AliasTarget": { "HostedZoneId": "Z2FDTNDATAQYW2", "DNSName": "PROD_DIST_DOMAIN", "EvaluateTargetHealth": false } } },
-    { "Action": "CREATE", "ResourceRecordSet": {
-        "Name": "directhired.com", "Type": "MX", "TTL": 3600,
-        "ResourceRecords": [{ "Value": "1 smtp.google.com" }] } },
-    { "Action": "CREATE", "ResourceRecordSet": {
-        "Name": "VALIDATION_NAME_1", "Type": "CNAME", "TTL": 300,
-        "ResourceRecords": [{ "Value": "VALIDATION_VALUE_1" }] } },
-    { "Action": "CREATE", "ResourceRecordSet": {
-        "Name": "VALIDATION_NAME_2", "Type": "CNAME", "TTL": 300,
-        "ResourceRecords": [{ "Value": "VALIDATION_VALUE_2" }] } }
+
+    { "Action": "DELETE", "ResourceRecordSet": {
+        "Name": "mail.directhired.com", "Type": "CNAME", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "directhired.com" }] } },
+    { "Action": "DELETE", "ResourceRecordSet": {
+        "Name": "webmail.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "DELETE", "ResourceRecordSet": {
+        "Name": "cpanel.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "DELETE", "ResourceRecordSet": {
+        "Name": "ftp.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "DELETE", "ResourceRecordSet": {
+        "Name": "autodiscover.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "DELETE", "ResourceRecordSet": {
+        "Name": "autoconfig.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } }
   ]
 }
 ```
 
-The `MX` line is the domain's entire mail configuration. It must read exactly `1 smtp.google.com`.
+The `MX` record is **not** in this batch. Mail is untouched by go-live.
 
-The two validation records are **not optional and not temporary**. ACM re-reads them to renew the certificate. Once Exabytes stops being authoritative, these Route 53 copies are the only ones that exist.
+A `DELETE` must match the existing record exactly — same type, TTL and value — or Route 53 rejects the whole batch. That is a feature: a mismatch means the zone is not what this plan assumes, and the batch failing is the correct outcome.
 
 - [ ] **Step 3: Apply**
 
 ```bash
 aws route53 change-resource-record-sets --hosted-zone-id "$ZONE_ID" \
-  --change-batch "file:///tmp/records.json" --profile directhired \
+  --change-batch "file://infra/route53-golive.json" --profile directhired \
   --query 'ChangeInfo.{Id:Id,Status:Status}' --output table
 ```
 
-Expected: a change ID with status `PENDING`.
+Expected: a change ID, status `PENDING`. Live within about 60 seconds; up to 300 for resolvers holding the old `A` record.
 
-- [ ] **Step 4: Verify the zone contents**
-
-```bash
-aws route53 list-resource-record-sets --hosted-zone-id "$ZONE_ID" --profile directhired \
-  --query 'ResourceRecordSets[].{Name:Name,Type:Type,TTL:TTL,Alias:AliasTarget.DNSName,Value:ResourceRecords[0].Value}' \
-  --output table
-```
-
-Expected exactly: `NS` and `SOA` (auto-created), four ALIAS records, one `MX`, two validation `CNAME`s — eleven in total. **No `A` record for `103.7.9.45`, and no `mail`, `webmail`, `cpanel`, `ftp`, `autodiscover` or `autoconfig` record.**
-
-- [ ] **Step 5: Query the Route 53 nameservers directly — the mail check**
-
-The zone is not yet delegated, so a normal resolver still answers from Exabytes. Querying an AWS nameserver by name proves what the zone will serve **before** it serves it. This is the single most important verification in the plan.
+- [ ] **Step 4: Verify the live site**
 
 ```bash
-NS1=$(aws route53 get-hosted-zone --id "$ZONE_ID" --profile directhired \
-  --query 'DelegationSet.NameServers[0]' --output text)
-
-nslookup -type=MX directhired.com "$NS1"
-nslookup -type=A www.directhired.com "$NS1"
-nslookup -type=A directhired.com "$NS1"
-```
-
-Expected: `MX` returns preference `1`, exchange `smtp.google.com`; both `A` queries return CloudFront addresses.
-
-**If the `MX` answer is anything other than `1 smtp.google.com`, stop and fix the zone before Task 9.** Flipping the nameservers with a wrong `MX` takes email down.
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add docs/runbooks/2026-08-16-dns-cutover.md
-git commit -m "Runbook: Route 53 zone built and verified before delegation"
-```
-
----
-
-### Task 9: Nameserver flip and post-flip verification
-
-The only public-facing step. Do not start it until Task 7 passed every check and Task 8 Step 5 confirmed the `MX`.
-
-**Files:**
-- Modify: `docs/runbooks/2026-08-16-dns-cutover.md`, `docs/OPEN-DECISIONS.md`
-
-**Interfaces:**
-- Consumes: the four Route 53 nameservers (Task 8)
-- Produces: `directhired.com` delegated to Route 53
-
-- [ ] **Step 1: Change the nameservers at Exabytes (human action)**
-
-In the Exabytes **domain management** area — not the Zone Editor — replace:
-
-```
-ns135.sgcloudhosting.cloud
-ns136.sgcloudhosting.cloud
-```
-
-with the four Route 53 nameservers from Task 8. Enter all four.
-
-**Change nothing else. Do not cancel or delete the hosting, the DNS zone, or the domain.** Spec §7.3: resolvers still holding the old delegation reach the domain — including its mail — only through the old zone, for up to 48 hours.
-
-- [ ] **Step 2: Confirm the registry has the change**
-
-```bash
-nslookup -type=NS directhired.com 8.8.8.8
-```
-
-Expected: the four `ns-*.awsdns-*` servers. Typically within 5–60 minutes. Re-run until it changes; a stale answer here is a cache, not a failure.
-
-- [ ] **Step 3: Verify mail from a normal resolver**
-
-```bash
-nslookup -type=MX directhired.com 8.8.8.8
-nslookup -type=MX directhired.com 1.1.1.1
-```
-
-Expected: preference `1`, exchange `smtp.google.com`, from both.
-
-- [ ] **Step 4: Send and receive a real test message (human action)**
-
-Send a message **to** `hello@directhired.com` from an outside address and confirm it arrives. Reply **from** it and confirm the reply arrives.
-
-DNS answers prove the record; only a delivered message proves mail. Record the result in the runbook.
-
-- [ ] **Step 5: Verify the live site**
-
-```bash
+sleep 60
+nslookup -type=A www.directhired.com 8.8.8.8
 curl -sS -o /dev/null -w 'www   %{http_code}\n' https://www.directhired.com/
 curl -sS -o /dev/null -w 'apex  %{http_code} %{redirect_url}\n' https://directhired.com/
 curl -sS -o /dev/null -w '404   %{http_code}\n' https://www.directhired.com/no-such-page
 ```
 
-Expected: `200`; `301` to `https://www.directhired.com/`; `404`.
+Expected: CloudFront addresses, `200`, `301` to `https://www.directhired.com/`, `404`.
 
-If these still show the "UNDER CONSTRUCTION" page, your resolver is still on the old delegation. That is the expected propagation tail, not a failure — re-check with `nslookup -type=NS directhired.com 8.8.8.8`.
+If it still shows "UNDER CONSTRUCTION", either a resolver is holding the old record (wait out the 300s TTL) or it is still on the old delegation from Task 2 — check with `nslookup -type=NS directhired.com 8.8.8.8`.
+
+- [ ] **Step 5: Verify mail again**
+
+Go-live does not touch `MX`, which is exactly why it is worth confirming.
+
+```bash
+nslookup -type=MX directhired.com 8.8.8.8
+```
+
+Expected: `1 smtp.google.com`. Send one more test message to `hello@directhired.com`.
 
 - [ ] **Step 6: Record the outstanding email work**
 
 Add to `docs/OPEN-DECISIONS.md`, under *Housekeeping*:
 
 ```markdown
-**Your domain has no SPF, DKIM or DMARC record, and this migration deliberately
-did not add one.** `directhired.com` runs Google Workspace, and as of 2026-08-16
-it publishes no sender-authentication records at all. Mail from
+**Your domain has no SPF, DKIM or DMARC record, and the DNS migration
+deliberately did not add one.** `directhired.com` runs Google Workspace, and as
+of 2026-08-16 it publishes no sender-authentication records at all. Mail from
 `hello@directhired.com` is therefore easier to spoof and more likely to be
 filtered. This is a real weakness and it is written here so it is not mistaken
 for an oversight.
 
-It was left out of the DNS migration on purpose. Publishing
-`v=spf1 include:_spf.google.com ~all` is **not** an additive change: with no SPF
-record, receivers treat unlisted senders neutrally; the moment one exists, every
-sender not on the list begins to soft-fail. Your requirement form lives on a
-separate site that may well send notification mail as this domain, and nobody
-has yet enumerated every system that does. Bundling it into cutover day would
-also have made any mail problem the next morning impossible to attribute — the
-nameserver move and the new policy would be indistinguishable.
+It was left out on purpose. Publishing `v=spf1 include:_spf.google.com ~all` is
+**not** an additive change: with no SPF record, receivers treat unlisted senders
+neutrally; the moment one exists, every sender not on the list begins to
+soft-fail. Your requirement form lives on a separate site that may well send
+notification mail as this domain, and nobody has yet enumerated every system
+that does. Bundling it into the migration would also have made any mail problem
+the next morning impossible to attribute — the nameserver move and the new
+policy would be indistinguishable.
 
 **Recommended order when this is picked up.** Publish `_dmarc` at `p=none` with
 a reporting address first; it is monitoring-only and cannot affect delivery, and
@@ -1177,32 +1297,32 @@ This is now easier than it was: the records live in Route 53 under your own AWS
 account, so adding them is a change you control rather than a third-party panel.
 ```
 
-- [ ] **Step 7: Final full-suite run and commit**
+- [ ] **Step 7: Final suite run and commit**
 
 Run: `npm test`
 
 Expected: PASS.
 
 ```bash
-git add docs/runbooks/2026-08-16-dns-cutover.md docs/OPEN-DECISIONS.md
-git commit -m "Cutover complete: directhired.com delegated to Route 53"
+git add infra/route53-golive.json docs/runbooks/2026-08-16-dns-cutover.md docs/OPEN-DECISIONS.md
+git commit -m "Go live: www.directhired.com serves from CloudFront"
 ```
 
-- [ ] **Step 8: Set a reminder — do not skip**
+- [ ] **Step 8: Two dated follow-ups — do not skip**
 
-Two dated follow-ups, both easy to lose:
-
-1. **On or after 2026-08-23:** Exabytes hosting and DNS may be cancelled. Not before.
-2. **Before the certificate renews (~2027-07):** nothing to do if Task 8's validation records are in the zone. Confirm they are still present.
+1. **One week after go-live:** Exabytes hosting and DNS may be cancelled. Not before — `103.7.9.45` was serving live traffic until Step 3, and resolvers on the old delegation still need the old zone.
+2. **Before ~2027-07:** nothing to do if Task 3's validation records are still in the zone. Confirm they are.
 
 ---
 
 ## Self-Review
 
-**Spec coverage.** Spec §5.1 certificate → Task 1. §5.2 bucket → Task 3. §5.3 distribution, including `sni-only`, custom error responses and the security headers policy → Task 4. §5.4 function and its deploy gate → Tasks 2 and 6. §6 repository changes → Tasks 2, 5, 6 and 9 (all seven files covered). §7.1 cutover order → Tasks 1–9 in sequence. §7.2 zone contents → Task 8 Step 2, with the drops verified in Step 4. §7.3 propagation window → Task 9 Steps 1 and 8. §7.4 verification → Task 7 (pre-flip) and Task 9 (post-flip). §7.5 rollback → runbook, written in Task 1 Step 2 so it exists before anything can go wrong. §8 email deferral → Task 9 Step 6. §10 success criteria → criteria 1–4 in Task 7, 5 in Tasks 8 and 9, 6 in Task 6 Step 4, 7 in Task 5, 8 in Task 2 Step 5, 9 in Task 1 Step 2.
+**Spec coverage.** Spec §5.1 certificate → Task 3. §5.2 bucket → Task 5. §5.3 distribution, including `sni-only`, custom error responses and the security headers policy → Task 6. §5.4 function and its deploy gate → Tasks 4 and 8. §6 repository changes → Tasks 4, 7, 8, 10 (all files covered, plus two new Route 53 batch files this ordering requires). §7.2 zone contents → reached in two stages: Task 1 reproduces the old zone, Task 10 converts it to the spec's target set; the spec's "dropped" list is executed in Task 10 Step 2 and its "not added" list holds throughout. §7.3 propagation window → Task 2 (now invisible) and Task 10 Step 4. §7.4 verification → Task 9 pre-go-live, Task 10 post. §7.5 rollback → runbook, written in Task 1 Step 2 before anything can go wrong, and extended with the faster post-go-live route. §8 email deferral → Task 10 Step 6. §10 success criteria → 1–4 in Task 9 and re-confirmed in Task 10 Step 4; 5 in Tasks 1, 2, 10; 6 in Task 8 Step 4; 7 in Task 7; 8 in Task 4 Step 5; 9 in Task 1 Step 2.
 
-**Placeholder scan.** The `REPLACE_WITH_*` and `VALIDATION_*` tokens are deliberate: they mark values that cannot exist until an earlier task runs, and each is named in the consuming task's **Interfaces** block with the task that produces it. No step says "handle errors appropriately", "add tests", or "similar to Task N".
+**Deviation from the spec, declared.** The spec's §7.1 puts the nameserver flip last; this plan puts it second. Justified at the top of this document. No decision in spec §3 changes. The spec should be amended, or this plan cited as superseding it, before either is read as authoritative on ordering.
 
-**Type consistency.** `CERT_ARN` (Task 1 → 4), `PROD_DIST_ID` (Task 4 → 5, 6, 8), `PROD_DIST_DOMAIN` (Task 4 → 7, 8), `ZONE_ID` (Task 8) are spelled identically throughout. The function's contract — a response object for the apex, the mutated request for every other host — is asserted in `tests/infra.test.ts` (Task 2), re-asserted against the deployed function by `check`/`check_redirect` (Task 6), and exercised end-to-end over HTTPS (Task 7).
+**Placeholder scan.** `REPLACE_WITH_*`, `VALIDATION_*` and `PROD_DIST_DOMAIN` tokens are deliberate: they mark values that cannot exist until an earlier task runs, and each is named in the consuming task's **Interfaces** block with the task that produces it. No step says "handle errors appropriately", "add tests", or "similar to Task N".
 
-**One gap found and closed during review.** The original Task 6 kept the existing `check()` helper unchanged, which sends no `host` header. That would have passed — the apex branch would not match an empty host — but only by accident, leaving the suite's directory-index cases dependent on an absent header to select their code path. Task 6 Step 1 now updates `check()` to send `www.directhired.com` explicitly.
+**Type consistency.** `ZONE_ID` (Task 1 → 3, 10), `CERT_ARN` (Task 3 → 6), `PROD_DIST_ID` (Task 6 → 7, 8), `PROD_DIST_DOMAIN` (Task 6 → 9, 10) are spelled identically throughout. The function's contract — a response object for the apex, the mutated request for every other host — is asserted in `tests/infra.test.ts` (Task 4), re-asserted against the deployed function by `check`/`check_redirect` (Task 8), and exercised end-to-end over HTTPS (Task 9).
+
+**Two gaps found and closed during review.** (1) Task 1's verbatim copy originally dropped the six cPanel names, which would have made the Task 2 nameserver change a behaviour change and destroyed the entire safety argument for flipping first; they are now reproduced and retired in Task 10 instead. (2) Task 8 originally left `check()` sending no `host` header — it would have passed, but only because an empty host fails to match the apex branch, leaving the directory-index cases relying on an absent header to select their path.
