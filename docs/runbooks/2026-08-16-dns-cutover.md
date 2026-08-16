@@ -142,10 +142,10 @@ Apex and `www` both returned `200`; neither redirected to the other.
 | AWS account | `354918409802` |
 | Route 53 hosted zone ID | `Z0875849YNMCH1EJIGWA` |
 | Route 53 nameservers | `ns-173.awsdns-21.com`, `ns-516.awsdns-00.net`, `ns-1254.awsdns-28.org`, `ns-1898.awsdns-45.co.uk` |
-| Certificate ARN | _(Task 3)_ |
+| Certificate ARN | `arn:aws:acm:us-east-1:354918409802:certificate/6c22fa0e-11f6-4901-9323-f86e24796845` |
 | Prod bucket | `directhired-website-prod` (`ap-southeast-1`) |
-| Prod distribution ID | _(Task 6)_ |
-| Prod distribution domain | _(Task 6)_ |
+| Prod distribution ID | `E3R68EGASPTMJ3` |
+| Prod distribution domain | `d3ov6snrv878q6.cloudfront.net` |
 | Preview distribution (unchanged) | `EQFX1V1KHG4IS` → `didceb5na1cjo.cloudfront.net` |
 | Origin Access Control (shared) | `E2JJP00VJVN9QQ` |
 | Viewer-request function (shared) | `directhired-directory-index` |
@@ -225,18 +225,129 @@ ns-1898.awsdns-45.co.uk
 | `MX` unchanged from 8.8.8.8 and 1.1.1.1 | _(pending)_ |
 | Apex still returns 200 | _(pending)_ |
 | **`dev.directhired.com` still returns 200** | _(pending)_ |
-| Test message sent to `hello@directhired.com` and received | _(pending)_ |
-| Reply sent from `hello@directhired.com` and received | _(pending)_ |
+| Test message sent to `hello@directhired.com` and received | _(to confirm)_ |
+| Reply sent from `hello@directhired.com` and received | _(to confirm)_ |
 
-**Task 3 (the certificate) is blocked on this.** ACM validates by reading a
-public DNS record; until the domain is delegated to Route 53, a record created
-there is invisible to the internet and validation cannot complete.
+**Completed 2026-08-16.** Verified immediately after the change:
+
+```
+DELEGATION   8.8.8.8  -> ns-1254 / ns-173 / ns-1898 / ns-516   (all four AWS)
+             9.9.9.9  -> ns-1254 / ns-173 / ns-1898 / ns-516   (all four AWS)
+             1.1.1.1  -> ns135 / ns136                          (old, still cached)
+
+MX           8.8.8.8  -> pref=1 smtp.google.com
+             1.1.1.1  -> pref=1 smtp.google.com
+             9.9.9.9  -> pref=1 smtp.google.com
+```
+
+**`MX` is correct from every resolver, including the one still on the old
+delegation.** That is the verbatim copy earning its place: during the tail it
+does not matter which nameserver answers, because both say the same thing.
+
+All four sites still served `200` — apex and `www` (793 b placeholder), `dev`
+and `www.dev` (29 KB application).
 
 ---
 
-## Task 9 — pre-go-live verification
+## Task 3 — certificate (2026-08-16)
 
-Status: _pending_
+Requested in `us-east-1`, DNS validation, `directhired.com` + SAN
+`www.directhired.com`. Validation records created from
+`infra/route53-acm-validation.json` and **left in place permanently** — ACM
+re-reads them to auto-renew.
+
+Status: **ISSUED**.
+
+One snag worth recording: the first `change-resource-record-sets` call was
+rejected because the batch `Comment` exceeded Route 53's 256-character limit.
+JSON has no comment syntax, so the explanation that belongs beside those records
+lives here rather than in the file.
+
+## Task 6 — production distribution (2026-08-16)
+
+`E3R68EGASPTMJ3` → `d3ov6snrv878q6.cloudfront.net`, from
+`infra/prod-distribution.json`. Verified after creation:
+
+| Check | Result |
+|---|---|
+| `SSLSupportMethod` | **`sni-only`** ✅ (the ~US$600/month guard) |
+| `MinimumProtocolVersion` | `TLSv1.2_2021` |
+| Custom error responses | `403 → /404.html` as 404; `404 → /404.html` as 404 |
+
+Bucket policy applied from `infra/prod-bucket-policy.json`, scoped by
+`AWS:SourceArn` to this distribution alone, so the preview distribution cannot
+read the production bucket.
+
+## Task 7 — first production deploy (2026-08-16)
+
+`scripts/deploy-production.sh` created. The confirmation gate was tested by
+answering "no" **before** it was trusted: it aborted with exit 1 and left the
+bucket empty. Then deployed for real — `<Tbd>` gate passed, 31 objects.
+
+Cache-control verified on a **nested** page, not just the root, because that is
+the case the `*.html` pattern exists to catch:
+
+```
+index.html                 public,max-age=60,must-revalidate
+pricing/index.html         public,max-age=60,must-revalidate
+contact/index.html         public,max-age=60,must-revalidate
+404.html                   public,max-age=60,must-revalidate
+_astro/about.CWtgndoc.css  public,max-age=31536000,immutable
+```
+
+## Task 8 — function published (2026-08-16)
+
+All 15 gate checks passed against the real deployed function — 9 rewrite cases,
+3 apex redirects, and 3 negative cases proving `www`, the preview host and a
+lookalike host do **not** redirect. Published to LIVE; both distributions
+invalidated.
+
+Two script fixes were needed:
+
+1. `mktemp -d` returned a POSIX path the shell could write and the **native
+   Windows** AWS CLI could not read, so every `test-function` call died on
+   "Unable to load paramfile" while the file plainly existed. Now a
+   repo-relative temp dir, which resolves under Git Bash, Windows and Linux CI.
+2. `check()` sent no `host` header. It would still have passed — an empty host
+   fails to match the apex branch — but a rewrite case selecting its code path
+   via an *absent* header is the kind of accident this suite exists to catch.
+   It now states the host explicitly.
+
+## Task 9 — pre-go-live verification (2026-08-16)
+
+Run with `curl --connect-to`, which sends the real SNI and `Host` header while
+connecting to the CloudFront endpoint — the same thing a browser will do, with
+no `hosts` file edit and no administrator rights.
+
+| Check | Result |
+|---|---|
+| TLS chain valid for `www.directhired.com` | ✅ `ssl_verify_result=0`, 200 |
+| apex `/` → `www` | ✅ 301 → `https://www.directhired.com/` |
+| apex `/pricing` → `www` | ✅ 301, path preserved |
+| apex `/pricing?utm_source=fb&utm_campaign=x` | ✅ 301, **both** parameters preserved |
+| `http://` → `https://` | ✅ 301 |
+| All 7 pages | ✅ 200 |
+| Missing page | ✅ **404** (not 403), 25,328 bytes, zero `AccessDenied`, title `Page not found — DirectHired` |
+| `Strict-Transport-Security` | ✅ `max-age=31536000` |
+| `X-Content-Type-Options` / `X-Frame-Options` / `Referrer-Policy` | ✅ all present |
+| HTML cache-control | ✅ `max-age=60,must-revalidate` |
+| Asset cache-control | ✅ `max-age=31536000,immutable` |
+| Preview distribution unaffected | ✅ `/` and `/pricing` 200 |
+
+**On the query string:** parameters are preserved but may be **reordered**
+(`utm_source=fb&utm_campaign=x` came back as `utm_campaign=x&utm_source=fb`).
+CloudFront hands the function a querystring object, and object key order is not
+the request's order. No parameter is lost or altered, and no analytics tool
+depends on parameter order, so this is recorded as a known behaviour rather than
+a defect.
+
+**Pre-existing issue found on the preview stack, not caused by this work.**
+`/about` returns 403 on the preview distribution. The preview bucket is a stale
+deploy containing only `index.html` and `pricing/`, and preview has no custom
+error responses — so a missing key surfaces S3's raw 403. Both conditions
+predate today; `/` and `/pricing` return 200, which is what proves the shared
+function still behaves there. Worth fixing separately by giving preview the same
+`403 → /404.html` mapping production now has.
 
 ## Task 10 — go-live
 
