@@ -1,0 +1,32 @@
+{
+  "Comment": "Verbatim copy of the Exabytes zone as measured 2026-08-16. Web TTLs lowered to 300 so the go-live swap propagates quickly; every VALUE is unchanged.",
+  "Changes": [
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "directhired.com", "Type": "A", "TTL": 300,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "www.directhired.com", "Type": "CNAME", "TTL": 300,
+        "ResourceRecords": [{ "Value": "directhired.com" }] } },
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "directhired.com", "Type": "MX", "TTL": 3600,
+        "ResourceRecords": [{ "Value": "1 smtp.google.com" }] } },
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "mail.directhired.com", "Type": "CNAME", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "directhired.com" }] } },
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "webmail.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "cpanel.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "ftp.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "autodiscover.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "autoconfig.directhired.com", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } }
+  ]
+}
