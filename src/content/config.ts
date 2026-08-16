@@ -73,6 +73,9 @@ const faq = defineCollection({
   schema: z.object({
     question: z.string(),
     surfaces: z.array(z.enum(['home', 'faq', 'pricing'])),
+    // Required, no default. /faq groups by this; a default would silently
+    // dump miscategorised entries into one bucket.
+    category: z.enum(['cost', 'sources', 'process', 'replacement']),
     order: z.number(),
   }),
 })

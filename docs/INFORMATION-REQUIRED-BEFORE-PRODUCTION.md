@@ -35,16 +35,16 @@ Information DirectHired still owes that leaves **no detectable trace** in the co
 
 They are therefore **declared** in `DECLARED_INPUTS` in `scripts/generate-info-required.mjs` — the only hand-maintained list in this document. The alternative would be sprinkling cosmetic `<Tbd>` markers onto pages purely so this script could find them, which would trade a correct page for a broken one. `npm run build` **succeeds** with these outstanding; nothing false is published.
 
-Design spec §5 names three Category A items — the MOM licence number, detailed replacement terms, and the without-replacement inclusion list. The first was supplied on 2026-08-15 and its `<Tbd>` removed; the other two never had one and appear here.
+Design spec §5 named three Category A items — the MOM licence number, detailed replacement terms, and the without-replacement inclusion list. **All three have since been supplied**: the licence number on 2026-08-15 (its `<Tbd>` removed), the other two on 2026-08-16. What remains below is one item that is not missing information at all — the facts are in hand and what is outstanding is DirectHired’s sign-off on publishing them — and one that is a placeholder asset rather than a gap in the copy.
 
-- **Detailed replacement terms and conditions**
-  - Source: Brief §18 / §79 Reminder 04; design spec §5 Category A
-  - Blocks: publishing any replacement language beyond the single confirmed line "1 replacement within 6 months". A replacement policy page, and any FAQ answer about what a replacement covers, cannot be written without it.
-  - Handled meanwhile by: the confirmed line is the only replacement text on the site (`replacementTerm` in `src/data/pricing.ts`, rendered by `src/components/PricingCard.astro`); no conditions are stated.
 - **Approved social share image (Open Graph)**
   - Source: Brief §79 Reminders 01/02; §55
   - Blocks: nothing from rendering — a share card ships and link previews work, including in WhatsApp, a secondary conversion channel for this business. What is still outstanding is DirectHired’s **own approved** card: the one in place is an AI-generated illustration carrying no wordmark, so every link to this site currently previews unbranded.
   - Handled meanwhile by: `src/layouts/BaseLayout.astro` ships `og:image` / `twitter:image` (with width, height, type and alt) pointing at `src/assets/og-share.png`, cropped to exactly 1200x630 and transcoded to JPEG by `astro:assets`, and declares `twitter:card="summary_large_image"` now that there is an image to fill it. The image is compliant with §55 because it is visibly a drawing and every figure in it is faceless — it depicts a situation and claims no person — and nothing captions it as a DirectHired family, helper or staff member. Its provenance is recorded as `ai-generated` in the registry and it appears in Category D below. If the image is ever removed, `twitter:card` must go back to `"summary"` in the same commit.
+- **Compliance sign-off on loan repayment terms**
+  - Source: Brief §19; core-pages spec §2.3, §2.5 and §2.6.2
+  - Blocks: publishing the repayment mechanics — the 1-7 month range, that repayment comes from the helper's basic salary, and that the helper receives off-day compensation during it. DirectHired supplied these facts on 2026-08-16; what is missing is sign-off, not information. **Their 2026-08-16 approval of one process sentence does not resolve this.** That approval covers "We go through the repayment arrangement in full with you before you commit, and it is set out in the contract" and nothing else — one sentence about the process, not the three mechanics above, which remain unpublishable in substance as well as literally.
+  - Handled meanwhile by: `src/sections/LoanAndPlacement.astro` publishes the framing only — the employer advances the loan and placement fee, the helper repays it, it is ultimately the helper's cost, the placement fee is one month's salary, and (since 2026-08-16, in DirectHired's own approved wording) that the arrangement is gone through in full before the employer commits and is set out in the contract. The repayment mechanics appear nowhere on the site. The page is complete and honest without them; it is a salary-deduction arrangement on a licensed agency's public site, in an area MOM regulates, so it does not publish unreviewed.
 
 ## Category D — Images that are not DirectHired’s own
 
@@ -59,7 +59,7 @@ This is the production decision list: for each entry, either supply your own pho
   - Usage sites:
     - `src/sections/MeetHelpers.astro:54` — <section class="meet-helpers"> — renders only when the helper-profiles collection is non-empty
     - `src/sections/MeetHelpers.astro:64` — <div class="helper-card"> — the profile card body, where a portrait would sit
-    - `src/content/config.ts:87` — const helperProfiles = defineCollection({ — the helper-profiles schema, which has no portrait field and must not gain one before signed releases exist
+    - `src/content/config.ts:90` — const helperProfiles = defineCollection({ — the helper-profiles schema, which has no portrait field and must not gain one before signed releases exist
   - Should become: Priority 2 of the shot brief: individual portraits of real helpers, eye level, working clothes not uniform, plain background, one consistent crop across all of them, each with a signed release obtained before the shoot in a language the subject reads fluently.
   - AI generation **not permitted**: An AI-generated helper portrait is a fabricated helper. Master brief §78 forbids inventing helper details and §55 forbids presenting placeholder people as actual DirectHired helpers; a face on a profile card asserts that this specific person exists and is available. No prompt is written for this slot. It stays absent until a real, consented photograph exists.
 - **Hero — one frame, both people in it** (`hero-together`)

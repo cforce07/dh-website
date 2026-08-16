@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { packages, packageTotalCents } from '../src/data/pricing'
-import { formatSgd } from '../src/lib/money'
+import { formatSgd, formatSgdProse } from '../src/lib/money'
 
 /**
  * Strips every comment form this codebase uses, so a comment that explains
@@ -208,9 +208,233 @@ describe('the site never calls Mizoram a country', () => {
   })
 })
 
+describe('no helper source beyond Indonesia, Myanmar and Mizoram is ever named', () => {
+  /*
+   * Spec §7 and master brief §22: the Philippines is never named, including
+   * as "coming soon". Sri Lanka, Cambodia and Bangladesh are the three
+   * neighbouring sources a writer reaches for by habit.
+   *
+   * WHY THIS EXISTS WHEN tests/pages.test.ts ALREADY BANS THEM. That ban
+   * runs over dist/, so it only ever sees copy a page currently renders.
+   * Nine content files — the six services and the three helper sources —
+   * are not rendered by either page built today: /services/[slug] and
+   * /helpers/[slug] land in a later sub-project. Writing "the Philippines"
+   * into the body of src/content/services/transfer-helper.md scored a full
+   * green suite, verified by mutation, twice, by two independent reviewers.
+   *
+   * That is the worst shape a gap can have. The rule is spec §7's strongest,
+   * the files already exist, and they would arrive in the routing commit as
+   * PRE-EXISTING CONTENT rather than as a diff anyone would connect back to
+   * the rule. Nobody re-reads a file they did not touch.
+   *
+   * So the ban is asserted against the SOURCES as well as the build.
+   * renderedCopy() is the same sweep the Mizoram rules above use: every
+   * content markdown file verbatim, plus the comment-free source of every
+   * .astro. Comments are stripped, so a comment naming a banned source in
+   * order to ban it — the paragraph you are reading, if it were in an
+   * .astro file — is not itself a violation.
+   */
+  const copy = renderedCopy()
+
+  /*
+   * Kept byte-identical to the pattern in tests/pages.test.ts, and the
+   * assertion below is what keeps it that way. Two copies of a regex is the
+   * lesser evil here: the alternative is exporting it from a test file into
+   * another test file, and the repo's existing convention for a literal that
+   * two files must agree on is to state it twice and assert the agreement
+   * (see --bp-desktop in tokens.css and tests/header-fit.test.ts).
+   */
+  const FORBIDDEN_SOURCE = /\b(?:philippin\w*|filipin\w*|sri\s?lank\w*|cambodi\w*|banglades\w*)\b/i
+
+  it('sweeps the nine files the dist/ ban cannot see (guards the gap this closes)', () => {
+    // Named individually, not counted. A count would survive the walker
+    // silently dropping src/content/services and picking up nine .astro
+    // files instead — which is exactly the class of vacuous pass that let
+    // the gap exist in the first place.
+    const files = copy.map((c) => c.file)
+    for (const unrendered of [
+      'src/content/services/transfer-helper.md',
+      'src/content/services/new-helper-placement.md',
+      'src/content/services/direct-hire-processing.md',
+      'src/content/services/maid-insurance.md',
+      'src/content/services/maid-replacement.md',
+      'src/content/services/medical-examination.md',
+      'src/content/helpers/indonesia.md',
+      'src/content/helpers/myanmar.md',
+      'src/content/helpers/mizoram.md',
+    ]) {
+      expect(files, `${unrendered} is not being swept`).toContain(unrendered)
+    }
+  })
+
+  it('names none of them in any surface a visitor reads', () => {
+    const offenders = copy
+      .filter(({ text }) => FORBIDDEN_SOURCE.test(text))
+      .map(({ file }) => file)
+    expect(offenders).toEqual([])
+  })
+
+  it('states the same pattern tests/pages.test.ts applies to the build', () => {
+    // Hand-synced, and asserted rather than trusted. If someone widens one
+    // pattern to catch a fifth source, this fails until they widen both —
+    // which is the only way two copies of a rule stay one rule.
+    const pagesTest = readFileSync('tests/pages.test.ts', 'utf8')
+    expect(pagesTest).toContain(FORBIDDEN_SOURCE.source)
+  })
+
+  it('really does fire on the sentence the mutation used', () => {
+    // Non-vacuity. A pattern that matched nothing would make the sweep above
+    // green for the wrong reason. These strings live in this test file and
+    // are never built or published.
+    expect(FORBIDDEN_SOURCE.test('We also place helpers from the Philippines.')).toBe(true)
+    expect(FORBIDDEN_SOURCE.test('Filipino helpers coming soon.')).toBe(true)
+    expect(FORBIDDEN_SOURCE.test('Sri Lanka and Cambodia and Bangladesh.')).toBe(true)
+    // ...and not on the three real sources, or the suite would be
+    // unsatisfiable by correct copy.
+    expect(FORBIDDEN_SOURCE.test('Indonesia, Myanmar and Mizoram.')).toBe(false)
+  })
+})
+
+describe("/pricing puts a price above the fold", () => {
+  /*
+   * The hero summary line — "$1,640.10 with a replacement · $1,140.10
+   * without" — and the one thing about it that is load-bearing: WHERE it is.
+   *
+   * WHY THIS NEEDED ITS OWN GUARD. Deleting the whole `.page-summary` block
+   * from src/pages/pricing.astro dropped two figures from the page and left
+   * the suite fully green: the money floor still saw 26 figures, and the
+   * "every distinct figure is printed" assertion is satisfied by the two
+   * cards alone. So the page could silently go back to a first screen with a
+   * headline, two lines of lede and 452px of empty cream, on the page whose
+   * entire job is answering "how much does this cost", and nothing would
+   * say so.
+   *
+   * That is the G-1 regression one layer further in. G-1 was "the money
+   * sweep proves every figure is real but no longer proves /pricing has
+   * any"; this is "the sweep proves /pricing has figures but not that a
+   * reader meets one before scrolling". Each time, a property that was
+   * genuinely being relied on was asserted by nothing.
+   *
+   * ORDER IS THE ASSERTION, not the mere presence of the element. Measured
+   * in Chrome at 320x568 with the sticky header and the fixed CTA bar
+   * accounted for, 448px of viewport is usable. With this block after the
+   * lede it rendered at y=527 — still below the fold, which is the exact
+   * defect it exists to fix. Before the lede it renders at y=263. Presence
+   * without position would pass in both cases, so both are checked.
+   *
+   * Static, from the built HTML: position in source order is what the
+   * measurement came down to, and re-measuring in a headless browser here
+   * would only be as trustworthy as its layout engine.
+   */
+  function pricingBody(): string {
+    const html = readFileSync('dist/pricing/index.html', 'utf8')
+    // <style> holds the scoped CSS, which mentions every one of these class
+    // names before the markup does — comparing raw indices would compare
+    // stylesheet positions and pass on anything.
+    return html
+      .slice(html.indexOf('<body'))
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+  }
+
+  it('finds the markers it orders (guards the assertion itself)', () => {
+    const body = pricingBody()
+    for (const marker of ['<h1', 'page-summary', 'page-lede', 'pkg-total', 'package-grid']) {
+      expect(body.indexOf(marker), `${marker} not found in the built page body`).toBeGreaterThan(-1)
+    }
+  })
+
+  it('renders the summary between the <h1> and the lede', () => {
+    const body = pricingBody()
+    const h1 = body.indexOf('<h1')
+    const summary = body.indexOf('page-summary')
+    const lede = body.indexOf('page-lede')
+    expect(h1).toBeLessThan(summary)
+    // The load-bearing half. At 320 the lede is 210px tall, so a summary
+    // after it starts below the fold no matter how short the summary is.
+    expect(summary, 'the price summary must precede the lede').toBeLessThan(lede)
+  })
+
+  it('reaches the reader before either package card does', () => {
+    const body = pricingBody()
+    expect(body.indexOf('page-summary')).toBeLessThan(body.indexOf('package-grid'))
+    expect(body.indexOf('page-summary')).toBeLessThan(body.indexOf('pkg-total'))
+  })
+
+  it('carries both package totals, derived rather than typed', () => {
+    const body = pricingBody()
+    const start = body.indexOf('class="page-summary"')
+    const summary = body.slice(start, body.indexOf('</p>', start))
+    for (const pkg of packages) {
+      const total = formatSgd(packageTotalCents(pkg))
+      expect(summary, `the hero summary omits ${total}`).toContain(total)
+    }
+    // Two packages, two figures — not one restated. Guards against the
+    // block surviving as a single-number teaser.
+    expect(new Set(packages.map((p) => formatSgd(packageTotalCents(p))))).toHaveProperty('size', 2)
+  })
+})
+
 describe('services', () => {
   it('has the six current services', () => {
     expect(readdirSync('src/content/services')).toHaveLength(6)
+  })
+})
+
+describe('faq categories', () => {
+  // Task 1 (core-pages): `category` groups /faq's grouped layout. Required,
+  // no default — a default would let a miscategorised entry silently land
+  // in the wrong bucket. This table is the source of truth for every
+  // entry; it must fail loudly if an entry's category drifts.
+  //
+  // Task 3 added the eight entries below the rule. The table is exhaustive
+  // BY DESIGN — `toEqual` on the directory listing means a new entry
+  // cannot be dropped into src/content/faq without someone stating its
+  // category here, which is the only reason this assertion catches
+  // anything. Extend it when the collection grows; do not relax it to a
+  // subset check.
+  const EXPECTED_CATEGORIES: Record<string, string> = {
+    'cost.md': 'cost',
+    'fly-in-package.md': 'cost',
+    'helper-sources.md': 'sources',
+    'how-matching-works.md': 'process',
+    'new-vs-transfer.md': 'sources',
+    'submit-requirements.md': 'process',
+    // --- Task 3 (core-pages), authored from design spec §2 ---
+    'helper-loan-placement-fee.md': 'cost',
+    'insurance.md': 'cost',
+    'how-long-does-it-take.md': 'process',
+    'response-time.md': 'process',
+    'medical-examination.md': 'process',
+    'direct-hire-processing.md': 'process',
+    'replacement-six-months.md': 'replacement',
+    'replacement-what-covered.md': 'replacement',
+  }
+
+  it('has the 14 current entries, each carrying the category from the table', () => {
+    const files = readdirSync('src/content/faq')
+    expect(files.sort()).toEqual(Object.keys(EXPECTED_CATEGORIES).sort())
+
+    for (const [file, expected] of Object.entries(EXPECTED_CATEGORIES)) {
+      const content = readFileSync(`src/content/faq/${file}`, 'utf8')
+      const match = content.match(/^category:\s*(.+)$/m)
+      expect(match, `${file} has no frontmatter "category:" field`).not.toBeNull()
+      expect(match![1].trim(), `${file} category`).toBe(expected)
+    }
+  })
+
+  it('declares category as a required enum on the faq schema, with no default', () => {
+    const schema = readFileSync('src/content/config.ts', 'utf8').replace(/\/\/[^\n]*/g, ' ')
+    // Scoped to the faq collection's own schema block, not the whole file,
+    // so a `.default(...)` on an unrelated field elsewhere in config.ts
+    // cannot satisfy this assertion vacuously.
+    const faqBlock = schema.slice(
+      schema.indexOf('const faq = defineCollection('),
+      schema.indexOf('const helperProfiles'),
+    )
+    expect(faqBlock).toMatch(/category: z\.enum\(\['cost', 'sources', 'process', 'replacement'\]\)/)
+    expect(faqBlock).not.toMatch(/category:[^\n]*\.default\(/)
+    expect(faqBlock).not.toMatch(/category:[^\n]*\.optional\(/)
   })
 })
 
@@ -306,6 +530,276 @@ describe('faq pricing figures stay in sync with pricing.ts', () => {
     // Guards against the pattern silently matching nothing (a vacuous pass).
     // 2 totals in cost.md + 1 total + 6 line items + 1 total in
     // fly-in-package.md = 10 figures currently published.
+    //
+    // Task 5 (core-pages) left this at 10 deliberately: it authored no FAQ
+    // content and changed no figure, so the number it describes has not
+    // moved. Changing it would only have hidden that.
     expect(matchCount).toBe(10)
+  })
+
+  // --- extended to EVERY built page (design spec §5.3) -----------------
+  //
+  // "That page repeats figures in prose, which is exactly where a stale
+  // number hides." So the same rule now runs against the BUILT output, not
+  // just the FAQ markdown: every dollar figure a visitor can read anywhere
+  // on the site must be a real amount from pricing.ts.
+  //
+  // Fix round 1, F-2. This read `dist/pricing/index.html` by name — the one
+  // page list in this task that stayed hardcoded, and the one guarding
+  // money. The homepage publishes 14 distinct figures it never looked at,
+  // and a reviewer's scratch /about page carrying two hardcoded totals in
+  // its meta description tripped twelve other assertions while every money
+  // assertion stayed green. Deriving the list was free: the homepage's
+  // figures were already all in the allowed set, so this passes today and
+  // covers every Phase B page the moment it builds.
+  //
+  // Three amounts are not from pricing.ts and must not be: the loan
+  // carry-forward worked sum in ReplacementTerms.astro is illustrative by
+  // design (spec §2.3 forbids publishing any loan figure or range), so its
+  // values are read from that file's own constants rather than exempted by
+  // pattern. If someone edits the example, this stays correct; if someone
+  // types a fourth figure into the prose beside it, this fails.
+
+  /** Every built page, derived from dist/ — never a hardcoded page list. */
+  function builtPages(): { file: string; text: string }[] {
+    const walkDist = (dir: string): string[] =>
+      readdirSync(dir).flatMap((entry) => {
+        const full = join(dir, entry).split('\\').join('/')
+        return statSync(full).isDirectory() ? walkDist(full) : [full]
+      })
+
+    return walkDist('dist')
+      .filter((f) => f.endsWith('.html'))
+      .map((file) => ({
+        file,
+        text: readFileSync(file, 'utf8')
+          .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+          .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+          .replace(/<[^>]+>/g, ' '),
+      }))
+  }
+
+  /** The illustrative carry-forward amounts, read from their definitions. */
+  function illustrativeAmounts(): string[] {
+    const source = readFileSync('src/sections/ReplacementTerms.astro', 'utf8')
+    const read = (name: string): number => {
+      const match = source.match(new RegExp(`${name}\\s*=\\s*([\\d_]+)`))
+      if (!match) throw new Error(`ReplacementTerms.astro no longer defines ${name}`)
+      return Number(match[1].replace(/_/g, ''))
+    }
+    const newLoan = read('EXAMPLE_NEW_LOAN_CENTS')
+    const outstanding = read('EXAMPLE_OUTSTANDING_CENTS')
+    return [newLoan, outstanding, newLoan - outstanding].map(formatSgd)
+  }
+
+  it('reads the illustrative example from its source constants (sanity check)', () => {
+    // A broken read would silently widen — or empty — the allowlist below.
+    const amounts = illustrativeAmounts()
+    expect(amounts).toHaveLength(3)
+    expect(amounts.every((a) => /^\$[\d,]+\.\d{2}$/.test(a))).toBe(true)
+    // The example is a subtraction; if it ever stops being one, the copy
+    // around it ("that balance is subtracted from what you advance") is
+    // wrong and somebody must look.
+    const [a, b, c] = amounts.map((s) => Number(s.replace(/[$,]/g, '')))
+    expect(a - b).toBeCloseTo(c, 2)
+  })
+
+  /*
+   * The gap between two package totals — "the one line that differs is our
+   * agent fee, a gap of $500.00". Derived from the same totals the cards
+   * print, exactly as src/pages/pricing.astro derives it, so a price change
+   * moves both together and neither can go stale against the other. Every
+   * ordered pair, because nothing here should depend on which package is
+   * listed first.
+   */
+  function packageDifferences(): string[] {
+    const totals = packages.map(packageTotalCents)
+    // Both renderings, for the same reason `validAmounts` above accepts
+    // both: formatSgd() always emits cents because a column has to align on
+    // its decimal point, and formatSgdProse() drops a trailing ".00"
+    // because "a gap of $500.00" reads as a printed field rather than an
+    // amount someone has named. The gap is quoted in prose on /pricing, so
+    // the allowlist has to know the prose form of it. Derived from the same
+    // subtraction either way — neither form can go stale against the data.
+    return totals.flatMap((a) =>
+      totals.filter((b) => b < a).flatMap((b) => [formatSgd(a - b), formatSgdProse(a - b)]),
+    )
+  }
+
+  it('walks every built page, not just /pricing (guards the sweep itself)', () => {
+    // F-2's own regression guard. A mis-walked dist/ would make the money
+    // sweep below pass on nothing, which is how the hardcoded version hid
+    // the homepage's 14 figures in the first place.
+    const built = builtPages()
+    expect(built.length).toBeGreaterThanOrEqual(2)
+    expect(built.map((p) => p.file)).toContain('dist/index.html')
+    expect(built.map((p) => p.file)).toContain('dist/pricing/index.html')
+  })
+
+  it('every dollar figure on every built page is a real amount', () => {
+    const allowed = new Set([
+      ...validAmounts,
+      ...packageDifferences(),
+      ...illustrativeAmounts(),
+    ])
+
+    const strays = builtPages().flatMap(({ file, text }) =>
+      [...new Set(text.match(dollarPattern) ?? [])]
+        .filter((amount) => !allowed.has(amount))
+        .map((amount) => `${file}: ${amount}`),
+    )
+    expect(strays).toEqual([])
+  })
+
+  it('the money sweep really does find figures to check (sanity check)', () => {
+    // Non-vacuous: the site really does print figures. If this ever reads
+    // zero, the check above means nothing. Asserted across the whole build
+    // rather than per page, because a Phase B page with no prices on it is
+    // legitimate — /about and /contact will both be one.
+    //
+    // A global floor is the right shape for "the sweep found something",
+    // and the WRONG shape for "this particular page still shows prices".
+    // See the /pricing floor below, which is not redundant with it.
+    const total = builtPages().reduce((n, { text }) => n + (text.match(dollarPattern) ?? []).length, 0)
+    expect(total).toBeGreaterThanOrEqual(20)
+  })
+
+  it('/pricing still prints prices', () => {
+    /*
+     * Fix round 2, G-1 — a regression this suite introduced and then
+     * failed to notice.
+     *
+     * Before F-2 the money check read dist/pricing/index.html by name and
+     * carried `found.length >= 10`, so it asserted two things at once:
+     * every figure on /pricing is real, AND /pricing has figures.
+     * Generalising the sweep to all pages correctly fixed the first and
+     * silently dropped the second — the replacement floor is global, and
+     * the homepage alone prints 24 figures, so /pricing could have
+     * rendered zero and the whole suite would still have been green.
+     * Nothing else covered it: tests/pricing.test.ts asserts totals
+     * against the DATA, not against the built page, and
+     * tests/compliance-gate.test.ts reads that page for other properties
+     * entirely. A property that was asserted before the commit was not
+     * asserted after it.
+     *
+     * Naming one page here does not contradict "derive the page list from
+     * dist/". Derivation exists so that UNKNOWN future pages are covered
+     * without anyone remembering them; it is not a rule against asserting
+     * something specific about a page whose entire job is the thing being
+     * asserted. /pricing showing no prices is a page-specific catastrophe
+     * and needs a page-specific guard.
+     *
+     * A floor of 10, not today's 28: the coarse check restored verbatim
+     * from before F-2, so it fails when the prices go rather than when the
+     * copy is edited. The sharp check is the assertion below it, which is
+     * derived and needs no chosen number at all.
+     */
+    const pricing = builtPages().find((p) => p.file === 'dist/pricing/index.html')
+    expect(pricing, 'dist/pricing/index.html was not built').toBeDefined()
+    const found = pricing!.text.match(dollarPattern) ?? []
+    expect(found.length).toBeGreaterThanOrEqual(10)
+  })
+
+  it('/pricing prints every distinct figure pricing.ts holds', () => {
+    /*
+     * The sharp half of G-1, and the reason the floor above is not left to
+     * do this on its own.
+     *
+     * /pricing prints 28 figures, but only 14 of them come from the two
+     * package cards — the pricing-tagged FAQ answers repeat 10 more in
+     * prose, and the carry-forward example adds 3. So a count floor loose
+     * enough not to break on a copy edit is also loose enough to survive
+     * both cards disappearing, which is the regression that actually
+     * matters on this page.
+     *
+     * This asserts the property instead: every distinct amount in
+     * pricing.ts is printed somewhere on the page. It needs no chosen
+     * number, it tracks the data, and it is not satisfiable by the FAQ
+     * prose alone — $388.00, the without-replacement agent fee, appears
+     * only on the cards. Both renderings of a whole-dollar amount are
+     * accepted, for the same reason the FAQ drift guard accepts both:
+     * formatSgd always emits cents, prose does not.
+     */
+    const pricing = builtPages().find((p) => p.file === 'dist/pricing/index.html')
+    expect(pricing, 'dist/pricing/index.html was not built').toBeDefined()
+
+    const distinct = [...new Set(amountsCents)]
+    expect(distinct.length, 'no figures in pricing.ts to look for').toBeGreaterThan(0)
+
+    // Tokenised, not substring-matched: `$70` is a substring of `$700.00`,
+    // and a guard that accepted that would pass on the wrong figure.
+    const printed = new Set(pricing!.text.match(dollarPattern) ?? [])
+    const missing = distinct
+      .map(formatSgd)
+      .filter((amount) => !printed.has(amount))
+      .filter((amount) => !(amount.endsWith('.00') && printed.has(amount.slice(0, -3))))
+    expect(missing).toEqual([])
+  })
+})
+
+// --- the other half of §5.3: no dollar literal in the pricing sources ---
+//
+// Extending the drift guard to /pricing passes on day one and would never
+// have been shown to fail, because every figure on that page is already
+// derived through packageTotalCents() and formatSgd(). That is a property
+// worth ASSERTING rather than relying on: the guard above can only compare
+// what is printed against what pricing.ts holds, so a hand-typed "$1,988.10"
+// that happens to still be correct passes it — and stays passing on the day
+// pricing.ts changes and the literal does not.
+//
+// This assertion is the cheap one that can actually fail: no dollar literal
+// appears in these three files at all, outside comments. Comments are
+// stripped first because ReplacementTerms.astro's header explains the
+// illustrative $2,500 in prose, and a rule's own explanation must not read
+// as a violation of it — the same technique, for the same reason, as the
+// Mizoram sweep above.
+describe('the /pricing sources contain no hardcoded money', () => {
+  const PRICING_SOURCES = [
+    'src/pages/pricing.astro',
+    'src/sections/ReplacementTerms.astro',
+    'src/sections/LoanAndPlacement.astro',
+  ]
+
+  // `$` followed by a digit. `${...}` template interpolations — which are
+  // how every real figure on the page arrives — are `$` followed by `{`,
+  // so they are not matched and do not need exempting.
+  const DOLLAR_LITERAL = /\$\s*\d/
+
+  it('scans the files it claims to scan (sanity check)', () => {
+    for (const file of PRICING_SOURCES) {
+      const source = readFileSync(file, 'utf8')
+      expect(source.length, `${file} is empty or missing`).toBeGreaterThan(1_000)
+      // Each of these files renders money through the shared formatter.
+      // If one stops, the assertion below is guarding a file that no
+      // longer has anything to guard.
+      expect(source, `${file} no longer references a money value`).toMatch(
+        /formatSgd|packageTotalCents|amount/,
+      )
+    }
+  })
+
+  it('no dollar figure is typed into any of them outside a comment', () => {
+    const offenders = PRICING_SOURCES.flatMap((file) => {
+      const stripped = code(readFileSync(file, 'utf8'))
+      const matches = stripped.match(/\$\s*\d[\d,]*(?:\.\d{2})?/g) ?? []
+      return matches.map((m) => `${file}: ${m}`)
+    })
+    expect(offenders).toEqual([])
+    // DOLLAR_LITERAL is the rule this test states; referenced so the
+    // constant cannot drift away from the pattern actually applied.
+    expect(PRICING_SOURCES.every((f) => !DOLLAR_LITERAL.test(code(readFileSync(f, 'utf8'))))).toBe(
+      true,
+    )
+  })
+
+  it('the comment stripper is what makes this pass, not an absence of dollars', () => {
+    // ReplacementTerms.astro's header DOES contain "$2,500", in the
+    // paragraph explaining that the figure is illustrative. If code()
+    // stopped stripping block comments this test would go green for the
+    // wrong reason — an absent violation rather than a stripped comment —
+    // so the stripping is asserted directly.
+    const raw = readFileSync('src/sections/ReplacementTerms.astro', 'utf8')
+    expect(raw).toMatch(DOLLAR_LITERAL)
+    expect(code(raw)).not.toMatch(DOLLAR_LITERAL)
   })
 })

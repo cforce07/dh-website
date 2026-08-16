@@ -1,6 +1,7 @@
 ---
 question: What is the difference between a new helper and a transfer helper?
 surfaces: [home, faq]
+category: sources
 order: 3
 ---
 

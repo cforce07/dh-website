@@ -25,13 +25,32 @@
  * minority who want the itemised detail before doing anything else.
  *
  * The lede must stay consistent with `.pricing-qualifier` below it. Brief
- * §19 states additional helper placement-related fees may apply, and
- * forbids representing the package total as necessarily the complete
+ * §19 forbids representing the package total as necessarily the complete
  * final employer cost — so "explained in full", "everything you pay", or
  * any equivalent completeness promise is contradicted by the qualifier
  * this very section renders. The lede instead surfaces the qualifier's
  * existence upfront, which is the honest and defensible version of the
  * claim.
+ *
+ * THE QUALIFIER WAS WRONG UNTIL 2026-08-16, and the correction is binding
+ * on every surface, not just this one. It read "Additional helper
+ * placement-related fees may apply depending on the selected helper and
+ * placement arrangement" — two errors in one sentence. "May apply" makes a
+ * certainty conditional, and stating a fee without stating that it is
+ * recovered makes it read as a cost the employer bears. Core-pages design
+ * spec §2.4: the employer ADVANCES the helper's loan and placement fee and
+ * RECOVERS them through the helper's repayment; they are ultimately the
+ * HELPER'S cost. Copy must carry both halves — the money leaves the
+ * employer's account first, and it comes back — because either half on its
+ * own is a different and untrue claim. The same correction was applied to
+ * src/content/faq/cost.md, and /pricing's LoanAndPlacement section is
+ * where the whole explanation lives, which is why the qualifier now links
+ * there.
+ *
+ * The repayment mechanics themselves are NOT published anywhere on the
+ * site — they are gated behind DirectHired's compliance sign-off (spec
+ * §2.5, recorded in scripts/generate-info-required.mjs, enforced by
+ * tests/compliance-gate.test.ts). Do not add them here.
  */
 import Container from '../components/Container.astro'
 import SectionHeader from '../components/SectionHeader.astro'
@@ -48,7 +67,7 @@ const whatsappHref = defaultWhatsappUrl()
   <Container>
     <SectionHeader
       title="Transparent Pricing. No Guesswork."
-      lede="Two ways to bring a helper into your home, with package costs set out upfront — including where further placement-related fees can apply."
+      lede="Two ways to bring a helper into your home, with package costs set out upfront — and a plain account of what sits outside them."
     />
 
     <div class="pricing-grid">
@@ -56,7 +75,9 @@ const whatsappHref = defaultWhatsappUrl()
     </div>
 
     <p class="pricing-qualifier">
-      Additional helper placement-related fees may apply depending on the selected helper and placement arrangement.
+      The helper’s loan and placement fee sit outside these packages. You advance both at the
+      start and recover them through the helper’s repayment, so they are ultimately the helper’s
+      cost rather than an extra charge you carry — <a href="/pricing">see how that works</a>.
     </p>
 
     <div class="pricing-cta">
@@ -92,12 +113,12 @@ const whatsappHref = defaultWhatsappUrl()
 
   .pricing-qualifier {
     /*
-     * 60ch keeps a readable measure — at 13px that computes to ~500px, and
-     * the sentence needs 669px on one line, so it wraps to two. That is the
-     * right call for reading; what was wrong was WHERE it broke. Without
-     * `balance` the browser fills line one and orphans "and placement
-     * arrangement." on line two, which reads as a mistake rather than a
-     * measure. `balance` splits the two lines evenly instead.
+     * 60ch keeps a readable measure — at 13px that computes to ~500px.
+     * `text-wrap: balance` was added when this was a single sentence that
+     * broke across two lines and orphaned three words on the second; it is
+     * kept now that the §2.4 correction has made it three lines, where it
+     * does the same job across all of them. `pretty` would only protect
+     * the last line.
      */
     max-width: 60ch;
     text-wrap: balance;
@@ -106,6 +127,19 @@ const whatsappHref = defaultWhatsappUrl()
     font-size: var(--size-small);
     line-height: 1.5;
     color: var(--color-ink-muted);
+  }
+
+  /* The qualifier's link into /pricing, where the whole explanation lives.
+     --color-accent (6.03:1 on this section's cream ground), never
+     --color-brand-teal, which fails AA for text. */
+  .pricing-qualifier a {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .pricing-qualifier a:hover {
+    color: var(--color-accent-hover);
   }
 
   .pricing-cta {

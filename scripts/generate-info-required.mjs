@@ -97,19 +97,35 @@ const BARE_PATTERN = /data-tbd(?![-="])/g
  * confirm the gap is being handled honestly rather than silently ignored.
  */
 const DECLARED_INPUTS = [
-  {
-    item: 'Detailed replacement terms and conditions',
-    source: 'Brief §18 / §79 Reminder 04; design spec §5 Category A',
-    blocks:
-      'publishing any replacement language beyond the single confirmed line ' +
-      '"1 replacement within 6 months". A replacement policy page, and any ' +
-      'FAQ answer about what a replacement covers, cannot be written without it.',
-    handledBy:
-      'the confirmed line is the only replacement text on the site (`replacementTerm` ' +
-      'in `src/data/pricing.ts`, rendered by `src/components/PricingCard.astro`); ' +
-      'no conditions are stated.',
-  },
-  // RESOLVED 2026-08-16 — DirectHired supplied the breakdown, which also
+  // RESOLVED 2026-08-16 — "Detailed replacement terms and conditions"
+  // (brief §18 / §79 Reminder 04; design spec §5 Category A). DirectHired
+  // supplied them, and they are recorded verbatim in core-pages design
+  // spec §2.1: the employer requests a replacement with no justification
+  // required; the sole exclusion is a breach of the Employment Act or
+  // abuse of the helper; one replacement, within 6 months of the
+  // deployment date; the third-party components are re-paid and the agent
+  // fee is not; and an outstanding loan balance from the replaced helper
+  // is subtracted from what the employer advances for the new one.
+  //
+  // CONFIRMED COMPLETE 2026-08-16 (spec §2.6.1). DirectHired was asked in
+  // docs/OPEN-DECISIONS.md whether those five facts are the WHOLE of their
+  // replacement terms — the one thing that could not be inferred from the
+  // facts themselves — and answered yes. That is why
+  // src/sections/ReplacementTerms.astro's lede now says the terms are stated
+  // in full, and it is the only thing supporting that claim. If DirectHired
+  // ever adds a term, this entry comes back and that sentence comes out.
+  //
+  // This entry stated that the confirmed line "1 replacement within 6
+  // months" was the only replacement text on the site and that no
+  // conditions were stated. Both stopped being true on 2026-08-16, when
+  // `src/sections/ReplacementTerms.astro` and two FAQ entries published
+  // the full terms. Deleted rather than left in place: a checklist item
+  // that describes the site incorrectly is worse than no item, because it
+  // is the document a reader trusts to tell them what is still missing.
+  //
+  // RESOLVED 2026-08-16 — the without-replacement inclusion list, the
+  // third of design spec §5's Category A items.
+  // DirectHired supplied the breakdown, which also
   // corrected the total from $1,252.10 to $1,140.10. The package is now
   // `itemised` in src/data/pricing.ts and renders its six line items.
   //
@@ -162,6 +178,55 @@ const DECLARED_INPUTS = [
       'provenance is recorded as `ai-generated` in the registry and it appears in ' +
       'Category D below. If the image is ever removed, `twitter:card` must go back ' +
       'to `"summary"` in the same commit.',
+  },
+  // Added 2026-08-16 with /pricing (core-pages Task 4). This is the one
+  // entry here whose blocker is NOT missing information — DirectHired
+  // supplied the facts the same day. What is missing is sign-off, so the
+  // usual "we cannot write it until you tell us" framing does not apply
+  // and the `blocks` text says so explicitly.
+  //
+  // Enforced, not merely declared: tests/compliance-gate.test.ts scans the
+  // built HTML of every page for the gated phrasings and for the obvious
+  // paraphrases of them. Resolving this item means deleting that test's
+  // expectations in the same commit that publishes the paragraph — a
+  // deliberate speed bump, so the gate cannot lapse by inattention.
+  // STILL OPEN after DirectHired's 2026-08-16 answers, and the item is
+  // deliberately NOT narrowed into something that reads as nearly done.
+  //
+  // DirectHired approved ONE sentence that day (core-pages spec §2.6.2):
+  // "We go through the repayment arrangement in full with you before you
+  // commit, and it is set out in the contract." That sentence is about the
+  // PROCESS and now ships. It is not sign-off on the MECHANICS, which is
+  // what this entry has always been about and what §2.5 gates. Approving a
+  // sentence that says an arrangement is explained to the employer says
+  // nothing about publishing how the arrangement works.
+  //
+  // The wording below states the approval explicitly rather than leaving it
+  // out, because the failure mode here is a reader seeing "they answered on
+  // 2026-08-16" somewhere else and assuming this closed with it.
+  {
+    item: 'Compliance sign-off on loan repayment terms',
+    source: 'Brief §19; core-pages spec §2.3, §2.5 and §2.6.2',
+    blocks:
+      'publishing the repayment mechanics — the 1-7 month range, that repayment ' +
+      'comes from the helper\'s basic salary, and that the helper receives ' +
+      'off-day compensation during it. DirectHired supplied these facts on ' +
+      '2026-08-16; what is missing is sign-off, not information. **Their ' +
+      '2026-08-16 approval of one process sentence does not resolve this.** ' +
+      'That approval covers "We go through the repayment arrangement in full ' +
+      'with you before you commit, and it is set out in the contract" and ' +
+      'nothing else — one sentence about the process, not the three mechanics ' +
+      'above, which remain unpublishable in substance as well as literally.',
+    handledBy:
+      '`src/sections/LoanAndPlacement.astro` publishes the framing only — the ' +
+      'employer advances the loan and placement fee, the helper repays it, it is ' +
+      'ultimately the helper\'s cost, the placement fee is one month\'s salary, ' +
+      'and (since 2026-08-16, in DirectHired\'s own approved wording) that the ' +
+      'arrangement is gone through in full before the employer commits and is ' +
+      'set out in the contract. The repayment mechanics appear nowhere on the ' +
+      'site. The page is complete and honest without them; it is a ' +
+      'salary-deduction arrangement on a licensed agency\'s public site, in an ' +
+      'area MOM regulates, so it does not publish unreviewed.',
   },
 ]
 
@@ -415,9 +480,12 @@ function renderMarkdown(categoryA, categoryB, categoryC, categoryD) {
   )
   lines.push('')
   lines.push(
-    'Design spec §5 names three Category A items — the MOM licence number, detailed ' +
-      'replacement terms, and the without-replacement inclusion list. The first was supplied ' +
-      'on 2026-08-15 and its `<Tbd>` removed; the other two never had one and appear here.',
+    'Design spec §5 named three Category A items — the MOM licence number, detailed ' +
+      'replacement terms, and the without-replacement inclusion list. **All three have since ' +
+      'been supplied**: the licence number on 2026-08-15 (its `<Tbd>` removed), the other two ' +
+      'on 2026-08-16. What remains below is one item that is not missing information at all — ' +
+      'the facts are in hand and what is outstanding is DirectHired’s sign-off on publishing ' +
+      'them — and one that is a placeholder asset rather than a gap in the copy.',
   )
   lines.push('')
 

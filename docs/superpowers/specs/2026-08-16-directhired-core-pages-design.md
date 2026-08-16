@@ -68,6 +68,28 @@ Current site copy says these fees "may apply", which reads as a cost the employe
 
 **This paragraph ships behind a declared input requiring DirectHired's compliance sign-off.** Not because the facts are doubted, but because it is the highest-liability sentence on the site.
 
+### 2.6 Supplied 2026-08-16 (second round)
+
+Five questions put to DirectHired in `docs/OPEN-DECISIONS.md`, answered the same day. Same rule as the rest of §2: nothing here may be extended, rounded or inferred beyond what is written.
+
+- **2.6.1 — The replacement terms are complete.** Asked "are those five facts the whole of your replacement terms?", DirectHired answered **yes**. §2.1's five facts are therefore the whole of the replacement terms, and that is now a supplied fact rather than an inference.
+
+  **Scope: the replacement terms only.** It says nothing about the completeness of `/pricing` as a page, which still withholds the loan figure (§2.3, §7) and the repayment mechanics (§2.5). A section may state that its own terms are complete; the page may not claim to be.
+
+- **2.6.2 — One repayment-process sentence is approved for publication.** DirectHired approved this exact wording:
+
+  > We go through the repayment arrangement in full with you before you commit, and it is set out in the contract.
+
+  It is a statement about **process** — that the arrangement is explained and contracted — not about the mechanism. **§2.5's gate is unchanged by it.** The 1–7 month range, repayment from the helper's basic salary, and off-day compensation during repayment all remain unpublishable pending compliance sign-off, in substance as well as literally. One sentence was approved; the mechanics were not.
+
+  This also supersedes, for this sentence only, the earlier deletion of "…before you commit to anything" from `src/sections/LoanAndPlacement.astro` and `src/content/faq/helper-loan-placement-fee.md`. That clause was an unauthorised process promise when it was deleted; the sentence above is the same idea, now authorised, in DirectHired's own words.
+
+- **2.6.3 — The with-replacement package is recommended for first-time employers.** Asked whether they recommend it to first-time employers, DirectHired answered **yes**. The recommendation is **audience-qualified**: it is for first-time employers, not a general statement that the package is better. The without-replacement package remains the right choice for an experienced employer, and no copy may imply otherwise.
+
+- **2.6.4 — What families ask after seeing the figures.** DirectHired: *"Normally they will ask similar question for re-assurance."* Families re-ask questions the page has already answered, seeking reassurance rather than new information. Consequence: an FAQ that restates what the page says is **correct behaviour, not duplication**, and copy answering these questions should be framed as reassurance. This does **not** license restoring near-verbatim adjacent repetition — the earlier de-duplication on `/pricing` removed entries that repeated the cards a screen above them, which remains right.
+
+- **2.6.5 — The requirements form stays on the legacy site.** DirectHired: *"Yes it's a different site. We can audit design on that later."* The employer requirement form is not migrating to this site. Consequence: **the primary conversion path leaves this domain**, so conversion cannot be measured from here and the form's design is outside this project. DirectHired has accepted both; a design audit of that form is deferred.
+
 ---
 
 ## 3. Architecture

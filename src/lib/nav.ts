@@ -18,8 +18,11 @@
  * brand name is already set 40px to the left in the wordmark, so the
  * longer label re-stated it inside its own header. The ROUTE keeps the
  * full name — /why-directhired is the URL DirectHired will print and
- * share, and it is in tests/links.test.ts's known-future-routes
- * allowlist. Change the label freely; do not change the href.
+ * share, and it is enumerated in tests/links.test.ts's DEFERRED_ROUTES.
+ * Change the label freely; do not change the href — and if you add a nav
+ * entry for a route that does not exist yet, add it to that enumeration
+ * in the same commit. It is no longer derived from this file, precisely
+ * so that adding a link cannot silently permit itself.
  */
 export const navItems = [
   { label: 'Find Your Helper', href: '/find-your-helper' },

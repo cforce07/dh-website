@@ -1,0 +1,498 @@
+---
+/**
+ * ReplacementTerms — the replacement mechanics, /pricing only.
+ *
+ * Everything stated here comes from the core-pages design spec §2.1, which
+ * is the only permitted source of business facts for this page. Nothing is
+ * extended, rounded or inferred: the trigger, the single exclusion, the
+ * entitlement, and which components recur are written exactly as supplied.
+ *
+ * Two things are worth knowing before editing this file.
+ *
+ * 1. THE SUM IS THE POINT. DirectHired asked specifically that the loan
+ *    carry-forward be shown as visible arithmetic rather than described in
+ *    prose — a subtraction a reader can follow line by line. It is a real
+ *    <table> with a <caption> and row headers, not a <pre> block: a screen
+ *    reader announces "New helper's loan, $2,500.00" as a labelled pair,
+ *    and the label column wraps on a narrow phone instead of forcing the
+ *    page to scroll sideways. Preformatted text does neither.
+ *
+ * 2. THE FIGURES ARE ILLUSTRATIVE AND MUST STAY LABELLED AS SUCH. $2,500
+ *    is not DirectHired's loan — the loan is case-by-case and no figure or
+ *    range may be published (spec §2.3, §7). The numbers exist to
+ *    demonstrate the subtraction. That is said in the caption, again in a
+ *    note under the table, and the three values are derived from two
+ *    constants below so the arithmetic is performed rather than typed —
+ *    a wrong total in an example about arithmetic would be its own kind of
+ *    embarrassment.
+ *
+ * The single most customer-favourable true fact available is that the
+ * agent fee is not charged a second time. Before this section it was
+ * published nowhere on the site, so it is stated plainly rather than left
+ * to be inferred from the list of components that do recur.
+ *
+ * The recurring components are read from src/data/pricing.ts rather than
+ * retyped, so a change to the package breakdown reaches this section too.
+ * They are the with-replacement package's line items minus the agent fee,
+ * which is precisely what "the agent fee is not charged again" means.
+ *
+ * NAMES ONLY — NO AMOUNTS. Spec §2.1 authorises WHICH components recur.
+ * It does not state what any of them costs on a replacement. This section
+ * first shipped with the five amounts printed beside the names and no
+ * subtotal, on the reasoning that summing them would read as a complete
+ * quotation the spec does not support. That reasoning was right and did
+ * not go far enough: printing all five addends while withholding only the
+ * addition is one step short of the line, not on the safe side of it, and
+ * a reader adds them up anyway. Insurance and medical are precisely the
+ * two most likely to differ for a different helper. Controller ruling,
+ * 2026-08-16; the same ruling corrected the FAQ entry rendered a screen
+ * below this one on /pricing (`replacement-what-covered.md`, which now
+ * says "the same components" rather than "the same amounts"), so leaving
+ * figures here would have made one page disagree with itself.
+ *
+ * The list stays derived from pricing.ts even without the amounts: the
+ * SET of components is the thing that must not drift, and reading it is
+ * what makes an added or renamed line item reach this copy automatically.
+ */
+import Container from '../components/Container.astro'
+import SectionHeader from '../components/SectionHeader.astro'
+import { packages } from '../data/pricing'
+import { formatSgd } from '../lib/money'
+
+const withReplacement = packages.find((pkg) => pkg.id === 'fly-in-with-replacement')
+
+const recurringComponents =
+  withReplacement && withReplacement.kind === 'itemised'
+    ? withReplacement.lineItems.filter((item) => item.label !== 'Agent fees')
+    : []
+
+/**
+ * "A, B and C". Deliberately a local copy — src/pages/pricing.astro has
+ * the same four lines. It is English list punctuation, not a business
+ * fact: if the two ever diverged the worst outcome is an inconsistent
+ * comma, so neither file gains a dependency on the other and nothing
+ * false can be published by the difference. Promote it to src/lib/ if a
+ * third caller appears.
+ */
+function listSentence(items: readonly string[]): string {
+  if (items.length < 2) return items.join('')
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
+}
+
+/*
+ * Falls back to a component-free sentence rather than rendering "for the
+ * new helper: ." if the package ever becomes total-only. See the parallel
+ * guard in src/pages/pricing.astro.
+ */
+const recurringSentence = listSentence(recurringComponents.map((item) => item.label))
+
+/*
+ * Illustrative only — see the file header. Held as integer cents and run
+ * through formatSgd() like every other money value on the site, so the
+ * example is rendered by the same formatter as the real prices instead of
+ * being three hand-typed strings that could disagree with each other.
+ */
+const EXAMPLE_NEW_LOAN_CENTS = 250_000
+const EXAMPLE_OUTSTANDING_CENTS = 150_000
+const exampleAdvanceCents = EXAMPLE_NEW_LOAN_CENTS - EXAMPLE_OUTSTANDING_CENTS
+---
+
+<section class="replacement-terms">
+  <Container>
+    {/*
+      THE COMPLETENESS CLAIM IS AUTHORISED. Supplied 2026-08-16, recorded as
+      core-pages design spec §2.6.1. Do not delete it again without reading
+      that section first.
+
+      This lede once ended "...and the terms are short enough to state in
+      full", and that was struck — correctly — because nothing authorised it.
+      Spec §2.1 supplied the facts stated below (who asks, the one exclusion,
+      how many and by when, which components recur) and §2's preamble forbids
+      inferring anything it does not state. "And there are no others" was
+      exactly such an inference, and the master brief's Reminder 04 requires
+      DirectHired's official terms and conditions BEFORE detailed replacement
+      language is published.
+
+      docs/OPEN-DECISIONS.md then asked DirectHired the one question that
+      would settle it — "are those five facts the whole of your replacement
+      terms?" — and named the three gaps a yes would have to cover: a
+      replaced helper who is already deployed, refund treatment, and how long
+      a replacement takes to arrange. The answer on 2026-08-16 was yes. So
+      the claim is no longer an inference from the facts; it is one of the
+      facts, and the sentence returns.
+
+      SCOPE, AND THIS IS THE PART THAT MATTERS. The confirmation covers the
+      REPLACEMENT TERMS. It does not cover /pricing, which deliberately
+      withholds the loan figure (§2.3, §7 forbid publishing a range) and the
+      repayment mechanics (§2.5's compliance gate). Hence "these are its
+      terms in full" — "its" being this package's replacement terms — rather
+      than anything about the page. The <h1> stays "Maid Agency Pricing,
+      Itemised" and the two other completeness claims deleted from
+      src/pages/pricing.astro stay deleted; see the notes there. One section
+      may now say its own terms are complete. The page may not say it is.
+    */}
+    <SectionHeader
+      title="If the placement doesn’t work out"
+      lede="The fly-in package with replacement carries one replacement, and these are its terms in full."
+    />
+
+    <div class="replacement-body">
+      <div class="terms">
+        <dl class="term-list">
+          <div class="term">
+            <dt>Who asks</dt>
+            <dd>
+              You do. If the placement is not working for your household you request a replacement,
+              and you do not have to justify the request.
+            </dd>
+          </div>
+
+          <div class="term">
+            <dt>The one exception</dt>
+            <dd>
+              A replacement is not available where the employer has breached the Employment Act or
+              has abused the helper. That is the sole exclusion.
+            </dd>
+          </div>
+
+          <div class="term">
+            <dt>How many, and by when</dt>
+            <dd>
+              One replacement, requested within 6 months of your helper’s deployment date. Not an
+              unlimited entitlement, and the 6 months runs from deployment rather than from the day
+              you sign.
+            </dd>
+          </div>
+
+          <div class="term">
+            <dt>What you pay again</dt>
+            <dd>
+              {
+                recurringSentence
+                  ? `The third-party components are paid a second time for the new helper: ${recurringSentence}.`
+                  : 'The third-party components are paid a second time for the new helper.'
+              }
+              <strong class="fee-note">Our agent fee is not charged again.</strong>
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      <div class="carry-forward-panel">
+        <table class="carry-forward">
+          {/*
+            THE DISCLAIMER IS AN EYEBROW, NOT A FOOTNOTE, and it is first in
+            source order as well as first on the page.
+
+            It used to sit beneath "Loan carry-forward" at 13px muted — the
+            smallest, lightest text in a panel whose only real risk is being
+            read as a quote. A skimmer reading only the largest type in this
+            panel reads "Loan carry-forward ... $1,000.00", and the single
+            thing holding that back from being read as a price was the word
+            "Employer advances" in semibold. That held, but narrowly.
+
+            So it now reads before the title rather than after it, at body
+            size in --color-ink, as a tinted strip across the top of the
+            panel. The wording is unchanged.
+          */}
+          <caption>
+            <span class="caption-note">Illustrative figures — an example of the method, not a quote</span>
+            <span class="caption-title">Loan carry-forward</span>
+          </caption>
+          <tbody>
+            <tr>
+              <th scope="row">New helper’s loan</th>
+              <td>{formatSgd(EXAMPLE_NEW_LOAN_CENTS)}</td>
+            </tr>
+            <tr>
+              {/*
+                Shortened from "Less: outstanding balance from the replaced
+                helper", which wrapped to five lines at 320px and made this
+                row 129px tall against 61px and 66px for the two beside it,
+                with the amount floating vertically centred against nothing.
+                Decimal alignment survived — the tabular figures did their
+                job — but three ragged rows read as three statements rather
+                than one subtraction, which is the whole point of the block.
+
+                Nothing is lost: "the replaced helper" is established by the
+                section heading above and restated in the note below, so the
+                antecedent for "her" is on screen at every width. No fact is
+                added or removed.
+              */}
+              <th scope="row">Less: her outstanding balance</th>
+              <td>−{formatSgd(EXAMPLE_OUTSTANDING_CENTS)}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row">Employer advances</th>
+              <td>{formatSgd(exampleAdvanceCents)}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <p class="carry-forward-note">
+          If the helper being replaced still has an outstanding loan balance, that balance is
+          subtracted from what you advance for the new helper — so the same amount is not funded
+          twice. The figures above are there to show the subtraction. They are not our loan
+          amounts: the loan is assessed for each helper individually, which is why we publish no
+          figure for it.
+        </p>
+      </div>
+    </div>
+  </Container>
+</section>
+
+<style>
+  .replacement-terms {
+    padding-block: var(--space-section);
+    /*
+     * --color-surface-teal. THE PAGE'S THIRD GROUND, and the reason it is
+     * here rather than anywhere else.
+     *
+     * /pricing ran five sections across two surfaces — cream / white /
+     * cream / white / cream — 5,201px of metronomic alternation at
+     * identical padding with no register change anywhere. The homepage runs
+     * eleven sections across three light grounds plus one dark, and the
+     * pale-teal wash is one of them (block 05, Process). Losing it here
+     * flattened this page against the one it is reached from, and five more
+     * pages will inherit whichever rhythm this page sets.
+     *
+     * THIS IS NOT A SECOND DARK BAND. Block 07 of the homepage keeps
+     * --color-deep as the site's only palette register shift, and that is
+     * unchanged: --color-surface-teal is 8% brand teal over cream, a light
+     * surface that clears AA for every text colour used on it
+     * (tests/tokens.test.ts). Do not add a dark section here.
+     *
+     * This section rather than another because it is the emotional turn of
+     * the page — what happens if the placement does not work out — and a
+     * register change is worth spending where the subject changes. The
+     * sequence is now cream / teal / cream / white / cream: still no two
+     * consecutive sections on the same ground.
+     */
+    background: var(--color-surface-teal);
+  }
+
+  .replacement-body {
+    display: grid;
+    gap: var(--space-12);
+    margin-top: var(--space-12);
+    align-items: start;
+  }
+
+  .term-list {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+
+  .term {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .term dt {
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+  }
+
+  .term dd {
+    margin: 0;
+    max-width: 60ch;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink);
+  }
+
+  .fee-note {
+    display: block;
+    margin-top: var(--space-4);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-ink);
+  }
+
+  .carry-forward-panel {
+    /* min-width: 0 for the same reason Card.astro sets it — a grid item's
+       automatic minimum is its min-content width, and the longest row
+       label here is a full sentence. Without this the panel refuses to
+       shrink below that label's unbroken width and the whole page gains a
+       horizontal scrollbar at 320px. */
+    min-width: 0;
+    /* --space-4, not --space-6, until there is room for it. At a 305px
+       viewport the container already spends 48px on its own gutters; a
+       24px panel inset on top of that left the table 209px, and a table
+       whose amount column will not wrap spends that on the amounts —
+       "New helper's loan" broke across three lines. Measured in Chrome.
+
+       Held as a custom property rather than typed twice, because the
+       caption strip below has to cancel it exactly with a negative margin
+       to reach the panel's edges. Two literals that must agree are two
+       literals that will eventually disagree. */
+    --panel-pad: var(--space-4);
+    padding: var(--panel-pad);
+    /* White on the teal ground — the same inverse relationship this panel
+       has always had with its section, restated after the section moved
+       from white to --color-surface-teal. Cream on teal would have been
+       two washes arguing; white is the surface the rest of the site raises
+       things onto. */
+    background: var(--color-surface-raised);
+    border-radius: var(--radius-lg);
+    /* The panel's own edge. On the old white section it had none and needed
+       none — cream against white was the edge. On the teal ground a white
+       panel reads as raised, and --shadow-sm is what the rest of the site
+       raises things with (Card.astro). */
+    box-shadow: var(--shadow-sm);
+  }
+
+  .carry-forward {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-text);
+  }
+
+  .carry-forward caption {
+    text-align: left;
+    padding-bottom: var(--space-4);
+  }
+
+  .caption-title {
+    display: block;
+    font-family: var(--font-display);
+    font-size: var(--size-h3);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  /*
+   * The disclaimer, promoted. Was 13px --color-ink-muted sitting under the
+   * title; it is now --size-body semibold in --color-ink, on a tinted strip
+   * that runs the full width of the panel above everything else in it.
+   *
+   * The negative margin cancels --panel-pad exactly on three sides so the
+   * strip reaches the panel's own edges, and the matching inline padding
+   * puts the text back on the same axis as the table beneath it. The two
+   * top corners are rounded to the panel's radius; the bottom two are
+   * square, because the strip meets the panel's contents rather than its
+   * edge there.
+   */
+  .caption-note {
+    display: block;
+    margin: calc(-1 * var(--panel-pad)) calc(-1 * var(--panel-pad)) var(--space-4);
+    padding: var(--space-3) var(--panel-pad);
+    border-start-start-radius: var(--radius-lg);
+    border-start-end-radius: var(--radius-lg);
+    /* Cream, not the teal wash. The section ground IS the teal wash now, so
+       a teal strip inside a white panel loses its own left and right edges
+       against it and reads as a hole in the panel rather than a band across
+       it — checked in Chrome at 1280 before this line was written. Cream is
+       the third surface in the sequence and is distinct from both. */
+    background: var(--color-surface);
+    font-size: var(--size-body);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.4;
+    color: var(--color-ink);
+  }
+
+  .carry-forward th {
+    text-align: left;
+    font-weight: var(--font-weight-regular);
+    color: var(--color-ink-muted);
+  }
+
+  .carry-forward td {
+    text-align: right;
+    /* The amounts never wrap; the labels do. Tabular figures keep the
+       three numbers aligned on their decimal point, which is what makes
+       the block read as a sum rather than as three unrelated prices. */
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-ink);
+  }
+
+  .carry-forward tbody th,
+  .carry-forward tbody td {
+    padding-block: var(--space-2);
+    font-size: var(--size-body);
+    line-height: 1.4;
+  }
+
+  /* The rule under the subtraction — the "———" of the worked sum. It sits
+     on the tfoot cells' top edge, so it spans exactly the table's width at
+     every viewport instead of being drawn as a fixed-length character run
+     that a phone would break. */
+  .carry-forward tfoot th,
+  .carry-forward tfoot td {
+    padding-top: var(--space-4);
+    border-top: 1.5px solid var(--color-ink-muted);
+    font-size: var(--size-body);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-ink);
+  }
+
+  /* The total is the one figure that gets display treatment. It is set at
+     --size-lede until 30em and only then steps up to --size-h3: the
+     amount column never wraps, so on a narrow phone every point of its
+     font size is taken directly out of the label column beside it. The
+     step-up happens where the table has the width to pay for it. */
+  .carry-forward tfoot td {
+    font-family: var(--font-display);
+    font-size: var(--size-lede);
+  }
+
+  .carry-forward-note {
+    max-width: 60ch;
+    margin: var(--space-6) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+  }
+
+  /* 30em (480px) — a local, content-driven step, not a site breakpoint:
+     it is simply where this table stops being width-starved. Deliberately
+     NOT promoted to tokens.css, which reserves that for values more than
+     one file needs; see the --bp-xwide entry there for what happens when
+     two files adopt the same literal independently. */
+  @media (min-width: 30em) {
+    .carry-forward-panel {
+      /* The strip's negative margin reads the same property, so it follows
+         this step automatically. */
+      --panel-pad: var(--space-6);
+    }
+
+    .carry-forward tfoot td {
+      font-size: var(--size-h3);
+    }
+  }
+
+  /* 64em = --bp-wide (tokens.css). Custom properties do not resolve inside
+     a media condition, so the literal is repeated here by hand. Below this
+     the sum stacks under the terms at full width, which is where its label
+     column has the most room. */
+  @media (min-width: 64em) {
+    .replacement-body {
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: var(--space-16);
+      /*
+       * `stretch`, overriding the `start` above, only where the two columns
+       * are actually side by side. The terms column ran 37px past the foot
+       * of the panel at 1280 and 1920 (measured), which left the section a
+       * ragged bottom edge immediately above 128px of padding — and now
+       * that the panel is white on the teal ground, its lower edge is a
+       * drawn line rather than an invisible one, so the mismatch shows.
+       *
+       * Stretching the panel spends those 37px as extra room under the
+       * note. That is not the dead space the loan cards had: 37px reads as
+       * padding, 77px read as a missing sentence.
+       */
+      align-items: stretch;
+    }
+  }
+</style>

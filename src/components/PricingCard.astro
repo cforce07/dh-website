@@ -21,7 +21,7 @@
  * packageTotalCents() + formatSgd() — never a literal string.
  */
 import type { Package } from '../data/pricing'
-import { packageTotalCents } from '../data/pricing'
+import { divergingLineItemLabels, packageTotalCents } from '../data/pricing'
 import { formatSgd } from '../lib/money'
 import Card from './Card.astro'
 
@@ -31,17 +31,58 @@ interface Props {
 
 const { pkg } = Astro.props
 const total = packageTotalCents(pkg)
+
+/*
+ * The row that is not the same on both cards. Six of the seven rows are
+ * identical between the two packages, so the one that differs was the one
+ * thing a reader had to find by diffing two lists — set at exactly the same
+ * size, weight and colour as the five that carry no information at all.
+ *
+ * Read from the data rather than passed in as a prop: a caller that has to
+ * say which row matters is a caller that can get it wrong, and both of this
+ * component's call sites render the same `packages` array anyway. See
+ * divergingLineItemLabels() for why the set is computed and not listed.
+ */
+const diverging = divergingLineItemLabels()
 ---
 
 <Card>
   <div class:list={['pricing-card', pkg.kind]}>
+    {/*
+      THE RECOMMENDATION BAND — rendered on BOTH cards, filled on one.
+
+      DirectHired confirmed on 2026-08-16 (core-pages design spec §2.6.3)
+      that they recommend the with-replacement package to first-time
+      employers. `recommendedFor` in src/data/pricing.ts holds the audience,
+      not a boolean, so this can never render a bare "Recommended" — see the
+      note on RecommendedFor for why the qualifier is load-bearing rather
+      than decorative. The other package is not marked as second best,
+      because it is not: it is the right package for an experienced
+      employer.
+
+      THE EMPTY CARD RENDERS THE SAME BOX. This is the alignment property
+      the whole component is built around — see the note on .pkg-name below
+      for what happens at 768-828px when one card grows a line the other
+      does not. A flag on one card only would reintroduce exactly that
+      defect, one element higher up. So both cards render this div with the
+      same padding and the same minimum height, and only the fill and the
+      text differ. The rows cannot drift apart, because there is no width at
+      which one card has a box the other lacks.
+    */}
+    <div
+      class:list={['pkg-flag', !pkg.recommendedFor && 'is-empty']}
+      aria-hidden={pkg.recommendedFor ? undefined : 'true'}
+    >
+      {pkg.recommendedFor && <span>Recommended for {pkg.recommendedFor}</span>}
+    </div>
+
     <h3 class="pkg-name">{pkg.name}</h3>
 
     {
       pkg.kind === 'itemised' && (
         <ul class="line-items">
           {pkg.lineItems.map((item) => (
-            <li>
+            <li class:list={[diverging.has(item.label) && 'differs']}>
               <span class="item-label">{item.label}</span>
               <span class="item-amount">{formatSgd(item.amountCents)}</span>
             </li>
@@ -50,12 +91,19 @@ const total = packageTotalCents(pkg)
       )
     }
 
+    {/*
+      ABOVE the total rule, not below it. The replacement term is the thing
+      the price difference buys, and while it sat under the total it was
+      orphaned beneath the rule that closes the card — a footnote to the
+      number rather than a part of what the number is for. Adjacent to its
+      price is where it belongs.
+    */}
+    {pkg.replacementTerm && <p class="pkg-replacement">{pkg.replacementTerm}</p>}
+
     <div class="pkg-total">
       <span class="total-label">Total</span>
       <span class="total-amount">{formatSgd(total)}</span>
     </div>
-
-    {pkg.replacementTerm && <p class="pkg-replacement">{pkg.replacementTerm}</p>}
   </div>
 </Card>
 
@@ -66,12 +114,116 @@ const total = packageTotalCents(pkg)
     gap: var(--space-6);
   }
 
+  /*
+   * The recommendation band, flush to the card's top edge.
+   *
+   * COLOUR. --color-surface-teal is the brand wash — #00a4a6 at 8% over
+   * cream — and the text on it is --color-accent (#046A6C), which
+   * tests/contrast.test.ts asserts at >= 4.5:1 against exactly this ground.
+   * --color-brand-teal itself measures 2.89:1 and is graphic-only across
+   * this whole site: it is never text, and never a fill with text on it. A
+   * "recommended" badge is precisely where someone reaches for it, which is
+   * why this comment is here rather than in a token file.
+   *
+   * No new colour and no new shape: the full-bleed band is the same idiom
+   * as the caption strip in ReplacementTerms.astro, and the wash is the one
+   * already carried by the .differs row below. It sits at the card's very
+   * top edge, spanning its full width, so it reads as a header ON the card
+   * rather than as another row IN it.
+   *
+   * GEOMETRY. The negative margins cancel Card's --space-8 padding on three
+   * sides so the band reaches the card's own edges; the matching inline
+   * padding puts the label back on the same axis as everything below it.
+   * min-block-size reserves one line, which is what the label measures at
+   * every width where the two cards sit side by side (checked in Chrome at
+   * 768, 790, 810, 828, 1280 and 1920 — the label wraps only below 48em,
+   * where the cards are stacked and nothing is being aligned).
+   *
+   * If a future recommendation is long enough to wrap at 768, raise this to
+   * 2lh rather than shortening the audience — the same ruling the .pkg-name
+   * note records, for the same reason.
+   */
+  .pkg-flag {
+    margin: calc(-1 * var(--space-8)) calc(-1 * var(--space-8)) 0;
+    padding: var(--space-3) var(--space-8);
+    border-start-start-radius: var(--radius-lg);
+    border-start-end-radius: var(--radius-lg);
+    background: var(--color-surface-teal);
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.4;
+    color: var(--color-accent);
+    /*
+     * ONE LINE PLUS ITS OWN PADDING, and the padding is not optional
+     * arithmetic. global.css sets `box-sizing: border-box`, so
+     * min-block-size floors the BORDER box, not the content box: a bare
+     * `1lh` here floored the empty card's flag at 18px, which its 24px of
+     * vertical padding already exceeded, so it rendered 24px against the
+     * filled card's 42px. Every row on the two cards then sat 18px apart —
+     * measured in Chrome at 768, 790, 810, 828, 1280 and 1920, the exact
+     * defect this element was added to avoid. Adding the padding back makes
+     * the floor describe the same box the filled flag draws.
+     *
+     * The calc() above is the fallback for engines without `lh` (Chrome
+     * <109, Safari <16.4): 1.4em is this element's own line-height, the
+     * same arithmetic done by hand. Declaring both in this order means a
+     * supporting browser takes the second and the rest take the first —
+     * the same pattern as .pkg-name below.
+     */
+    min-block-size: calc(1.4em + 2 * var(--space-3));
+    min-block-size: calc(1lh + 2 * var(--space-3));
+  }
+
+  /* The other card's copy of the same box: identical geometry, no fill and
+     no text. It is what keeps the two cards' rows on the same baselines,
+     and it is aria-hidden in the markup so a screen reader is not handed an
+     empty container. */
+  .pkg-flag.is-empty {
+    background: none;
+  }
+
   .pkg-name {
     margin: 0;
     font-family: var(--font-display);
     font-size: 1.375rem;
     font-weight: var(--font-weight-medium);
     color: var(--color-ink);
+    /*
+     * TWO LINES ARE ALWAYS RESERVED, whether the title uses them or not.
+     *
+     * These two cards are a comparison, and a comparison whose rows do not
+     * line up is not one. Between 768px and 829px — 768 is iPad portrait
+     * exactly — "Fly-In Without Replacement" wrapped to two lines while
+     * "Fly-In With Replacement" stayed on one, and every row in the right
+     * card then sat 26px lower than its counterpart: Agent fees, MOM,
+     * Insurance, SIP, Medical, Handling, and the two TOTALS on different
+     * baselines. The grid stretches both cards to the same height, so the
+     * left card also gained 26px of dead white at its foot. Measured broken
+     * at 768 / 790 / 810, correct from 829 up, on BOTH /pricing and the
+     * homepage — this component is shared.
+     *
+     * The fix is here rather than in either page's grid because the cause is
+     * here. The two alternatives were both worse: shortening a package name
+     * changes what DirectHired calls its own product to satisfy a layout, and
+     * moving the grid's 48em breakpoint to 52em would trade the misalignment
+     * for the loss of side-by-side comparison at iPad portrait, which is the
+     * width where the comparison matters most.
+     *
+     * Reserving the space makes the rows align regardless of how the title
+     * wraps, which is the property that has to hold — not "these particular
+     * two names happen to fit". A third package with a longer name inherits
+     * it for free.
+     *
+     * `2lh` is two of this element's own line boxes, so it tracks the font
+     * size and the 1.15 heading line-height in global.css automatically. The
+     * calc() above it is the fallback for engines without `lh` (Chrome <109,
+     * Safari <16.4): 1.15em x 2, the same arithmetic done by hand. Declaring
+     * both in this order means a supporting browser takes the second and the
+     * rest take the first.
+     */
+    min-block-size: calc(2 * 1.15em);
+    min-block-size: 2lh;
   }
 
   .line-items {
@@ -97,8 +249,45 @@ const total = packageTotalCents(pkg)
     border-bottom: none;
   }
 
+  /*
+   * The one row that differs between the two packages.
+   *
+   * Six of the seven rows are identical on both cards, so this is the only
+   * row carrying information a comparison needs — and it was set in exactly
+   * the same 16px regular ink as MOM and SIP, which meant finding it was the
+   * reader's job. Weight and a wash, both already in the system: no new
+   * colour, no badge, and nothing that says one package is better than the
+   * other (see the equal-columns note in the two grids that host these).
+   *
+   * --color-surface-teal is the brand wash, the token that exists to give
+   * #00a4a6 real area without ever putting it behind text as a text colour.
+   * The label goes to --color-ink here rather than staying muted, which is
+   * both the emphasis and what keeps the contrast comfortable on the wash.
+   *
+   * Declared AFTER the :first-child rule above on purpose: `Agent fees` is
+   * the first line item on both cards, and it needs its top padding back or
+   * the wash starts flush against the card's title.
+   */
+  .line-items li.differs {
+    padding-block: var(--space-2);
+    /* Bleeds the wash into the card's own padding so the row reads as a
+       band across the card, not as a floating rectangle. The inline padding
+       cancels the negative margin exactly, so the label and the amount stay
+       on the same axis as every other row. */
+    margin-inline: calc(-1 * var(--space-3));
+    padding-inline: var(--space-3);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-teal);
+  }
+
   .item-label {
     color: var(--color-ink-muted);
+  }
+
+  .differs .item-label,
+  .differs .item-amount {
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-ink);
   }
 
   .item-amount {
@@ -140,7 +329,23 @@ const total = packageTotalCents(pkg)
     font-size: 2.25rem;
   }
 
+  /*
+   * Now the last thing above the total rule, which puts a second
+   * variable-height element between the line items and the two totals. It
+   * reads "1 replacement within 6 months" on one card and "No replacement"
+   * on the other, so the same failure the title had is available to it: one
+   * wrapping while the other does not separates the totals again.
+   *
+   * The floor below reserves one line, which is what the longer of the two
+   * measures at every width from 320 up (13px over a 208px content box at
+   * the narrowest card the site renders — checked in Chrome, not reasoned
+   * about). If a future package's term is long enough to wrap, raise this
+   * to 2lh rather than shortening the term; the title's note above says why.
+   */
   .pkg-replacement {
+    margin: 0;
+    min-block-size: calc(1 * 1.5em);
+    min-block-size: 1lh;
     font-family: var(--font-text);
     font-size: var(--size-small);
     color: var(--color-ink-muted);

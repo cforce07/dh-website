@@ -1,6 +1,7 @@
 ---
 question: How do I submit my requirements?
 surfaces: [home, faq]
+category: process
 order: 6
 ---
 

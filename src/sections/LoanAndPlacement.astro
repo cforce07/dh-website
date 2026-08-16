@@ -1,0 +1,323 @@
+---
+/**
+ * LoanAndPlacement — the two amounts that sit outside the package totals,
+ * /pricing only.
+ *
+ * WHAT THIS SECTION EXISTS TO CORRECT. The site used to say that further
+ * placement-related fees "may apply", which a reader takes to mean a cost
+ * the employer bears, possibly, on top of the package. Both halves of that
+ * are wrong. Core-pages design spec §2.4, binding on all copy: the
+ * employer ADVANCES the loan and the placement fee and RECOVERS them
+ * through the helper's repayment. It is ultimately the HELPER'S cost. Copy
+ * must state both halves — the money leaves the employer's account first,
+ * and it comes back — because either half alone is a different and untrue
+ * claim.
+ *
+ * WHAT IS DELIBERATELY ABSENT, AND MUST STAY ABSENT.
+ *
+ * DirectHired supplied the repayment mechanics on 2026-08-16: the range it
+ * runs over, where in the helper's pay it comes from, and what she
+ * receives alongside it. None of that is published here, on any other
+ * page, or in any FAQ answer. It describes a salary-deduction arrangement
+ * on a licensed employment agency's public website, in an area MOM
+ * regulates closely, and source brief §19 requires the final wording to be
+ * reviewed against DirectHired's actual commercial and regulatory terms
+ * before it goes out. It is the highest-liability sentence on the site.
+ *
+ * The gap is recorded as a declared input in
+ * scripts/generate-info-required.mjs (Category C of
+ * docs/INFORMATION-REQUIRED-BEFORE-PRODUCTION.md) and enforced by
+ * tests/compliance-gate.test.ts, which scans the built HTML. What is
+ * missing is sign-off, not information.
+ *
+ * A PARAPHRASE IS A BREACH. Writing "over several months", "from what she
+ * earns", or "she keeps her rest-day pay" would publish the same
+ * arrangement in different words and would pass a literal search for the
+ * supplied phrases. Do not gesture at the mechanism. The page is complete
+ * and honest without it: a family needs to know who ultimately bears the
+ * cost, which is stated here in full.
+ *
+ * The loan carries no figure and no range — spec §2.3 says it is genuinely
+ * case-by-case and §7 forbids publishing a range. "It depends" is the
+ * true answer, so it is given as the answer rather than softened into an
+ * approximate one.
+ */
+import Container from '../components/Container.astro'
+import SectionHeader from '../components/SectionHeader.astro'
+import Card from '../components/Card.astro'
+import { company } from '../data/company'
+---
+
+<section class="loan-placement">
+  <Container>
+    {/*
+      "They are the ones most often misunderstood" is gone. It was a claim
+      about what DirectHired's customers misunderstand and no source
+      supplies it — the same unverifiable-behaviour class as the FAQ lede on
+      /pricing, and as the claim already cut from an FAQ entry. What is left
+      says only what the section does, which needs no authority.
+    */}
+    <SectionHeader
+      title="The loan and the placement fee"
+      lede="Two amounts sit outside the package totals above. Here is what they are and who ends up paying them."
+    />
+
+    <div class="loan-grid">
+      <Card>
+        <div class="amount-card">
+          <h3>Placement fee</h3>
+          <p class="amount-figure">One month’s salary</p>
+          <p>
+            Fixed at one month’s salary, and the same amount whether you take on a new helper or a
+            transfer helper. There is no separate scale to work through.
+          </p>
+        </div>
+      </Card>
+
+      <Card>
+        <div class="amount-card">
+          <h3>Helper loan</h3>
+          <p class="amount-figure">Assessed case by case</p>
+          <p>
+            The loan depends on the individual helper, so there is no standard figure to publish —
+            and we would rather publish none than one that turns out not to be yours.
+            {' '}
+            {/*
+              The sentence that offers to tell you the number was the one
+              sentence on this page that offered no way to ask for it. It is
+              now the link, pointed at the same single-sourced destination as
+              every primary CTA on the site — company.requirementFormUrl,
+              never a literal (tests/links.test.ts).
+
+              "…BEFORE YOU COMMIT TO ANYTHING" IS DELETED, and must not come
+              back. It is an unauthorised process promise — zero hits in the
+              master brief — and commit ff4d631 formally removed that exact
+              phrase from src/content/faq/helper-loan-placement-fee.md on
+              those grounds. Commit be9dfea had already copied it into this
+              file, so the ruling took it out of the FAQ while it survived
+              here, and the /pricing CTA work then attached it to the
+              requirement-form link: the promise ended up sitting on the
+              conversion path, which is the worst place for it. Its entry in
+              COPY_THAT_MUST_NOT_BE_CAUGHT (tests/compliance-gate.test.ts)
+              went with it — that list was asserting it as approved copy.
+
+              For anyone reading the live audit's C4, which proposes asking
+              DirectHired to approve a sentence containing "before you
+              commit": that request is still open and still correct. It is
+              not satisfied by this clause, which was never approved.
+            */}
+            <a href={company.requirementFormUrl}
+              >Our team goes through the exact amount for the helper you choose</a
+            >.
+          </p>
+        </div>
+      </Card>
+    </div>
+
+    {/*
+      THE PARAGRAPH THE PAGE EXISTS TO DELIVER, given the weight to match.
+
+      The copy here is unchanged and was never the problem: it states both
+      halves of spec §2.4 in balance, which is exactly what is required. The
+      defect was that it carried less visual weight than "Handling &
+      transport $120.00" — a 24px heading and one 16px paragraph on bare
+      cream, no panel, no rule, no tint, sitting immediately after two
+      raised white cards that take all the attention, at precisely the point
+      a reader is deciding whether they have been dealt with straight.
+
+      The treatment is the one already in the system: white on the cream
+      ground, the inverse of the carry-forward panel's raised surface on
+      /pricing. No new colour and no new fact.
+    */}
+    <div class="who-pays">
+      <h3 class="who-pays-heading">Who actually bears these</h3>
+      <p class="who-pays-lede">
+        You advance both amounts at the start, and you recover them through the helper’s repayment.
+        Both halves matter: the money does leave your account first, and it does come back.
+      </p>
+      <p>
+        They are ultimately the <strong>helper’s</strong> cost, not an additional charge you carry
+        on top of the package.
+      </p>
+      {/*
+        APPROVED VERBATIM BY DIRECTHIRED, 2026-08-16. Core-pages design spec
+        §2.6.2. Do not paraphrase it, and do not extend it.
+
+        IT IS ABOUT PROCESS, NOT MECHANISM, and that is precisely why it
+        clears §2.5's gate. It tells a reader that the arrangement is
+        explained to them and written into the contract. It discloses
+        nothing about how the arrangement works: not how long repayment
+        runs, not where in the helper's pay it comes from, not what she
+        receives during it. All three remain gated pending compliance
+        sign-off, in substance as well as literally — see this file's
+        header, which is unchanged and still the real rule. One sentence was
+        authorised. It is not a foothold for the mechanics.
+
+        "BEFORE YOU COMMIT" — AND THIS IS NOT A CONTRADICTION. The clause
+        "…before you commit to anything" was struck from this file and from
+        src/content/faq/helper-loan-placement-fee.md (ff4d631) as an
+        unauthorised process promise, and its entry was struck from
+        COPY_THAT_MUST_NOT_BE_CAUGHT for asserting it as approved copy. That
+        was correct: nothing had approved it. The live audit's C4 proposed
+        asking DirectHired to approve a sentence containing the idea, and
+        this is the answer to that request — the same idea, now authorised,
+        in DirectHired's own words rather than ours. The deletion stands for
+        the old clause; this sentence exists because it was asked for.
+
+        It is deliberately NOT attached to the requirement-form link in the
+        card above, which is where the old clause ended up and the worst
+        place for an unapproved promise. It sits here, in the paragraph
+        about who bears the cost, which is what it qualifies.
+
+        The gate's patterns were narrowed by exactly one token to admit it —
+        "arrangement" left the duration alternation in
+        tests/compliance-gate.test.ts, where the reasoning is recorded — and
+        the sentence is now a permanent fixture there so no future pattern
+        can start eating approved copy.
+      */}
+      <p>
+        We go through the repayment arrangement in full with you before you commit, and it is set
+        out in the contract.
+      </p>
+    </div>
+  </Container>
+</section>
+
+<style>
+  .loan-placement {
+    padding-block: var(--space-section);
+    /* Cream, so the two Cards below read as raised against it — the same
+       reasoning PricingSection.astro records for block 06. Also puts this
+       section between the white replacement block above and the white FAQ
+       below, keeping the page's grounds alternating. */
+    background: var(--color-surface);
+  }
+
+  .loan-grid {
+    display: grid;
+    gap: var(--space-8);
+    margin-top: var(--space-12);
+  }
+
+  .amount-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .amount-card h3 {
+    margin: 0;
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+  }
+
+  .amount-figure {
+    margin: 0;
+    font-family: var(--font-display);
+    /* 1.75rem, matching PricingCard's `.total-amount` exactly — the size
+       every package total on this page is set at. "One month's salary"
+       and "assessed case by case" ARE the answers to "how much?", and
+       setting them as prose while every real number on the page is set as
+       a figure would read as evasion.
+
+       Precisely: `.total-amount` is a flat 1.75rem at every viewport
+       (PricingCard declares no media queries at all). Its 2.25rem rule is
+       `.total-only .total-amount` — a VARIANT for a package with no line
+       items, which has had zero instances since 2026-08-16, not a
+       breakpoint step. So the two match as rendered today. If a
+       total-only package ever ships, these figures sit beside a 2.25rem
+       total and this comment is where to decide whether to follow it;
+       the answer is probably no, since the step exists to stop a card
+       with nothing else on it reading as sparse, which is not this
+       card's problem. */
+    font-size: 1.75rem;
+    font-weight: var(--font-weight-medium);
+    line-height: 1.2;
+    color: var(--color-accent);
+  }
+
+  .amount-card p:not(.amount-figure) {
+    margin: 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+  }
+
+  /* --color-accent (6.03:1 on the cream card), never --color-brand-teal,
+     which measures 2.89:1 and carries no text anywhere on this site. Same
+     treatment as PricingSection's qualifier link on the homepage. */
+  .amount-card a {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .amount-card a:hover {
+    color: var(--color-accent-hover);
+  }
+
+  .who-pays {
+    /* The measure stays 60ch; the panel is what is new. Its own padding is
+       outside that, so the line length a reader gets is unchanged. */
+    max-width: 60ch;
+    margin-top: var(--space-12);
+    padding: var(--space-8);
+    background: var(--color-surface-raised);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .who-pays-heading {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--size-h3);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  .who-pays p {
+    margin: var(--space-4) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink);
+  }
+
+  /* The two-clause sentence — "the money does leave your account first, and
+     it does come back" — is the one a reader must not misread, so it is set
+     a step above the paragraph that follows it. */
+  .who-pays .who-pays-lede {
+    /* Two class selectors, not one: `.who-pays p` above is (0,1,1) and
+       would otherwise win the font-size on specificity alone. */
+    font-size: var(--size-lede);
+    line-height: 1.5;
+  }
+
+  /* 48em = --bp-tablet (tokens.css); the literal is repeated by hand
+     because custom properties do not resolve inside a media condition. */
+  @media (min-width: 48em) {
+    .loan-grid {
+      grid-template-columns: 1fr 1fr;
+      /*
+       * `start`, not `stretch`. These two cards are not a like-for-like
+       * comparison the way the two package cards are — one answers "how
+       * much" with a fixed rule, the other answers it with "assessed case
+       * by case" and a paragraph explaining why — so their content lengths
+       * legitimately differ. Stretching matched the shorter card to the
+       * taller and left ~77px of empty white at the foot of the placement
+       * fee card at 1280, which reads as a missing sentence rather than as
+       * a card that is simply shorter.
+       *
+       * The package grids keep `stretch` for the opposite reason: there the
+       * two cards ARE the comparison, and unequal heights would read as
+       * unequal offers.
+       */
+      align-items: start;
+    }
+  }
+</style>

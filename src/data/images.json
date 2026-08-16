@@ -49,7 +49,7 @@
     "usedBy": [
       { "file": "src/sections/MeetHelpers.astro", "line": 54, "what": "<section class=\"meet-helpers\"> — renders only when the helper-profiles collection is non-empty" },
       { "file": "src/sections/MeetHelpers.astro", "line": 64, "what": "<div class=\"helper-card\"> — the profile card body, where a portrait would sit" },
-      { "file": "src/content/config.ts", "line": 87, "what": "const helperProfiles = defineCollection({ — the helper-profiles schema, which has no portrait field and must not gain one before signed releases exist" }
+      { "file": "src/content/config.ts", "line": 90, "what": "const helperProfiles = defineCollection({ — the helper-profiles schema, which has no portrait field and must not gain one before signed releases exist" }
     ],
     "provenance": "none-yet",
     "renderedAt": "Not rendered. The section is absent from the page while src/content/helper-profiles/ is empty, and the card schema has no image field.",

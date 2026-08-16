@@ -1,0 +1,516 @@
+---
+/**
+ * /pricing — the highest-value page on the site.
+ *
+ * It answers source brief §84's number-one customer objection ("how much
+ * does this actually cost?") and owns core-pages design spec §4's
+ * strongest commercial-intent queries: *maid agency pricing Singapore* and
+ * *how much does a maid cost Singapore*. Both appear once, inside
+ * sentences a person would read, in the <title> and the description — the
+ * description is also og:description and the string Google shows in
+ * results, so it carries the two figures rather than an adjective.
+ *
+ * NOT ONE HARDCODED PRICE STRING. Every figure on this page — the two
+ * totals, the gap between them, the recurring components in
+ * ReplacementTerms — resolves from src/data/pricing.ts through
+ * packageTotalCents() and formatSgd(), including the ones inside the meta
+ * description. A page that repeats prices in prose is exactly where a
+ * stale number hides, and the drift guard in tests/content.test.ts cannot
+ * see a string typed into an .astro file.
+ *
+ * The "what's included" block under the cards is derived the same way: the
+ * shared components are computed by comparing the two packages' line
+ * items, and the difference between the packages is subtracted rather than
+ * stated. The claim it makes — that the packages differ in the agent fee
+ * and nothing else — is the same claim tests/pricing.test.ts asserts
+ * against the data, so the prose cannot drift away from it either.
+ *
+ * Section grounds alternate cream / white / cream / white / cream across
+ * the five blocks below (packages, ReplacementTerms, LoanAndPlacement,
+ * Faq, FinalCta). Faq and FinalCta are fixed at white and cream
+ * respectively, which is what fixes the other three. Block 07 of the
+ * homepage keeps --color-deep as the site's only palette register shift;
+ * nothing here is a second dark band.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro'
+import Container from '../components/Container.astro'
+import Button from '../components/Button.astro'
+import PricingCard from '../components/PricingCard.astro'
+import ReplacementTerms from '../sections/ReplacementTerms.astro'
+import LoanAndPlacement from '../sections/LoanAndPlacement.astro'
+import Faq from '../sections/Faq.astro'
+import FinalCta from '../sections/FinalCta.astro'
+import { packages, packageTotalCents } from '../data/pricing'
+import { company } from '../data/company'
+import { defaultWhatsappUrl } from '../lib/whatsapp'
+import { formatSgd, formatSgdProse } from '../lib/money'
+
+const withReplacement = packages.find((pkg) => pkg.id === 'fly-in-with-replacement')!
+const withoutReplacement = packages.find((pkg) => pkg.id === 'fly-in-without-replacement')!
+
+const withTotal = formatSgd(packageTotalCents(withReplacement))
+const withoutTotal = formatSgd(packageTotalCents(withoutReplacement))
+
+/*
+ * The gap between the two packages. Every place this page names it is a
+ * sentence, so it is rendered with formatSgdProse rather than formatSgd —
+ * see that function in src/lib/money.ts. "A gap of $500.00" reads as a
+ * field being printed rather than an amount being named; the card totals
+ * and line items keep their cents, because a column has to align.
+ */
+const differenceCents = packageTotalCents(withReplacement) - packageTotalCents(withoutReplacement)
+const difference = formatSgdProse(differenceCents)
+
+const whatsappHref = defaultWhatsappUrl()
+
+/*
+ * The line items that are identical in both packages, matched on label AND
+ * amount. Matching on label alone would call two components "the same"
+ * while they carried different prices, which is the specific mistake the
+ * label/amount pairing in tests/pricing.test.ts exists to catch.
+ */
+const sharedComponents =
+  withReplacement.kind === 'itemised' && withoutReplacement.kind === 'itemised'
+    ? withReplacement.lineItems.filter((item) =>
+        withoutReplacement.lineItems.some(
+          (other) => other.label === item.label && other.amountCents === item.amountCents,
+        ),
+      )
+    : []
+
+/** "A, B and C" — used so the shared components read as a sentence. */
+function listSentence(items: readonly string[]): string {
+  if (items.length < 2) return items.join('')
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
+}
+
+const sharedComponentSentence = listSentence(sharedComponents.map((item) => item.label))
+
+/*
+ * The explicit fallback for a package that is not itemised.
+ *
+ * `sharedComponents` is empty whenever either package is `total-only` —
+ * the shape src/data/pricing.ts keeps precisely so that an unpublished
+ * breakdown cannot be invented, and the shape the without-replacement
+ * package actually had until 2026-08-16. With no guard this sentence
+ * degraded to "Both packages cover the same components at the same
+ * amounts: ." — a published typo, and the claim before the colon would
+ * itself be unsupported, since nothing could be compared to establish it.
+ *
+ * So the comparison claim is made only when there is a comparison to make.
+ * The fallback is empty rather than a restatement: without line items there
+ * is nothing this sentence can say that `.package-difference` above the
+ * block has not already said from the two totals alone.
+ *
+ * WHAT THIS SENTENCE NO LONGER CARRIES. It used to end "...the one line
+ * that differs is our agent fee, a gap of $500", which is now the first
+ * clause of `.package-difference`, sitting directly under the cards where
+ * the reader is actually comparing them. Restating it here two paragraphs
+ * later was the same sentence twice on one screen. This block's job is the
+ * part its own heading names — what the totals COVER — so it now says only
+ * that, and the thing that differs is said once, next to the cards.
+ */
+const comparisonSentence = sharedComponentSentence
+  ? `Both packages cover the same components at the same amounts: ${sharedComponentSentence}.`
+  : ''
+
+const title = 'Maid Agency Pricing in Singapore — Itemised | DirectHired'
+const description =
+  `How much does a maid cost in Singapore? DirectHired's maid agency pricing, itemised — ` +
+  `${withTotal} with a replacement, ${withoutTotal} without — and what sits outside the package.`
+---
+
+<BaseLayout title={title} description={description}>
+  <section class="pricing-packages">
+    <Container>
+      <div class="page-intro">
+        {/*
+          "Itemised", not "Set Out in Full". The heading may name what the
+          page does; it may not promise the page is exhaustive.
+
+          Two things here are still deliberately incomplete: the loan figure
+          (§2.3 and §7 forbid publishing a range) and the repayment
+          mechanics (§2.5's compliance gate). It was three — the third was
+          the replacement terms, which the master brief's Reminder 04 kept
+          out of detailed language until DirectHired supplied them.
+          DirectHired supplied them, and confirmed on 2026-08-16 that they
+          are complete (spec §2.6.1), so ReplacementTerms.astro's lede now
+          says so about ITS OWN terms.
+
+          THAT DOES NOT REACH THIS HEADING, and "Set Out in Full" must not
+          come back. An <h1> claims the page, not a section, and two of the
+          three gaps are still open. Three completeness claims were deleted
+          from this page's body; this one sat above all of them and survived
+          three sweeps. It also matches the <title>, which already said
+          "Itemised" and claimed nothing.
+        */}
+        <h1>Maid Agency Pricing, Itemised</h1>
+        {/*
+          A NUMBER ABOVE THE FOLD, AT EVERY WIDTH — and directly under the
+          headline, before the lede, which is the only position that
+          achieves it on a 320px phone.
+
+          This page answers "how much does a maid cost", and its first
+          screen used to contain a headline, two lines of lede and 452px of
+          empty cream:
+          the first TOTAL landed 163px below the fold on a 1280x720 laptop
+          and roughly two and a half screens down on a 320px phone. Measured
+          with this line placed AFTER the lede instead, it sat at y=527 at
+          320 against 448px of usable viewport — still below the fold. Above
+          it, it lands at y=264.
+
+          Both figures resolve from packageTotalCents() like every other
+          price on the site. This is not a second copy of the totals; it is
+          the same computation rendered earlier.
+        */}
+        <p class="page-summary">
+          <span class="summary-item">
+            <span class="summary-figure">{withTotal}</span> with a replacement
+          </span>
+          <span class="summary-sep" aria-hidden="true">·</span>
+          <span class="summary-item">
+            <span class="summary-figure">{withoutTotal}</span> without
+          </span>
+        </p>
+        {/*
+          Differentiated from the homepage's pricing block, which carries
+          these same two cards under "Transparent Pricing. No Guesswork."
+          with a near-identical lede. A visitor arriving from there met the
+          same sentence twice with a hero in between. What this page does
+          that the homepage block does not is the replacement terms and the
+          two amounts outside the totals, so the lede points at those. No
+          new fact: both are already on the page below.
+
+          IT SAID "the replacement terms IN FULL" until the whole-branch
+          review, and it is deliberately NOT restored now that spec §2.6.1
+          has authorised that claim. ReplacementTerms.astro's own lede
+          carries it, one screen down, immediately above the terms it
+          describes — see the long note on its SectionHeader.
+
+          The difference is what the sentence is attached to. There, "these
+          are its terms in full" is a claim about the replacement terms,
+          which DirectHired confirmed on 2026-08-16 are complete. Here it
+          would sit in a lede that also names "the two amounts that sit
+          outside either total" — the loan, which has no published figure
+          (§2.3, §7), and the placement fee, whose repayment mechanics are
+          gated (§2.5). A completeness claim in this sentence reads as
+          covering the whole list, and two thirds of that list is
+          deliberately incomplete. Naming the subject is fine here;
+          promising it is exhaustive is a page-level claim nothing supports.
+        */}
+        <p class="page-lede">
+          Both fly-in packages for a domestic helper in Singapore, itemised line by line — plus the
+          replacement terms and the two amounts that sit outside either total.
+        </p>
+      </div>
+
+      {/*
+        This <h2> is structural, not decorative. PricingCard sets each
+        package name as an <h3>, so without a heading here the document
+        went <h1> straight to <h3> and axe's heading-order rule fired on
+        the skipped level. It also earns its place on the page: the cards
+        are the first thing below the lede and they now say what they are.
+      */}
+      <h2 class="grid-heading">The two fly-in packages</h2>
+
+      <div class="package-grid">
+        {packages.map((pkg) => <PricingCard pkg={pkg} />)}
+      </div>
+
+      {/*
+        What the gap buys, next to the cards rather than 166px below them.
+
+        Six of the two cards' seven rows are identical, and the difference
+        between the totals was named only in the prose block further down —
+        at 320px the two TOTALS are 557px apart, so a reader had to hold the
+        first figure in memory across a full scroll to find the second, then
+        scroll further still to be told what separated them. Both clauses
+        below are already asserted elsewhere on this page; nothing here is a
+        new claim, and the amount is subtracted rather than typed.
+      */}
+      <p class="package-difference">
+        The two packages differ by <strong>{difference}</strong> — the agent fee. That {difference}
+        {' '}buys one replacement within 6 months.
+      </p>
+
+      <div class="whats-included">
+        <h2>What each total covers</h2>
+        <p>
+          {comparisonSentence} The replacement is one replacement helper, requested within 6 months
+          of the deployment date, and the {withoutReplacement.name} package does not include it.
+        </p>
+        {/*
+          "explained IN FULL further down this page" until the whole-branch
+          review — the third completeness claim on this page, and the only
+          one found by sweeping for the pattern W-1 named rather than by
+          being told about it. It was the worst-placed of the three: the
+          section it points at deliberately withholds the repayment
+          mechanics pending DirectHired's compliance sign-off, so "in full"
+          was a promise the very next section is built not to keep.
+          PricingSection.astro's header already forbids the phrase by name.
+        */}
+        <p>
+          Two further amounts — the helper’s loan and the placement fee — sit outside both totals.
+          They are not an extra charge you carry: you advance them and recover them, and they are
+          explained further down this page.
+        </p>
+      </div>
+
+      {/*
+        The page's first way to act.
+
+        Before this, <main> held no CTA at all until the final block — on
+        desktop, which has no sticky bar, that was 4,524px of scrolling
+        through both prices, the replacement terms and the loan explanation
+        with nothing to do at the end of any of them. This is the point a
+        reader has just finished the two totals and what separates them,
+        which is the moment the page has been building to.
+
+        Primary before secondary, both from the single-sourced URLs, exactly
+        as every other CTA surface on the site renders them.
+      */}
+      <div class="packages-cta">
+        <Button variant="primary" href={company.requirementFormUrl}>Submit Your Requirements</Button>
+        <Button variant="secondary" href={whatsappHref} external>WhatsApp Us</Button>
+      </div>
+    </Container>
+  </section>
+
+  <ReplacementTerms />
+  <LoanAndPlacement />
+
+  {/*
+    Three entries, not five.
+
+    "How much does it cost to hire a helper?" gave both totals again and
+    "What is included in the fly-in package?" reprinted the entire line-item
+    list — to a reader who had just scrolled past both on the cards. Neither
+    entry is deleted: both still serve /faq and the homepage, where the
+    reader has NOT just read the cards. They are only untagged from this
+    surface (`surfaces:` in their frontmatter), which is the difference
+    between cutting a question and putting it where it answers something.
+
+    What should stand in their place is a question for DirectHired — "what
+    do families ask you on the phone AFTER you send them the price list?" —
+    so the block is left shorter rather than filled with invented entries.
+    `limit` is unchanged: it has always been a ceiling, and the number of
+    entries is decided by the tagging, not by this prop.
+  */}
+  <Faq
+    surface="pricing"
+    limit={6}
+    heading="Questions about what it costs"
+    {/*
+      The lede read "The ones families ask us most often once they have seen
+      the figures above." Nothing in the brief supports a claim about what
+      families ask most often — and the comment directly above this one
+      records the opposite, since "what do families ask you AFTER you send
+      them the price list?" is an open question to DirectHired. The page was
+      asserting the answer to a question it was simultaneously recording as
+      unanswered.
+    */}
+    lede="A few more questions about the figures above."
+  />
+
+  <FinalCta
+    heading="Know the numbers. Now tell us the household."
+    lede="Send us what your family needs and we will come back with helpers who fit it — and the exact figures for each of them."
+  />
+</BaseLayout>
+
+<style>
+  .pricing-packages {
+    /*
+     * --space-12 top, --space-section bottom — the homepage hero's exact
+     * treatment (Hero.astro), and for the same reason.
+     *
+     * This block carries the page's hero, and it was spending the full
+     * --space-section (128px at ≥1280) above an image-less, CTA-less,
+     * single-column headline. The homepage does not: it uses 48px and fills
+     * the right column with the illustration. Here the right 45% is empty
+     * either way, so the padding was pure cost — 128px of cream pushing the
+     * first price below the fold on a 720px laptop. The section's bottom
+     * padding is unchanged, so the rhythm against ReplacementTerms below is
+     * the same as it was.
+     */
+    padding-block: var(--space-12) var(--space-section);
+    /* Cream, so the two white PricingCards read as raised against it —
+       the same reasoning PricingSection.astro records for the homepage.
+       This section carries the <h1>, the cards and the inclusion notes as
+       one block rather than three: splitting them would put two cream
+       sections next to each other, which is the adjacency the site's
+       ground rhythm exists to prevent. */
+    background: var(--color-surface);
+  }
+
+  .page-intro h1 {
+    margin: 0;
+    max-width: 18ch;
+    font-family: var(--font-display);
+    font-size: var(--size-h1);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.1;
+    color: var(--color-ink);
+  }
+
+  .page-lede {
+    max-width: 56ch;
+    margin: var(--space-6) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-lede);
+    line-height: 1.5;
+    color: var(--color-ink-muted);
+  }
+
+  /* The hero's summary line. Fraunces, --color-accent (6.03:1 on cream) for
+     the two figures and --color-ink for the words between them, so the
+     numbers read as figures rather than as a sentence about figures. Never
+     --color-brand-teal: it measures 2.89:1 and carries no text anywhere on
+     this site. */
+  /* Stacked until there is room for one line, then a single row.
+     Wrapping a row of two figures put the "·" at the end of the first line
+     with nothing after it — a separator separating a line from a line
+     break. Below 48em the two amounts get a line each and the separator is
+     removed rather than left to dangle; from 48em up the whole line fits
+     and the separator does its job. 48em is --bp-tablet (tokens.css), the
+     same width the cards below go side by side at, so the summary and the
+     comparison it summarises change shape together. */
+  .page-summary {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    margin: var(--space-6) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.4;
+    color: var(--color-ink);
+  }
+
+  .page-summary .summary-sep {
+    display: none;
+  }
+
+  /* Each package is one flex item, so the line breaks BETWEEN the two
+     figures on a narrow phone rather than between a figure and the words
+     that qualify it. Without this, 320px produced three ragged lines with
+     "with a replacement" orphaned under its own amount. */
+  .summary-item {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+
+  .summary-figure {
+    font-family: var(--font-display);
+    /* --size-lede here, 1.75rem from 30em up (the same content-driven step
+       ReplacementTerms uses for its total). At 320 the container gives this
+       line 257px, and 28px figures wrapped it to three lines and 122px of
+       hero — which is what pushed it below the fold in the first place. */
+    font-size: var(--size-lede);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .summary-sep {
+    color: var(--color-ink-muted);
+  }
+
+  @media (min-width: 30em) {
+    .page-summary {
+      font-size: var(--size-lede);
+    }
+
+    .summary-figure {
+      font-size: 1.75rem;
+    }
+  }
+
+  /* 48em = --bp-tablet (tokens.css); the literal is repeated by hand
+     because custom properties do not resolve inside a media condition. */
+  @media (min-width: 48em) {
+    .page-summary {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: var(--space-2) var(--space-3);
+    }
+
+    .page-summary .summary-sep {
+      display: inline;
+    }
+  }
+
+  /* Sits directly under the cards, at lede size, so the one sentence that
+     explains the comparison carries more weight than the six rows that do
+     not differ. Not a panel: it belongs to the cards above it, and a box
+     would detach it from them. */
+  .package-difference {
+    max-width: 52ch;
+    margin: var(--space-8) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-lede);
+    line-height: 1.5;
+    color: var(--color-ink);
+  }
+
+  .package-difference strong {
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-accent);
+  }
+
+  .packages-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-12);
+  }
+
+  .grid-heading {
+    margin: var(--space-12) 0 0;
+    font-family: var(--font-display);
+    font-size: var(--size-h3);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  .package-grid {
+    display: grid;
+    gap: var(--space-8);
+    margin-top: var(--space-6);
+  }
+
+  .whats-included {
+    max-width: 60ch;
+    margin-top: var(--space-12);
+  }
+
+  .whats-included h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--size-h3);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  .whats-included p {
+    margin: var(--space-4) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink);
+  }
+
+  /* 48em = --bp-tablet (tokens.css). Repeated as a literal by hand —
+     custom properties do not resolve inside a media condition. Equal
+     columns for the same reason PricingSection uses them: two packages a
+     visitor is comparing must be presented at the same weight, because a
+     wider card reads as the recommended one. */
+  @media (min-width: 48em) {
+    .package-grid {
+      grid-template-columns: 1fr 1fr;
+      align-items: stretch;
+    }
+  }
+</style>

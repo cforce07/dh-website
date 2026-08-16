@@ -1,6 +1,7 @@
 ---
 question: Where do your helpers come from?
 surfaces: [home, faq]
+category: sources
 order: 4
 ---
 
