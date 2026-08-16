@@ -1,3 +1,21 @@
+/// <reference types="vitest/config" />
+/*
+ * THE REFERENCE ABOVE IS LOAD-BEARING, added 2026-08-17 with the typecheck
+ * script.
+ *
+ * `getViteConfig` is typed to take Vite's `UserConfig`, which has no `test`
+ * key — that key exists because Vitest AUGMENTS Vite's config type, and the
+ * augmentation only loads if something references it. Without this line
+ * `npm run typecheck` reports
+ *
+ *   ts(2353) Object literal may only specify known properties, and 'test'
+ *            does not exist in type 'UserConfig'
+ *
+ * on the whole block below. It is the correct fix, not a suppression: the
+ * `test` key really is valid here, and this is what tells the compiler so.
+ * A `@ts-expect-error` or a cast would have hidden every future typo in this
+ * file's options along with it.
+ */
 import { getViteConfig } from 'astro/config'
 
 export default getViteConfig({

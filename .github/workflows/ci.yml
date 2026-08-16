@@ -21,6 +21,33 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # NOTHING TYPECHECKED THIS REPOSITORY UNTIL 2026-08-17.
+      #
+      # There was no `tsc` and no `astro check` in package.json, and this
+      # workflow ran install, test, build, axe and lhci and nothing else. So
+      # the repo was written in TypeScript, under astro/tsconfigs/strict, and
+      # the compiler never once looked at it.
+      #
+      # Two things that costs, and the second is the one that matters:
+      #
+      #   `@ts-expect-error` DIRECTIVES WERE NEVER EVALUATED. There is one, in
+      #   tests/pricing.test.ts, and it is load-bearing — it is the
+      #   compile-time half of the claim that a total-only package has no
+      #   `lineItems` property at all. An unevaluated @ts-expect-error is
+      #   worse than no assertion: it reads like one.
+      #
+      #   A PARSE ERROR HID THE REST OF A FILE. src/pages/pricing.astro
+      #   carried a `{/* … */}` comment between two ATTRIBUTES of a component
+      #   tag. Astro's compiler tolerates that and built it correctly for
+      #   weeks; TypeScript reads the braces as a spread and produced eleven
+      #   errors, after which everything below that line in the file went
+      #   unchecked. Fixed by moving the comment above the tag.
+      #
+      # It runs BEFORE the build on purpose: a type error is cheaper to read
+      # than a build log, and this step is the fastest of the three.
+      - name: Typecheck
+        run: npm run typecheck
+
       - name: Run tests
         run: npm test
 

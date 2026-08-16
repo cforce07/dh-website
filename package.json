@@ -10,6 +10,7 @@
     "build": "astro build && node scripts/check-tbd.mjs dist",
     "build:dev": "astro build",
     "test": "vitest run",
+    "typecheck": "astro check",
     "axe": "node scripts/run-axe.mjs",
     "preview": "astro preview"
   },
@@ -17,9 +18,11 @@
     "astro": "^5.18.2"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.10",
     "@astrojs/sitemap": "^3.7.3",
     "@axe-core/cli": "^4.13.0",
     "@lhci/cli": "^0.15.1",
+    "typescript": "^5.9.3",
     "vitest": "^4.1.10"
   }
 }
