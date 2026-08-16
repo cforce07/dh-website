@@ -2,12 +2,34 @@ import { sumCents } from '../lib/money'
 
 export type LineItem = { readonly label: string; readonly amountCents: number }
 
+/**
+ * Who DirectHired recommends a package TO, or `null` for no recommendation.
+ *
+ * AN AUDIENCE, NOT A VERDICT, and the type is this shape to keep it that
+ * way. DirectHired confirmed on 2026-08-16 (core-pages design spec §2.6.3)
+ * that they recommend the with-replacement package to FIRST-TIME EMPLOYERS.
+ * That is the whole of the supplied fact. A boolean `recommended` flag would
+ * have published a stronger claim than the client made — "this is the better
+ * package" rather than "this is the one for a reader in this situation" —
+ * and the without-replacement package remains the right choice for an
+ * experienced employer, which no copy may contradict.
+ *
+ * So the field holds the audience, PricingCard renders "Recommended for
+ * {audience}", and the qualifier cannot be dropped by accident: there is no
+ * value of this field that produces a bare "Recommended".
+ *
+ * At most one package may carry it — asserted in tests/pricing.test.ts.
+ * Two recommendations is a contradiction, and zero is a silent regression.
+ */
+export type RecommendedFor = string | null
+
 export type ItemisedPackage = {
   readonly kind: 'itemised'
   readonly id: string
   readonly name: string
   readonly lineItems: readonly LineItem[]
   readonly replacementTerm: string | null
+  readonly recommendedFor: RecommendedFor
 }
 
 /**
@@ -20,6 +42,7 @@ export type TotalOnlyPackage = {
   readonly name: string
   readonly totalCents: number
   readonly replacementTerm: string | null
+  readonly recommendedFor: RecommendedFor
 }
 
 export type Package = ItemisedPackage | TotalOnlyPackage
@@ -30,6 +53,11 @@ export const packages: readonly Package[] = [
     id: 'fly-in-with-replacement',
     name: 'Fly-In With Replacement',
     replacementTerm: '1 replacement within 6 months',
+    // DirectHired, 2026-08-16 (spec §2.6.3), answering "do you recommend the
+    // with-replacement package to first-time employers?" — yes. The audience
+    // is the fact; see RecommendedFor above for why it is stored rather than
+    // a boolean.
+    recommendedFor: 'first-time employers',
     lineItems: [
       { label: 'Agent fees', amountCents: 88800 },
       { label: 'MOM', amountCents: 7000 },
@@ -58,6 +86,13 @@ export const packages: readonly Package[] = [
     // "No replacement." is DirectHired's own wording from the same message
     // that supplied this breakdown.
     replacementTerm: 'No replacement',
+    // Null, and not because this package is second best. DirectHired
+    // recommended the other one to first-time employers specifically; this
+    // is the right package for an experienced employer, and nothing supplied
+    // says otherwise. An absent recommendation is the honest rendering of a
+    // recommendation that was scoped to an audience this card is not
+    // addressing.
+    recommendedFor: null,
     lineItems: [
       { label: 'Agent fees', amountCents: 38800 },
       { label: 'MOM', amountCents: 7000 },

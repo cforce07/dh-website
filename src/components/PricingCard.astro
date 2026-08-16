@@ -48,6 +48,34 @@ const diverging = divergingLineItemLabels()
 
 <Card>
   <div class:list={['pricing-card', pkg.kind]}>
+    {/*
+      THE RECOMMENDATION BAND — rendered on BOTH cards, filled on one.
+
+      DirectHired confirmed on 2026-08-16 (core-pages design spec §2.6.3)
+      that they recommend the with-replacement package to first-time
+      employers. `recommendedFor` in src/data/pricing.ts holds the audience,
+      not a boolean, so this can never render a bare "Recommended" — see the
+      note on RecommendedFor for why the qualifier is load-bearing rather
+      than decorative. The other package is not marked as second best,
+      because it is not: it is the right package for an experienced
+      employer.
+
+      THE EMPTY CARD RENDERS THE SAME BOX. This is the alignment property
+      the whole component is built around — see the note on .pkg-name below
+      for what happens at 768-828px when one card grows a line the other
+      does not. A flag on one card only would reintroduce exactly that
+      defect, one element higher up. So both cards render this div with the
+      same padding and the same minimum height, and only the fill and the
+      text differ. The rows cannot drift apart, because there is no width at
+      which one card has a box the other lacks.
+    */}
+    <div
+      class:list={['pkg-flag', !pkg.recommendedFor && 'is-empty']}
+      aria-hidden={pkg.recommendedFor ? undefined : 'true'}
+    >
+      {pkg.recommendedFor && <span>Recommended for {pkg.recommendedFor}</span>}
+    </div>
+
     <h3 class="pkg-name">{pkg.name}</h3>
 
     {
@@ -84,6 +112,58 @@ const diverging = divergingLineItemLabels()
     display: flex;
     flex-direction: column;
     gap: var(--space-6);
+  }
+
+  /*
+   * The recommendation band, flush to the card's top edge.
+   *
+   * COLOUR. --color-surface-teal is the brand wash — #00a4a6 at 8% over
+   * cream — and the text on it is --color-accent (#046A6C), which
+   * tests/contrast.test.ts asserts at >= 4.5:1 against exactly this ground.
+   * --color-brand-teal itself measures 2.89:1 and is graphic-only across
+   * this whole site: it is never text, and never a fill with text on it. A
+   * "recommended" badge is precisely where someone reaches for it, which is
+   * why this comment is here rather than in a token file.
+   *
+   * No new colour and no new shape: the full-bleed band is the same idiom
+   * as the caption strip in ReplacementTerms.astro, and the wash is the one
+   * already carried by the .differs row below. It sits at the card's very
+   * top edge, spanning its full width, so it reads as a header ON the card
+   * rather than as another row IN it.
+   *
+   * GEOMETRY. The negative margins cancel Card's --space-8 padding on three
+   * sides so the band reaches the card's own edges; the matching inline
+   * padding puts the label back on the same axis as everything below it.
+   * min-block-size reserves one line, which is what the label measures at
+   * every width where the two cards sit side by side (checked in Chrome at
+   * 768, 790, 810, 828, 1280 and 1920 — the label wraps only below 48em,
+   * where the cards are stacked and nothing is being aligned).
+   *
+   * If a future recommendation is long enough to wrap at 768, raise this to
+   * 2lh rather than shortening the audience — the same ruling the .pkg-name
+   * note records, for the same reason.
+   */
+  .pkg-flag {
+    margin: calc(-1 * var(--space-8)) calc(-1 * var(--space-8)) 0;
+    padding: var(--space-3) var(--space-8);
+    border-start-start-radius: var(--radius-lg);
+    border-start-end-radius: var(--radius-lg);
+    background: var(--color-surface-teal);
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.4;
+    color: var(--color-accent);
+    min-block-size: calc(1 * 1.4em);
+    min-block-size: 1lh;
+  }
+
+  /* The other card's copy of the same box: identical geometry, no fill and
+     no text. It is what keeps the two cards' rows on the same baselines,
+     and it is aria-hidden in the markup so a screen reader is not handed an
+     empty container. */
+  .pkg-flag.is-empty {
+    background: none;
   }
 
   .pkg-name {

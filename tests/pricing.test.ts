@@ -29,6 +29,77 @@ describe('fly-in with replacement', () => {
   it('states the confirmed replacement term', () => {
     expect(withReplacement.replacementTerm).toBe('1 replacement within 6 months')
   })
+
+  it('carries the audience DirectHired recommended it to, and only that', () => {
+    expect(withReplacement.recommendedFor).toBe('first-time employers')
+  })
+})
+
+/*
+ * The recommendation, asserted as the SHAPE of a claim rather than as a
+ * string that happens to be present.
+ *
+ * DirectHired answered one question on 2026-08-16 (core-pages design spec
+ * §2.6.3): do you recommend the with-replacement package to first-time
+ * employers? Yes. Everything below follows from how narrow that is.
+ *
+ * The failure this guards against is not a typo. It is the recommendation
+ * drifting from "for first-time employers" into "better" — by losing its
+ * audience, by appearing on both cards, or by acquiring a counterpart that
+ * marks the other package as the lesser one. Each is a claim DirectHired
+ * did not make, and each would be invisible to a test that only checked
+ * that the words "Recommended for" appear somewhere.
+ */
+describe('the package recommendation', () => {
+  it('is carried by exactly one package', () => {
+    const recommended = packages.filter((pkg) => pkg.recommendedFor !== null)
+    expect(recommended.map((pkg) => pkg.id)).toEqual(['fly-in-with-replacement'])
+  })
+
+  it('names an audience — there is no bare "recommended"', () => {
+    for (const pkg of packages) {
+      if (pkg.recommendedFor === null) continue
+      expect(pkg.recommendedFor.trim().length).toBeGreaterThan(0)
+    }
+  })
+
+  it('renders as "Recommended for <audience>" on the card that carries it', async () => {
+    const container = await AstroContainer.create()
+    const html = await container.renderToString(PricingCard, { props: { pkg: withReplacement } })
+
+    expect(html).toContain('Recommended for first-time employers')
+  })
+
+  it('says nothing at all on the card that does not', async () => {
+    const container = await AstroContainer.create()
+    const html = await container.renderToString(PricingCard, { props: { pkg: withoutReplacement } })
+
+    // No recommendation, and — the part that matters — no anti-recommendation
+    // either. The without-replacement package is the right choice for an
+    // experienced employer; nothing here may suggest it is second best.
+    expect(html).not.toContain('Recommended')
+    expect(html).not.toMatch(/\b(?:less suitable|not recommended|basic|budget|limited)\b/i)
+  })
+
+  it('reserves the same box on both cards, so the comparison stays aligned', async () => {
+    const container = await AstroContainer.create()
+    const [recommended, plain] = await Promise.all([
+      container.renderToString(PricingCard, { props: { pkg: withReplacement } }),
+      container.renderToString(PricingCard, { props: { pkg: withoutReplacement } }),
+    ])
+
+    // Both cards render the flag element. It is what keeps every row on the
+    // two cards on the same baseline between 768 and 828px, where the card
+    // titles wrap differently — see the note on .pkg-name in PricingCard. A
+    // flag rendered on one card only would reintroduce that defect.
+    expect(recommended).toMatch(/class="[^"]*\bpkg-flag\b/)
+    expect(plain).toMatch(/class="[^"]*\bpkg-flag\b/)
+    // ...and the empty one is marked as empty, so it can be unfilled and
+    // hidden from assistive technology rather than announced as a blank.
+    expect(recommended).not.toMatch(/class="[^"]*\bis-empty\b/)
+    expect(plain).toMatch(/class="[^"]*\bis-empty\b/)
+    expect(plain).toMatch(/aria-hidden="true"/)
+  })
 })
 
 describe('fly-in without replacement', () => {
@@ -113,6 +184,7 @@ describe('TotalOnlyPackage — the guard against an invented breakdown', () => {
     name: 'Fixture Package',
     totalCents: 123456,
     replacementTerm: null,
+    recommendedFor: null,
   }
 
   it('has no lineItems property at all — the structural reason a guess cannot be written', () => {
