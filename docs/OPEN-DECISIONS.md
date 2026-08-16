@@ -34,6 +34,21 @@ exactly this reason.
 
 ---
 
+## Copy that is short because you have not said more
+
+Nothing here blocks anything. `/why-directhired` is live and every sentence on
+it traces back to something you or your brief already supplied — which is
+exactly why two parts of it are shorter than they want to be. Neither gap was
+filled in, because filling it in would have meant writing something you never
+said.
+
+| | What's there now | What we would use instead |
+|---|---|---|
+| **Your founding story** | The one line from your brief, word for word: *"DirectHired was created after seeing families struggle with agencies that focused on filling vacancies instead of finding the right fit."* It opens `/why-directhired` and it will open `/about` | **The story in your own words** — who saw it, when, and what specifically went wrong. This is the single most persuasive paragraph a family reads on a trust page, and right now it is one sentence long. We will not invent a founder, a year or an anecdote to lengthen it |
+| **What "personalised service" consists of** | Two sentences: human guidance from your first questions through to the placement, and a person reading what you send rather than a system | **What that guidance actually is.** Does the same person carry a placement end to end? What do they do between the form arriving and the shortlist? Do they meet families, or is it all by phone and message? Your brief supports "human guidance" and nothing more specific, so the pillar stops there while the other two run to a paragraph each |
+
+---
+
 ## Decisions with a recommendation (answer when convenient)
 
 Three of these (**D-1**, **D-2**, **D-11**) are **already implemented**. They are
