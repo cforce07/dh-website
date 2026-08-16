@@ -228,12 +228,33 @@ const faqSchema = emitSchema
   }
 
   .faq-link {
+    /* `relative` so the hit-area pseudo-element below is positioned
+       against the link rather than the page. */
+    position: relative;
     font-family: var(--font-text);
     font-size: var(--size-body);
     font-weight: var(--font-weight-semibold);
     color: var(--color-accent);
     text-decoration: none;
     border-bottom: 1px solid var(--color-accent);
+  }
+
+  /*
+   * The tap target, extended to 44px without moving the underline.
+   *
+   * This link rendered 20px tall — less than half the comfortable touch
+   * target, and it is the only navigational link inside <main> on several
+   * pages. Padding would have worked but would have dropped the
+   * border-bottom 12px below the text, turning the underline into a rule.
+   * A transparent overlay extends the hit area instead and leaves the type
+   * exactly where it is. `.faq-more` has --space-8 of margin above it, so
+   * the overlay cannot reach the last FAQ item's summary.
+   */
+  .faq-link::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    inset-block: -12px;
   }
 
   .faq-link:hover {

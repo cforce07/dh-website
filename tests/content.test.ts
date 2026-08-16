@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { packages, packageTotalCents } from '../src/data/pricing'
-import { formatSgd } from '../src/lib/money'
+import { formatSgd, formatSgdProse } from '../src/lib/money'
 
 /**
  * Strips every comment form this codebase uses, so a comment that explains
@@ -447,7 +447,16 @@ describe('faq pricing figures stay in sync with pricing.ts', () => {
    */
   function packageDifferences(): string[] {
     const totals = packages.map(packageTotalCents)
-    return totals.flatMap((a) => totals.filter((b) => b < a).map((b) => formatSgd(a - b)))
+    // Both renderings, for the same reason `validAmounts` above accepts
+    // both: formatSgd() always emits cents because a column has to align on
+    // its decimal point, and formatSgdProse() drops a trailing ".00"
+    // because "a gap of $500.00" reads as a printed field rather than an
+    // amount someone has named. The gap is quoted in prose on /pricing, so
+    // the allowlist has to know the prose form of it. Derived from the same
+    // subtraction either way — neither form can go stale against the data.
+    return totals.flatMap((a) =>
+      totals.filter((b) => b < a).flatMap((b) => [formatSgd(a - b), formatSgdProse(a - b)]),
+    )
   }
 
   it('walks every built page, not just /pricing (guards the sweep itself)', () => {

@@ -148,9 +148,24 @@ const exampleAdvanceCents = EXAMPLE_NEW_LOAN_CENTS - EXAMPLE_OUTSTANDING_CENTS
 
       <div class="carry-forward-panel">
         <table class="carry-forward">
+          {/*
+            THE DISCLAIMER IS AN EYEBROW, NOT A FOOTNOTE, and it is first in
+            source order as well as first on the page.
+
+            It used to sit beneath "Loan carry-forward" at 13px muted — the
+            smallest, lightest text in a panel whose only real risk is being
+            read as a quote. A skimmer reading only the largest type in this
+            panel reads "Loan carry-forward ... $1,000.00", and the single
+            thing holding that back from being read as a price was the word
+            "Employer advances" in semibold. That held, but narrowly.
+
+            So it now reads before the title rather than after it, at body
+            size in --color-ink, as a tinted strip across the top of the
+            panel. The wording is unchanged.
+          */}
           <caption>
-            <span class="caption-title">Loan carry-forward</span>
             <span class="caption-note">Illustrative figures — an example of the method, not a quote</span>
+            <span class="caption-title">Loan carry-forward</span>
           </caption>
           <tbody>
             <tr>
@@ -158,7 +173,21 @@ const exampleAdvanceCents = EXAMPLE_NEW_LOAN_CENTS - EXAMPLE_OUTSTANDING_CENTS
               <td>{formatSgd(EXAMPLE_NEW_LOAN_CENTS)}</td>
             </tr>
             <tr>
-              <th scope="row">Less: outstanding balance from the replaced helper</th>
+              {/*
+                Shortened from "Less: outstanding balance from the replaced
+                helper", which wrapped to five lines at 320px and made this
+                row 129px tall against 61px and 66px for the two beside it,
+                with the amount floating vertically centred against nothing.
+                Decimal alignment survived — the tabular figures did their
+                job — but three ragged rows read as three statements rather
+                than one subtraction, which is the whole point of the block.
+
+                Nothing is lost: "the replaced helper" is established by the
+                section heading above and restated in the note below, so the
+                antecedent for "her" is on screen at every width. No fact is
+                added or removed.
+              */}
+              <th scope="row">Less: her outstanding balance</th>
               <td>−{formatSgd(EXAMPLE_OUTSTANDING_CENTS)}</td>
             </tr>
           </tbody>
@@ -185,12 +214,31 @@ const exampleAdvanceCents = EXAMPLE_NEW_LOAN_CENTS - EXAMPLE_OUTSTANDING_CENTS
 <style>
   .replacement-terms {
     padding-block: var(--space-section);
-    /* White. The page alternates cream / white / cream / white / cream
-       across its five sections, and this one holds no Card, so white is
-       free here. The carry-forward panel below is the inverse — cream on
-       white — which is what gives the sum its own edge without inventing
-       a fourth surface colour. */
-    background: var(--color-surface-raised);
+    /*
+     * --color-surface-teal. THE PAGE'S THIRD GROUND, and the reason it is
+     * here rather than anywhere else.
+     *
+     * /pricing ran five sections across two surfaces — cream / white /
+     * cream / white / cream — 5,201px of metronomic alternation at
+     * identical padding with no register change anywhere. The homepage runs
+     * eleven sections across three light grounds plus one dark, and the
+     * pale-teal wash is one of them (block 05, Process). Losing it here
+     * flattened this page against the one it is reached from, and five more
+     * pages will inherit whichever rhythm this page sets.
+     *
+     * THIS IS NOT A SECOND DARK BAND. Block 07 of the homepage keeps
+     * --color-deep as the site's only palette register shift, and that is
+     * unchanged: --color-surface-teal is 8% brand teal over cream, a light
+     * surface that clears AA for every text colour used on it
+     * (tests/tokens.test.ts). Do not add a dark section here.
+     *
+     * This section rather than another because it is the emotional turn of
+     * the page — what happens if the placement does not work out — and a
+     * register change is worth spending where the subject changes. The
+     * sequence is now cream / teal / cream / white / cream: still no two
+     * consecutive sections on the same ground.
+     */
+    background: var(--color-surface-teal);
   }
 
   .replacement-body {
@@ -249,10 +297,26 @@ const exampleAdvanceCents = EXAMPLE_NEW_LOAN_CENTS - EXAMPLE_OUTSTANDING_CENTS
        viewport the container already spends 48px on its own gutters; a
        24px panel inset on top of that left the table 209px, and a table
        whose amount column will not wrap spends that on the amounts —
-       "New helper's loan" broke across three lines. Measured in Chrome. */
-    padding: var(--space-4);
-    background: var(--color-surface);
+       "New helper's loan" broke across three lines. Measured in Chrome.
+
+       Held as a custom property rather than typed twice, because the
+       caption strip below has to cancel it exactly with a negative margin
+       to reach the panel's edges. Two literals that must agree are two
+       literals that will eventually disagree. */
+    --panel-pad: var(--space-4);
+    padding: var(--panel-pad);
+    /* White on the teal ground — the same inverse relationship this panel
+       has always had with its section, restated after the section moved
+       from white to --color-surface-teal. Cream on teal would have been
+       two washes arguing; white is the surface the rest of the site raises
+       things onto. */
+    background: var(--color-surface-raised);
     border-radius: var(--radius-lg);
+    /* The panel's own edge. On the old white section it had none and needed
+       none — cream against white was the edge. On the teal ground a white
+       panel reads as raised, and --shadow-sm is what the rest of the site
+       raises things with (Card.astro). */
+    box-shadow: var(--shadow-sm);
   }
 
   .carry-forward {
@@ -274,11 +338,34 @@ const exampleAdvanceCents = EXAMPLE_NEW_LOAN_CENTS - EXAMPLE_OUTSTANDING_CENTS
     color: var(--color-ink);
   }
 
+  /*
+   * The disclaimer, promoted. Was 13px --color-ink-muted sitting under the
+   * title; it is now --size-body semibold in --color-ink, on a tinted strip
+   * that runs the full width of the panel above everything else in it.
+   *
+   * The negative margin cancels --panel-pad exactly on three sides so the
+   * strip reaches the panel's own edges, and the matching inline padding
+   * puts the text back on the same axis as the table beneath it. The two
+   * top corners are rounded to the panel's radius; the bottom two are
+   * square, because the strip meets the panel's contents rather than its
+   * edge there.
+   */
   .caption-note {
     display: block;
-    margin-top: var(--space-1);
-    font-size: var(--size-small);
-    color: var(--color-ink-muted);
+    margin: calc(-1 * var(--panel-pad)) calc(-1 * var(--panel-pad)) var(--space-4);
+    padding: var(--space-3) var(--panel-pad);
+    border-start-start-radius: var(--radius-lg);
+    border-start-end-radius: var(--radius-lg);
+    /* Cream, not the teal wash. The section ground IS the teal wash now, so
+       a teal strip inside a white panel loses its own left and right edges
+       against it and reads as a hole in the panel rather than a band across
+       it — checked in Chrome at 1280 before this line was written. Cream is
+       the third surface in the sequence and is distinct from both. */
+    background: var(--color-surface);
+    font-size: var(--size-body);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.4;
+    color: var(--color-ink);
   }
 
   .carry-forward th {
@@ -343,7 +430,9 @@ const exampleAdvanceCents = EXAMPLE_NEW_LOAN_CENTS - EXAMPLE_OUTSTANDING_CENTS
      two files adopt the same literal independently. */
   @media (min-width: 30em) {
     .carry-forward-panel {
-      padding: var(--space-6);
+      /* The strip's negative margin reads the same property, so it follows
+         this step automatically. */
+      --panel-pad: var(--space-6);
     }
 
     .carry-forward tfoot td {
@@ -359,6 +448,19 @@ const exampleAdvanceCents = EXAMPLE_NEW_LOAN_CENTS - EXAMPLE_OUTSTANDING_CENTS
     .replacement-body {
       grid-template-columns: 1.15fr 0.85fr;
       gap: var(--space-16);
+      /*
+       * `stretch`, overriding the `start` above, only where the two columns
+       * are actually side by side. The terms column ran 37px past the foot
+       * of the panel at 1280 and 1920 (measured), which left the section a
+       * ragged bottom edge immediately above 128px of padding — and now
+       * that the panel is white on the teal ground, its lower edge is a
+       * drawn line rather than an invisible one, so the mismatch shows.
+       *
+       * Stretching the panel spends those 37px as extra room under the
+       * note. That is not the dead space the loan cards had: 37px reads as
+       * padding, 77px read as a missing sentence.
+       */
+      align-items: stretch;
     }
   }
 </style>

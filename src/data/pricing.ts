@@ -77,3 +77,44 @@ export function packageTotalCents(pkg: Package): number {
     ? sumCents(pkg.lineItems.map((item) => item.amountCents))
     : pkg.totalCents
 }
+
+/**
+ * The labels whose amount is NOT the same across every itemised package —
+ * the one row a visitor holding two cards side by side is actually looking
+ * for. Today that is exactly `Agent fees`.
+ *
+ * DERIVED, NEVER LISTED. Writing `['Agent fees']` somewhere would be a
+ * claim about the data that the data could quietly stop supporting: if a
+ * second component ever diverges, a hardcoded list would leave that row
+ * unmarked and the cards would once again say "these two differ in one
+ * line" while differing in two. Computing it means the emphasis follows
+ * whatever pricing.ts holds, and disappears entirely if the packages are
+ * ever harmonised.
+ *
+ * A label that appears in one package and not another counts as diverging
+ * too — its absence is a difference, and the count check below is what
+ * catches it. Total-only packages carry no line items to compare, so they
+ * are skipped rather than treated as differing in everything.
+ */
+export function divergingLineItemLabels(
+  pkgs: readonly Package[] = packages,
+): ReadonlySet<string> {
+  const itemised = pkgs.filter((pkg): pkg is ItemisedPackage => pkg.kind === 'itemised')
+  if (itemised.length < 2) return new Set<string>()
+
+  const amountsByLabel = new Map<string, number[]>()
+  for (const pkg of itemised) {
+    for (const item of pkg.lineItems) {
+      amountsByLabel.set(item.label, [
+        ...(amountsByLabel.get(item.label) ?? []),
+        item.amountCents,
+      ])
+    }
+  }
+
+  const diverging = new Set<string>()
+  for (const [label, amounts] of amountsByLabel) {
+    if (amounts.length !== itemised.length || new Set(amounts).size > 1) diverging.add(label)
+  }
+  return diverging
+}

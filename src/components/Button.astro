@@ -31,6 +31,23 @@ const target = external ? '_blank' : undefined
     justify-content: center;
     gap: var(--space-2);
     padding: var(--space-3) var(--space-6);
+    /*
+     * 44px, the minimum comfortable touch target. Every button on the site
+     * rendered at 40–41px (12px padding either side of a 16px label at
+     * line-height 1), including the two in the fixed mobile bar, which is
+     * where it matters most and where a mis-tap costs a conversion.
+     *
+     * A min-height rather than more padding: padding would have widened
+     * nothing but would have changed the compact override in
+     * MobileCtaBar.astro and the header's fit arithmetic (--bp-desktop was
+     * measured against this button's current padding — see tokens.css).
+     * The floor only ever adds height, and `align-items: center` above
+     * keeps the label centred in it.
+     *
+     * MobileCtaBar's --mobile-bar-height was re-measured against this; see
+     * the note there.
+     */
+    min-block-size: 2.75rem;
     border-radius: var(--radius-md);
     font-family: var(--font-text);
     font-size: var(--size-body);

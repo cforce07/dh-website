@@ -45,6 +45,7 @@
 import Container from '../components/Container.astro'
 import SectionHeader from '../components/SectionHeader.astro'
 import Card from '../components/Card.astro'
+import { company } from '../data/company'
 ---
 
 <section class="loan-placement">
@@ -72,20 +73,47 @@ import Card from '../components/Card.astro'
           <p class="amount-figure">Assessed case by case</p>
           <p>
             The loan depends on the individual helper, so there is no standard figure to publish —
-            and we would rather publish none than one that turns out not to be yours. Our team goes
-            through the exact amount for the helper you choose before you commit to anything.
+            and we would rather publish none than one that turns out not to be yours.
+            {' '}
+            {/*
+              The sentence that offers to tell you the number was the one
+              sentence on this page that offered no way to ask for it. It is
+              now the link, pointed at the same single-sourced destination as
+              every primary CTA on the site — company.requirementFormUrl,
+              never a literal (tests/links.test.ts). The wording is unchanged.
+            */}
+            <a href={company.requirementFormUrl}
+              >Our team goes through the exact amount for the helper you choose</a
+            > before you commit to anything.
           </p>
         </div>
       </Card>
     </div>
 
+    {/*
+      THE PARAGRAPH THE PAGE EXISTS TO DELIVER, given the weight to match.
+
+      The copy here is unchanged and was never the problem: it states both
+      halves of spec §2.4 in balance, which is exactly what is required. The
+      defect was that it carried less visual weight than "Handling &
+      transport $120.00" — a 24px heading and one 16px paragraph on bare
+      cream, no panel, no rule, no tint, sitting immediately after two
+      raised white cards that take all the attention, at precisely the point
+      a reader is deciding whether they have been dealt with straight.
+
+      The treatment is the one already in the system: white on the cream
+      ground, the inverse of the carry-forward panel's raised surface on
+      /pricing. No new colour and no new fact.
+    */}
     <div class="who-pays">
       <h3 class="who-pays-heading">Who actually bears these</h3>
-      <p>
+      <p class="who-pays-lede">
         You advance both amounts at the start, and you recover them through the helper’s repayment.
-        Both halves matter: the money does leave your account first, and it does come back. They
-        are ultimately the <strong>helper’s</strong> cost, not an additional charge you carry on
-        top of the package.
+        Both halves matter: the money does leave your account first, and it does come back.
+      </p>
+      <p>
+        They are ultimately the <strong>helper’s</strong> cost, not an additional charge you carry
+        on top of the package.
       </p>
     </div>
   </Container>
@@ -156,9 +184,28 @@ import Card from '../components/Card.astro'
     color: var(--color-ink-muted);
   }
 
+  /* --color-accent (6.03:1 on the cream card), never --color-brand-teal,
+     which measures 2.89:1 and carries no text anywhere on this site. Same
+     treatment as PricingSection's qualifier link on the homepage. */
+  .amount-card a {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .amount-card a:hover {
+    color: var(--color-accent-hover);
+  }
+
   .who-pays {
+    /* The measure stays 60ch; the panel is what is new. Its own padding is
+       outside that, so the line length a reader gets is unchanged. */
     max-width: 60ch;
     margin-top: var(--space-12);
+    padding: var(--space-8);
+    background: var(--color-surface-raised);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
   }
 
   .who-pays-heading {
@@ -177,12 +224,36 @@ import Card from '../components/Card.astro'
     color: var(--color-ink);
   }
 
+  /* The two-clause sentence — "the money does leave your account first, and
+     it does come back" — is the one a reader must not misread, so it is set
+     a step above the paragraph that follows it. */
+  .who-pays .who-pays-lede {
+    /* Two class selectors, not one: `.who-pays p` above is (0,1,1) and
+       would otherwise win the font-size on specificity alone. */
+    font-size: var(--size-lede);
+    line-height: 1.5;
+  }
+
   /* 48em = --bp-tablet (tokens.css); the literal is repeated by hand
      because custom properties do not resolve inside a media condition. */
   @media (min-width: 48em) {
     .loan-grid {
       grid-template-columns: 1fr 1fr;
-      align-items: stretch;
+      /*
+       * `start`, not `stretch`. These two cards are not a like-for-like
+       * comparison the way the two package cards are — one answers "how
+       * much" with a fixed rule, the other answers it with "assessed case
+       * by case" and a paragraph explaining why — so their content lengths
+       * legitimately differ. Stretching matched the shorter card to the
+       * taller and left ~77px of empty white at the foot of the placement
+       * fee card at 1280, which reads as a missing sentence rather than as
+       * a card that is simply shorter.
+       *
+       * The package grids keep `stretch` for the opposite reason: there the
+       * two cards ARE the comparison, and unequal heights would read as
+       * unequal offers.
+       */
+      align-items: start;
     }
   }
 </style>

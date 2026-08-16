@@ -1,6 +1,6 @@
 ---
 question: What is included in the fly-in package?
-surfaces: [home, faq, pricing]
+surfaces: [home, faq]
 category: cost
 order: 2
 ---

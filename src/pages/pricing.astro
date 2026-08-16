@@ -34,22 +34,34 @@
  */
 import BaseLayout from '../layouts/BaseLayout.astro'
 import Container from '../components/Container.astro'
+import Button from '../components/Button.astro'
 import PricingCard from '../components/PricingCard.astro'
 import ReplacementTerms from '../sections/ReplacementTerms.astro'
 import LoanAndPlacement from '../sections/LoanAndPlacement.astro'
 import Faq from '../sections/Faq.astro'
 import FinalCta from '../sections/FinalCta.astro'
 import { packages, packageTotalCents } from '../data/pricing'
-import { formatSgd } from '../lib/money'
+import { company } from '../data/company'
+import { defaultWhatsappUrl } from '../lib/whatsapp'
+import { formatSgd, formatSgdProse } from '../lib/money'
 
 const withReplacement = packages.find((pkg) => pkg.id === 'fly-in-with-replacement')!
 const withoutReplacement = packages.find((pkg) => pkg.id === 'fly-in-without-replacement')!
 
 const withTotal = formatSgd(packageTotalCents(withReplacement))
 const withoutTotal = formatSgd(packageTotalCents(withoutReplacement))
-const difference = formatSgd(
-  packageTotalCents(withReplacement) - packageTotalCents(withoutReplacement),
-)
+
+/*
+ * The gap between the two packages. Every place this page names it is a
+ * sentence, so it is rendered with formatSgdProse rather than formatSgd —
+ * see that function in src/lib/money.ts. "A gap of $500.00" reads as a
+ * field being printed rather than an amount being named; the card totals
+ * and line items keep their cents, because a column has to align.
+ */
+const differenceCents = packageTotalCents(withReplacement) - packageTotalCents(withoutReplacement)
+const difference = formatSgdProse(differenceCents)
+
+const whatsappHref = defaultWhatsappUrl()
 
 /*
  * The line items that are identical in both packages, matched on label AND
@@ -86,15 +98,21 @@ const sharedComponentSentence = listSentence(sharedComponents.map((item) => item
  * itself be unsupported, since nothing could be compared to establish it.
  *
  * So the comparison claim is made only when there is a comparison to make.
- * The fallback keeps what survives without line items: the difference
- * between the two totals, which `packageTotalCents` returns for either
- * package kind, and the replacement itself, which comes from spec §2.1
- * rather than from any breakdown.
+ * The fallback is empty rather than a restatement: without line items there
+ * is nothing this sentence can say that `.package-difference` above the
+ * block has not already said from the two totals alone.
+ *
+ * WHAT THIS SENTENCE NO LONGER CARRIES. It used to end "...the one line
+ * that differs is our agent fee, a gap of $500", which is now the first
+ * clause of `.package-difference`, sitting directly under the cards where
+ * the reader is actually comparing them. Restating it here two paragraphs
+ * later was the same sentence twice on one screen. This block's job is the
+ * part its own heading names — what the totals COVER — so it now says only
+ * that, and the thing that differs is said once, next to the cards.
  */
 const comparisonSentence = sharedComponentSentence
-  ? `Both packages cover the same components at the same amounts: ${sharedComponentSentence}. ` +
-    `The one line that differs is our agent fee, a gap of ${difference}.`
-  : `The two packages differ by ${difference}.`
+  ? `Both packages cover the same components at the same amounts: ${sharedComponentSentence}.`
+  : ''
 
 const title = 'Maid Agency Pricing in Singapore — Itemised | DirectHired'
 const description =
@@ -107,9 +125,44 @@ const description =
     <Container>
       <div class="page-intro">
         <h1>Maid Agency Pricing, Set Out in Full</h1>
+        {/*
+          A NUMBER ABOVE THE FOLD, AT EVERY WIDTH — and directly under the
+          headline, before the lede, which is the only position that
+          achieves it on a 320px phone.
+
+          The page is titled "Set Out in Full" and its first screen used to
+          contain a headline, two lines of lede and 452px of empty cream:
+          the first TOTAL landed 163px below the fold on a 1280x720 laptop
+          and roughly two and a half screens down on a 320px phone. Measured
+          with this line placed AFTER the lede instead, it sat at y=527 at
+          320 against 448px of usable viewport — still below the fold. Above
+          it, it lands at y=264.
+
+          Both figures resolve from packageTotalCents() like every other
+          price on the site. This is not a second copy of the totals; it is
+          the same computation rendered earlier.
+        */}
+        <p class="page-summary">
+          <span class="summary-item">
+            <span class="summary-figure">{withTotal}</span> with a replacement
+          </span>
+          <span class="summary-sep" aria-hidden="true">·</span>
+          <span class="summary-item">
+            <span class="summary-figure">{withoutTotal}</span> without
+          </span>
+        </p>
+        {/*
+          Differentiated from the homepage's pricing block, which carries
+          these same two cards under "Transparent Pricing. No Guesswork."
+          with a near-identical lede. A visitor arriving from there met the
+          same sentence twice with a hero in between. What this page does
+          that the homepage block does not is the replacement terms in full
+          and the two amounts outside the totals, so the lede points at
+          those. No new fact: both are already on the page below.
+        */}
         <p class="page-lede">
-          Two ways to bring a domestic helper into your home in Singapore, itemised line by line —
-          and a plain account of the two amounts that sit outside both totals.
+          Both fly-in packages for a domestic helper in Singapore, itemised line by line — plus the
+          replacement terms in full, and the two amounts that sit outside either total.
         </p>
       </div>
 
@@ -126,13 +179,27 @@ const description =
         {packages.map((pkg) => <PricingCard pkg={pkg} />)}
       </div>
 
+      {/*
+        What the gap buys, next to the cards rather than 166px below them.
+
+        Six of the two cards' seven rows are identical, and the difference
+        between the totals was named only in the prose block further down —
+        at 320px the two TOTALS are 557px apart, so a reader had to hold the
+        first figure in memory across a full scroll to find the second, then
+        scroll further still to be told what separated them. Both clauses
+        below are already asserted elsewhere on this page; nothing here is a
+        new claim, and the amount is subtracted rather than typed.
+      */}
+      <p class="package-difference">
+        The two packages differ by <strong>{difference}</strong> — the agent fee. That {difference}
+        {' '}buys one replacement within 6 months.
+      </p>
+
       <div class="whats-included">
         <h2>What each total covers</h2>
         <p>
-          {comparisonSentence} What that difference buys is the replacement — one replacement
-          helper, requested within 6 months of the deployment date, which the {
-            withoutReplacement.name
-          } package does not include.
+          {comparisonSentence} The replacement is one replacement helper, requested within 6 months
+          of the deployment date, and the {withoutReplacement.name} package does not include it.
         </p>
         <p>
           Two further amounts — the helper’s loan and the placement fee — sit outside both totals.
@@ -140,12 +207,47 @@ const description =
           explained in full further down this page.
         </p>
       </div>
+
+      {/*
+        The page's first way to act.
+
+        Before this, <main> held no CTA at all until the final block — on
+        desktop, which has no sticky bar, that was 4,524px of scrolling
+        through both prices, the replacement terms and the loan explanation
+        with nothing to do at the end of any of them. This is the point a
+        reader has just finished the two totals and what separates them,
+        which is the moment the page has been building to.
+
+        Primary before secondary, both from the single-sourced URLs, exactly
+        as every other CTA surface on the site renders them.
+      */}
+      <div class="packages-cta">
+        <Button variant="primary" href={company.requirementFormUrl}>Submit Your Requirements</Button>
+        <Button variant="secondary" href={whatsappHref} external>WhatsApp Us</Button>
+      </div>
     </Container>
   </section>
 
   <ReplacementTerms />
   <LoanAndPlacement />
 
+  {/*
+    Three entries, not five.
+
+    "How much does it cost to hire a helper?" gave both totals again and
+    "What is included in the fly-in package?" reprinted the entire line-item
+    list — to a reader who had just scrolled past both on the cards. Neither
+    entry is deleted: both still serve /faq and the homepage, where the
+    reader has NOT just read the cards. They are only untagged from this
+    surface (`surfaces:` in their frontmatter), which is the difference
+    between cutting a question and putting it where it answers something.
+
+    What should stand in their place is a question for DirectHired — "what
+    do families ask you on the phone AFTER you send them the price list?" —
+    so the block is left shorter rather than filled with invented entries.
+    `limit` is unchanged: it has always been a ceiling, and the number of
+    entries is decided by the tagging, not by this prop.
+  */}
   <Faq
     surface="pricing"
     limit={6}
@@ -161,7 +263,20 @@ const description =
 
 <style>
   .pricing-packages {
-    padding-block: var(--space-section);
+    /*
+     * --space-12 top, --space-section bottom — the homepage hero's exact
+     * treatment (Hero.astro), and for the same reason.
+     *
+     * This block carries the page's hero, and it was spending the full
+     * --space-section (128px at ≥1280) above an image-less, CTA-less,
+     * single-column headline. The homepage does not: it uses 48px and fills
+     * the right column with the illustration. Here the right 45% is empty
+     * either way, so the padding was pure cost — 128px of cream pushing the
+     * first price below the fold on a 720px laptop. The section's bottom
+     * padding is unchanged, so the rhythm against ReplacementTerms below is
+     * the same as it was.
+     */
+    padding-block: var(--space-12) var(--space-section);
     /* Cream, so the two white PricingCards read as raised against it —
        the same reasoning PricingSection.astro records for the homepage.
        This section carries the <h1>, the cards and the inclusion notes as
@@ -188,6 +303,111 @@ const description =
     font-size: var(--size-lede);
     line-height: 1.5;
     color: var(--color-ink-muted);
+  }
+
+  /* The hero's summary line. Fraunces, --color-accent (6.03:1 on cream) for
+     the two figures and --color-ink for the words between them, so the
+     numbers read as figures rather than as a sentence about figures. Never
+     --color-brand-teal: it measures 2.89:1 and carries no text anywhere on
+     this site. */
+  /* Stacked until there is room for one line, then a single row.
+     Wrapping a row of two figures put the "·" at the end of the first line
+     with nothing after it — a separator separating a line from a line
+     break. Below 48em the two amounts get a line each and the separator is
+     removed rather than left to dangle; from 48em up the whole line fits
+     and the separator does its job. 48em is --bp-tablet (tokens.css), the
+     same width the cards below go side by side at, so the summary and the
+     comparison it summarises change shape together. */
+  .page-summary {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    margin: var(--space-6) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.4;
+    color: var(--color-ink);
+  }
+
+  .page-summary .summary-sep {
+    display: none;
+  }
+
+  /* Each package is one flex item, so the line breaks BETWEEN the two
+     figures on a narrow phone rather than between a figure and the words
+     that qualify it. Without this, 320px produced three ragged lines with
+     "with a replacement" orphaned under its own amount. */
+  .summary-item {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+
+  .summary-figure {
+    font-family: var(--font-display);
+    /* --size-lede here, 1.75rem from 30em up (the same content-driven step
+       ReplacementTerms uses for its total). At 320 the container gives this
+       line 257px, and 28px figures wrapped it to three lines and 122px of
+       hero — which is what pushed it below the fold in the first place. */
+    font-size: var(--size-lede);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .summary-sep {
+    color: var(--color-ink-muted);
+  }
+
+  @media (min-width: 30em) {
+    .page-summary {
+      font-size: var(--size-lede);
+    }
+
+    .summary-figure {
+      font-size: 1.75rem;
+    }
+  }
+
+  /* 48em = --bp-tablet (tokens.css); the literal is repeated by hand
+     because custom properties do not resolve inside a media condition. */
+  @media (min-width: 48em) {
+    .page-summary {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: var(--space-2) var(--space-3);
+    }
+
+    .page-summary .summary-sep {
+      display: inline;
+    }
+  }
+
+  /* Sits directly under the cards, at lede size, so the one sentence that
+     explains the comparison carries more weight than the six rows that do
+     not differ. Not a panel: it belongs to the cards above it, and a box
+     would detach it from them. */
+  .package-difference {
+    max-width: 52ch;
+    margin: var(--space-8) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-lede);
+    line-height: 1.5;
+    color: var(--color-ink);
+  }
+
+  .package-difference strong {
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-accent);
+  }
+
+  .packages-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-12);
   }
 
   .grid-heading {

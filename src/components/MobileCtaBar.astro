@@ -121,22 +121,29 @@ const whatsappHref = defaultWhatsappUrl()
    */
   @media (max-width: 26em) {
     :global(:root) {
-      /* 7rem (112px), was 9rem (144px). 144px was ~22% of an iPhone SE's
+      /* 7.5rem (120px), was 7rem (112px), was 9rem (144px).
+
+         The step from 112 to 120 is the 44px tap-target floor added to
+         Button.astro: the two stacked buttons were 40px and 42px and are
+         now 44px each, so the bar's natural stacked height went from 106px
+         to 112px — exactly the old floor, leaving zero buffer, which is
+         how this bar starts occluding the content it sits over. 120px
+         restores the same 8px margin the row layout has.
+
+         The original note, still binding: 144px was ~22% of an iPhone SE's
          667px viewport, permanently occluded, on the cheapest and
-         narrowest devices this site serves; 112px is ~17%.
+         narrowest devices this site serves; 120px is ~18%.
 
          Measured natural height (min-height forced to 0, real Chrome,
-         320px and 375px): 106px — two buttons at 40px and 42px, one
-         8px gap, 8px of padding top and bottom. 112px keeps a 6px
-         buffer, the same deliberate margin as the 4.75rem default above
-         (measured natural 66px). Do not set this to the measured height:
-         a floor with zero margin is how this bar starts occluding the
-         content it sits over.
+         320px and 375px): 112px — two buttons at 44px, one 8px gap, 8px
+         of padding top and bottom. Do not set this to the measured
+         height: a floor with zero margin is how this bar starts
+         occluding the content it sits over.
 
          env(safe-area-inset-bottom) is added on top of this value by
          BOTH the bar's padding-bottom and body's padding-bottom, so
          home-indicator devices stay in sync automatically. */
-      --mobile-bar-height: 7rem;
+      --mobile-bar-height: 7.5rem;
     }
 
     .mobile-cta-bar {
@@ -148,15 +155,16 @@ const whatsappHref = defaultWhatsappUrl()
        * conversion channel and sub-416px is precisely the segment least
        * likely to complete a web form (the header's secondary CTA is
        * already gone, so this bar is the only place it stays on screen);
-       * and the buttons are 40/42px tall, already under the 44px
-       * comfortable touch target, so shrinking them to buy pixels makes
-       * the narrowest devices worse in exchange for the pixels.
+       * and the buttons now sit exactly ON the 44px comfortable touch
+       * target (Button.astro's min-block-size), so shrinking them to buy
+       * pixels puts the narrowest devices back under it.
        *
        * --space-2 (8px) instead of --space-3 (12px) on the bar's own
        * padding-block and on the gap between the stacked buttons: 4px
        * top + 4px bottom + 4px between = 12px, with the buttons
-       * untouched. Measured natural height at 320 and 375px after this:
-       * 106px; --mobile-bar-height above is set to 112px over it.
+       * untouched. Measured natural height at 320 and 375px, after the
+       * buttons gained their 44px floor: 112px; --mobile-bar-height above
+       * is set to 120px over it.
        */
       gap: var(--space-2);
       padding-block: var(--space-2);
