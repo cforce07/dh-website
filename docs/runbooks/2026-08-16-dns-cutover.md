@@ -116,9 +116,55 @@ They are removed in Task 10, once nothing depends on comparing the two zones.
 
 ---
 
+## Task 4 — apex redirect in the shared function (2026-08-16)
+
+`infra/cloudfront-directory-index.js` gained a host-guarded 301 from
+`directhired.com` to `https://www.directhired.com`, above the existing rewrite
+logic. Written test-first: 7 failing / 15 passing before, 22/22 after. Full
+suite green at 20 files, 710 tests.
+
+**Not yet published.** The live function is unchanged until Task 8 runs
+`scripts/deploy-cloudfront-function.sh`, which re-tests against the real
+published function and refuses to publish on any failure.
+
+## Task 5 — production bucket (2026-08-16)
+
+`directhired-website-prod` created in `ap-southeast-1`. Verified:
+
+| Check | Result |
+|---|---|
+| `BlockPublicAcls` / `IgnorePublicAcls` / `BlockPublicPolicy` / `RestrictPublicBuckets` | all `true` |
+| `LocationConstraint` | `ap-southeast-1` |
+| S3 static website hosting | off (never enabled) |
+
+Empty until Task 7. The bucket policy granting CloudFront read access is applied
+in Task 6, because it is scoped by `AWS:SourceArn` to a distribution that does
+not exist yet.
+
 ## Task 2 — nameserver change
 
-Status: _pending_
+Status: **awaiting the human action at Exabytes.**
+
+Replace `ns135.sgcloudhosting.cloud` and `ns136.sgcloudhosting.cloud` with:
+
+```
+ns-173.awsdns-21.com
+ns-516.awsdns-00.net
+ns-1254.awsdns-28.org
+ns-1898.awsdns-45.co.uk
+```
+
+| Check | Result |
+|---|---|
+| Registry returns the four AWS nameservers | _(pending)_ |
+| `MX` unchanged from 8.8.8.8 and 1.1.1.1 | _(pending)_ |
+| Site still returns 200 | _(pending)_ |
+| Test message sent to `hello@directhired.com` and received | _(pending)_ |
+| Reply sent from `hello@directhired.com` and received | _(pending)_ |
+
+**Task 3 (the certificate) is blocked on this.** ACM validates by reading a
+public DNS record; until the domain is delegated to Route 53, a record created
+there is invisible to the internet and validation cannot complete.
 
 | Check | Result |
 |---|---|
