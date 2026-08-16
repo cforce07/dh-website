@@ -208,6 +208,93 @@ describe('the site never calls Mizoram a country', () => {
   })
 })
 
+describe('no helper source beyond Indonesia, Myanmar and Mizoram is ever named', () => {
+  /*
+   * Spec §7 and master brief §22: the Philippines is never named, including
+   * as "coming soon". Sri Lanka, Cambodia and Bangladesh are the three
+   * neighbouring sources a writer reaches for by habit.
+   *
+   * WHY THIS EXISTS WHEN tests/pages.test.ts ALREADY BANS THEM. That ban
+   * runs over dist/, so it only ever sees copy a page currently renders.
+   * Nine content files — the six services and the three helper sources —
+   * are not rendered by either page built today: /services/[slug] and
+   * /helpers/[slug] land in a later sub-project. Writing "the Philippines"
+   * into the body of src/content/services/transfer-helper.md scored a full
+   * green suite, verified by mutation, twice, by two independent reviewers.
+   *
+   * That is the worst shape a gap can have. The rule is spec §7's strongest,
+   * the files already exist, and they would arrive in the routing commit as
+   * PRE-EXISTING CONTENT rather than as a diff anyone would connect back to
+   * the rule. Nobody re-reads a file they did not touch.
+   *
+   * So the ban is asserted against the SOURCES as well as the build.
+   * renderedCopy() is the same sweep the Mizoram rules above use: every
+   * content markdown file verbatim, plus the comment-free source of every
+   * .astro. Comments are stripped, so a comment naming a banned source in
+   * order to ban it — the paragraph you are reading, if it were in an
+   * .astro file — is not itself a violation.
+   */
+  const copy = renderedCopy()
+
+  /*
+   * Kept byte-identical to the pattern in tests/pages.test.ts, and the
+   * assertion below is what keeps it that way. Two copies of a regex is the
+   * lesser evil here: the alternative is exporting it from a test file into
+   * another test file, and the repo's existing convention for a literal that
+   * two files must agree on is to state it twice and assert the agreement
+   * (see --bp-desktop in tokens.css and tests/header-fit.test.ts).
+   */
+  const FORBIDDEN_SOURCE = /\b(?:philippin\w*|filipin\w*|sri\s?lank\w*|cambodi\w*|banglades\w*)\b/i
+
+  it('sweeps the nine files the dist/ ban cannot see (guards the gap this closes)', () => {
+    // Named individually, not counted. A count would survive the walker
+    // silently dropping src/content/services and picking up nine .astro
+    // files instead — which is exactly the class of vacuous pass that let
+    // the gap exist in the first place.
+    const files = copy.map((c) => c.file)
+    for (const unrendered of [
+      'src/content/services/transfer-helper.md',
+      'src/content/services/new-helper-placement.md',
+      'src/content/services/direct-hire-processing.md',
+      'src/content/services/maid-insurance.md',
+      'src/content/services/maid-replacement.md',
+      'src/content/services/medical-examination.md',
+      'src/content/helpers/indonesia.md',
+      'src/content/helpers/myanmar.md',
+      'src/content/helpers/mizoram.md',
+    ]) {
+      expect(files, `${unrendered} is not being swept`).toContain(unrendered)
+    }
+  })
+
+  it('names none of them in any surface a visitor reads', () => {
+    const offenders = copy
+      .filter(({ text }) => FORBIDDEN_SOURCE.test(text))
+      .map(({ file }) => file)
+    expect(offenders).toEqual([])
+  })
+
+  it('states the same pattern tests/pages.test.ts applies to the build', () => {
+    // Hand-synced, and asserted rather than trusted. If someone widens one
+    // pattern to catch a fifth source, this fails until they widen both —
+    // which is the only way two copies of a rule stay one rule.
+    const pagesTest = readFileSync('tests/pages.test.ts', 'utf8')
+    expect(pagesTest).toContain(FORBIDDEN_SOURCE.source)
+  })
+
+  it('really does fire on the sentence the mutation used', () => {
+    // Non-vacuity. A pattern that matched nothing would make the sweep above
+    // green for the wrong reason. These strings live in this test file and
+    // are never built or published.
+    expect(FORBIDDEN_SOURCE.test('We also place helpers from the Philippines.')).toBe(true)
+    expect(FORBIDDEN_SOURCE.test('Filipino helpers coming soon.')).toBe(true)
+    expect(FORBIDDEN_SOURCE.test('Sri Lanka and Cambodia and Bangladesh.')).toBe(true)
+    // ...and not on the three real sources, or the suite would be
+    // unsatisfiable by correct copy.
+    expect(FORBIDDEN_SOURCE.test('Indonesia, Myanmar and Mizoram.')).toBe(false)
+  })
+})
+
 describe('services', () => {
   it('has the six current services', () => {
     expect(readdirSync('src/content/services')).toHaveLength(6)
