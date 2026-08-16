@@ -107,6 +107,14 @@ const DECLARED_INPUTS = [
   // fee is not; and an outstanding loan balance from the replaced helper
   // is subtracted from what the employer advances for the new one.
   //
+  // CONFIRMED COMPLETE 2026-08-16 (spec §2.6.1). DirectHired was asked in
+  // docs/OPEN-DECISIONS.md whether those five facts are the WHOLE of their
+  // replacement terms — the one thing that could not be inferred from the
+  // facts themselves — and answered yes. That is why
+  // src/sections/ReplacementTerms.astro's lede now says the terms are stated
+  // in full, and it is the only thing supporting that claim. If DirectHired
+  // ever adds a term, this entry comes back and that sentence comes out.
+  //
   // This entry stated that the confirmed line "1 replacement within 6
   // months" was the only replacement text on the site and that no
   // conditions were stated. Both stopped being true on 2026-08-16, when
@@ -182,22 +190,43 @@ const DECLARED_INPUTS = [
   // paraphrases of them. Resolving this item means deleting that test's
   // expectations in the same commit that publishes the paragraph — a
   // deliberate speed bump, so the gate cannot lapse by inattention.
+  // STILL OPEN after DirectHired's 2026-08-16 answers, and the item is
+  // deliberately NOT narrowed into something that reads as nearly done.
+  //
+  // DirectHired approved ONE sentence that day (core-pages spec §2.6.2):
+  // "We go through the repayment arrangement in full with you before you
+  // commit, and it is set out in the contract." That sentence is about the
+  // PROCESS and now ships. It is not sign-off on the MECHANICS, which is
+  // what this entry has always been about and what §2.5 gates. Approving a
+  // sentence that says an arrangement is explained to the employer says
+  // nothing about publishing how the arrangement works.
+  //
+  // The wording below states the approval explicitly rather than leaving it
+  // out, because the failure mode here is a reader seeing "they answered on
+  // 2026-08-16" somewhere else and assuming this closed with it.
   {
     item: 'Compliance sign-off on loan repayment terms',
-    source: 'Brief §19; core-pages spec §2.3 and §2.5',
+    source: 'Brief §19; core-pages spec §2.3, §2.5 and §2.6.2',
     blocks:
       'publishing the repayment mechanics — the 1-7 month range, that repayment ' +
       'comes from the helper\'s basic salary, and that the helper receives ' +
       'off-day compensation during it. DirectHired supplied these facts on ' +
-      '2026-08-16; what is missing is sign-off, not information.',
+      '2026-08-16; what is missing is sign-off, not information. **Their ' +
+      '2026-08-16 approval of one process sentence does not resolve this.** ' +
+      'That approval covers "We go through the repayment arrangement in full ' +
+      'with you before you commit, and it is set out in the contract" and ' +
+      'nothing else — one sentence about the process, not the three mechanics ' +
+      'above, which remain unpublishable in substance as well as literally.',
     handledBy:
       '`src/sections/LoanAndPlacement.astro` publishes the framing only — the ' +
       'employer advances the loan and placement fee, the helper repays it, it is ' +
-      'ultimately the helper\'s cost, and the placement fee is one month\'s ' +
-      'salary. The repayment mechanics appear nowhere on the site. The page is ' +
-      'complete and honest without them; it is a salary-deduction arrangement on ' +
-      'a licensed agency\'s public site, in an area MOM regulates, so it does not ' +
-      'publish unreviewed.',
+      'ultimately the helper\'s cost, the placement fee is one month\'s salary, ' +
+      'and (since 2026-08-16, in DirectHired\'s own approved wording) that the ' +
+      'arrangement is gone through in full before the employer commits and is ' +
+      'set out in the contract. The repayment mechanics appear nowhere on the ' +
+      'site. The page is complete and honest without them; it is a ' +
+      'salary-deduction arrangement on a licensed agency\'s public site, in an ' +
+      'area MOM regulates, so it does not publish unreviewed.',
   },
 ]
 

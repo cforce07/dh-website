@@ -12,27 +12,8 @@ Generated status of missing content: `docs/INFORMATION-REQUIRED-BEFORE-PRODUCTIO
 
 | | What's needed | Why it blocks |
 |---|---|---|
-| **Compliance sign-off on loan repayment** | Written confirmation that the repayment terms you gave us on 2026-08-16 may be published as-is | You told us repayment runs **1 to 7 months**, comes from the helper's **basic salary**, and that she receives **off-day compensation** during it. None of it is on the site. It describes a salary-deduction arrangement on a licensed agency's public website, in an area MOM regulates closely — so it waits for your sign-off rather than your say-so. A test now fails the build if any of it appears, in those words or paraphrased. |
-| **Production form URL** | The live URL for the employer requirement form | Every primary CTA points at `company.requirementFormUrl`, which 404s today. One constant, one edit — but nothing converts until it resolves. |
-
-### One question, and it needs only a yes or a no
-
-**Are these five facts the whole of your replacement terms?**
-
-1. You request it — no justification needed
-2. The only exclusion is a breach of the Employment Act or abuse of the helper
-3. One replacement, within 6 months of the deployment date
-4. You re-pay MOM, insurance, SIP, medical, handling & transport — **our agent fee is not charged again**
-5. Any outstanding loan balance from the replaced helper is subtracted from what you advance for the new one
-
-`/pricing` now publishes all five, so the checklist has stopped asking for
-"detailed replacement terms" — that item is closed. If your actual terms
-contain anything beyond these five — what happens if the replaced helper is
-already deployed, refund treatment, how long a replacement takes to arrange —
-**it is now nowhere on the site and nothing is asking for it.**
-
-That is the one direction this checklist must not fail in, which is why it is
-here as a question rather than quietly resolved.
+| **Compliance sign-off on loan repayment** | Written confirmation that the repayment terms you gave us on 2026-08-16 may be published as-is | **Still open, and only partly narrowed by your 2026-08-16 answer.** You approved one sentence about the *process* — *"We go through the repayment arrangement in full with you before you commit, and it is set out in the contract."* — and that sentence is now live on `/pricing`. The **mechanics are not**: that repayment runs **1 to 7 months**, that it comes from the helper's **basic salary**, and that she receives **off-day compensation** during it. None of those three is on the site, in those words or paraphrased, and a test fails the build if any of them appears. They describe a salary-deduction arrangement on a licensed agency's public website, in an area MOM regulates closely, so they wait for your sign-off rather than your say-so. Approving one process sentence is not that sign-off. |
+| **Production form URL** | The live URL for the employer requirement form, on whichever site hosts it | Every primary CTA points at `company.requirementFormUrl`, which 404s today. One constant, one edit — but nothing converts until it resolves. You confirmed on 2026-08-16 that the form stays on your existing separate site, so what we need is that site's live form URL. See the note under *Housekeeping* about what hosting it elsewhere costs you. |
 
 ---
 
@@ -96,6 +77,18 @@ and documents why, but anyone handed the brief will work from old numbers:
 **"Handling & transport" vs "Transport"** — resolved, both cards now read
 "Handling & transport".
 
+**Your requirement form lives on a different site, and that has a cost worth
+stating once.** You confirmed on 2026-08-16 that the form is staying where it
+is, and that is a perfectly reasonable call — nothing here needs it to move.
+But it means the **primary conversion path leaves this domain**: every
+"Submit Your Requirements" button hands the visitor to another site, so this
+site cannot see whether they arrived, whether they finished, or where they
+gave up. Any future question of the form "how many visitors converted?"
+cannot be answered from here, by us or by anyone else, without instrumenting
+the other site. You have accepted that; it is written down so it is not
+rediscovered as a surprise later. A design audit of that form is **deferred**
+by your instruction, not forgotten.
+
 **Category A of the production checklist currently detects nothing.**
 `docs/INFORMATION-REQUIRED-BEFORE-PRODUCTION.md` opens with Category A —
 "inline gaps that block the production build" — and it reads *"None found."*
@@ -122,3 +115,8 @@ clean bill of health for the whole document, and it is not one.
 | Without-replacement pricing | $1,140.10, itemised; agent fee $388 | 2026-08-16 |
 | Process steps 1 and 2 | Merged into "Understand your household needs" | 2026-08-16 |
 | Helper source differences | None — same service, package and process; only the source differs | 2026-08-16 |
+| **Are those five facts the whole of your replacement terms?** | **Yes.** `/pricing` now says so: the replacement section states that these are its terms in full. That claim rests on this answer alone, so if anything is ever added to your terms — a replaced helper who is already deployed, refund treatment, how long a replacement takes to arrange — tell us, because the site is now asserting there is nothing else | 2026-08-16 |
+| May we publish *"We go through the repayment arrangement in full with you before you commit, and it is set out in the contract"*? | **Yes.** Live on `/pricing`, in your wording. It approves **this sentence only** — the repayment mechanics remain gated; see *Blocks launch* above | 2026-08-16 |
+| Do you recommend the with-replacement package to first-time employers? | **Yes.** Both pricing cards now carry the recommendation, marked **"Recommended for first-time employers"** on the with-replacement card. Deliberately worded with the audience rather than as a bare "Recommended": the other package is not marked as second best, because for an experienced employer it is the right one | 2026-08-16 |
+| What do families ask after seeing the figures? | *"Normally they will ask similar question for re-assurance."* Recorded rather than acted on: it means an FAQ that restates what the page already says is doing its job, not repeating itself, and it is the basis for writing those answers as reassurance. No FAQ entries were added or re-tagged on the strength of it — the entries removed from `/pricing` earlier were ones repeating the price cards a screen above them, which is a different problem | 2026-08-16 |
+| Is the requirements form staying on your existing site? | *"Yes it's a different site. We can audit design on that later."* Recorded; a design audit of that form is deferred. What it costs is written up under *Housekeeping* | 2026-08-16 |
