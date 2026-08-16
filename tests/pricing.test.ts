@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { experimental_AstroContainer as AstroContainer } from 'astro/container'
 import type { TotalOnlyPackage } from '../src/data/pricing'
 import { packages, packageTotalCents } from '../src/data/pricing'
@@ -99,6 +100,78 @@ describe('the package recommendation', () => {
     expect(recommended).not.toMatch(/class="[^"]*\bis-empty\b/)
     expect(plain).toMatch(/class="[^"]*\bis-empty\b/)
     expect(plain).toMatch(/aria-hidden="true"/)
+  })
+
+  /*
+   * THE ASSERTION THE MARKUP TESTS ABOVE COULD NOT MAKE.
+   *
+   * The recommendation flag shipped broken and the five tests added
+   * alongside it all passed, because every one of them asserts MARKUP —
+   * both cards render .pkg-flag, the empty one is aria-hidden — and all of
+   * that was equally true of the broken version. The defect was in one
+   * declaration: `min-block-size: 1lh` floors the BORDER box (global.css
+   * sets box-sizing: border-box), so the empty flag's 24px of vertical
+   * padding already cleared an 18px floor and it rendered 24px tall
+   * against the filled flag's 42px. Every row on the two cards sat 18px
+   * apart — the exact defect the element was added to prevent, visible only
+   * by measuring, and invisible to a test that reads the DOM.
+   *
+   * That is three times on this branch that a defect was visible only by
+   * measuring, so this asserts the arithmetic itself.
+   *
+   * WHY HERE. tests/section-rhythm.test.ts is this project's precedent for
+   * asserting a CSS source pattern, and the reasoning it records for doing
+   * so applies unchanged: a floor is decided at author time, and a jsdom
+   * re-measurement would only be as trustworthy as jsdom's layout engine
+   * (which does not implement `lh` at all). But that file reads
+   * `src/sections/*.astro` by construction — its whole subject is the order
+   * and grounds of page sections — and .pkg-flag is in src/components. It
+   * would have to grow a second, unrelated reader to host this.
+   *
+   * This file is where the recommendation flag's other five assertions
+   * live, and this is the sixth thing that has to hold about the same
+   * element. Someone changing the flag reads this describe; nobody changing
+   * the flag reads the section-rhythm file. Cohesion with the feature beats
+   * cohesion with the technique.
+   *
+   * It is deliberately written against the RELATIONSHIP, not the literal
+   * string: it reads the padding token out of the rule and requires the
+   * floor to include twice that same token. Retuning the padding cannot
+   * leave the floor behind.
+   */
+  it('floors the flag at one line PLUS its own vertical padding, not a bare 1lh', () => {
+    const source = readFileSync('src/components/PricingCard.astro', 'utf8')
+    // Comments in this file quote both the broken and the fixed value while
+    // explaining the difference, so they must not be read as declarations.
+    const css = source.replace(/\/\*[\s\S]*?\*\//g, ' ')
+
+    // `.pkg-flag {`, not `.pkg-flag.is-empty {` — the second only clears the
+    // background and carries no geometry.
+    const rule = /\.pkg-flag\s*\{([^}]*)\}/.exec(css)
+    expect(rule, 'no .pkg-flag rule in PricingCard.astro').not.toBeNull()
+    const body = rule![1]
+
+    // The block padding, read from the shorthand rather than assumed, so
+    // this test tracks the rule instead of duplicating it.
+    const padding = /padding:\s*var\((--space-\d+)\)\s+var\(--space-\d+\)/.exec(body)
+    expect(padding, 'no two-value padding shorthand on .pkg-flag').not.toBeNull()
+    const blockPadding = padding![1]
+
+    const floors = [...body.matchAll(/min-block-size:\s*([^;]+);/g)].map((m) => m[1].trim())
+
+    // Two declarations: the calc() fallback for engines without `lh`, then
+    // the `lh` version. Both are floors, so both have to include the
+    // padding — fixing only the second leaves Chrome <109 and Safari <16.4
+    // rendering the original defect.
+    expect(floors).toHaveLength(2)
+    for (const floor of floors) {
+      expect(floor, `min-block-size: ${floor} omits its own vertical padding`).toMatch(
+        new RegExp(`\\+\\s*2\\s*\\*\\s*var\\(${blockPadding}\\)`),
+      )
+    }
+    // Named explicitly because it is the exact value that shipped broken.
+    expect(floors).not.toContain('1lh')
+    expect(floors.some((floor) => /\b1lh\b/.test(floor))).toBe(true)
   })
 })
 
