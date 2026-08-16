@@ -126,15 +126,21 @@ const description =
       <div class="page-intro">
         {/*
           "Itemised", not "Set Out in Full". The heading may name what the
-          page does; it may not promise the page is exhaustive. Three things
-          here are deliberately incomplete — the loan figure (§2.3 and §7
-          forbid publishing a range), the repayment mechanics (§2.5's
-          compliance gate), and the replacement terms and conditions, which
-          the master brief's Reminder 04 says may not be published as
-          detailed language until DirectHired supplies them.
+          page does; it may not promise the page is exhaustive.
 
-          Three completeness claims were deleted from this page's body for
-          exactly that reason. This one sat above all of them and survived
+          Two things here are still deliberately incomplete: the loan figure
+          (§2.3 and §7 forbid publishing a range) and the repayment
+          mechanics (§2.5's compliance gate). It was three — the third was
+          the replacement terms, which the master brief's Reminder 04 kept
+          out of detailed language until DirectHired supplied them.
+          DirectHired supplied them, and confirmed on 2026-08-16 that they
+          are complete (spec §2.6.1), so ReplacementTerms.astro's lede now
+          says so about ITS OWN terms.
+
+          THAT DOES NOT REACH THIS HEADING, and "Set Out in Full" must not
+          come back. An <h1> claims the page, not a section, and two of the
+          three gaps are still open. Three completeness claims were deleted
+          from this page's body; this one sat above all of them and survived
           three sweeps. It also matches the <title>, which already said
           "Itemised" and claimed nothing.
         */}
@@ -176,11 +182,21 @@ const description =
           new fact: both are already on the page below.
 
           IT SAID "the replacement terms IN FULL" until the whole-branch
-          review. Nothing authorises a completeness claim about the
-          replacement terms — see the long note on the SectionHeader in
-          ReplacementTerms.astro, which carried the same assertion and lost
-          it for the same reason. Naming the subject is fine; promising it
-          is exhaustive is not, in either direction.
+          review, and it is deliberately NOT restored now that spec §2.6.1
+          has authorised that claim. ReplacementTerms.astro's own lede
+          carries it, one screen down, immediately above the terms it
+          describes — see the long note on its SectionHeader.
+
+          The difference is what the sentence is attached to. There, "these
+          are its terms in full" is a claim about the replacement terms,
+          which DirectHired confirmed on 2026-08-16 are complete. Here it
+          would sit in a lede that also names "the two amounts that sit
+          outside either total" — the loan, which has no published figure
+          (§2.3, §7), and the placement fee, whose repayment mechanics are
+          gated (§2.5). A completeness claim in this sentence reads as
+          covering the whole list, and two thirds of that list is
+          deliberately incomplete. Naming the subject is fine here;
+          promising it is exhaustive is a page-level claim nothing supports.
         */}
         <p class="page-lede">
           Both fly-in packages for a domestic helper in Singapore, itemised line by line — plus the

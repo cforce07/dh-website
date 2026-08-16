@@ -100,36 +100,40 @@ const exampleAdvanceCents = EXAMPLE_NEW_LOAN_CENTS - EXAMPLE_OUTSTANDING_CENTS
 <section class="replacement-terms">
   <Container>
     {/*
-      NO COMPLETENESS CLAIM. This lede used to end "...and the terms are
-      short enough to state in full", which told a reader that what follows
-      is all of them.
+      THE COMPLETENESS CLAIM IS AUTHORISED. Supplied 2026-08-16, recorded as
+      core-pages design spec §2.6.1. Do not delete it again without reading
+      that section first.
 
-      Nothing authorises that. Spec §2.1 supplies the facts stated below —
-      who asks, the one exclusion, how many and by when, and which
-      components recur — and §2's preamble forbids inferring anything it
-      does not state. "And there are no others" is exactly such an
-      inference. The master brief's Reminder 04 says to ask DirectHired for
-      the official detailed terms and conditions BEFORE publishing detailed
-      replacement language, and those T&Cs have never been supplied;
-      docs/OPEN-DECISIONS.md requests them by name and lists three plausible
-      gaps it cannot currently answer — a replaced helper who is already
-      deployed, refund treatment, and how long a replacement takes to
-      arrange.
+      This lede once ended "...and the terms are short enough to state in
+      full", and that was struck — correctly — because nothing authorised it.
+      Spec §2.1 supplied the facts stated below (who asks, the one exclusion,
+      how many and by when, which components recur) and §2's preamble forbids
+      inferring anything it does not state. "And there are no others" was
+      exactly such an inference, and the master brief's Reminder 04 requires
+      DirectHired's official terms and conditions BEFORE detailed replacement
+      language is published.
 
-      This is the previous sub-project's headline defect in a new place: the
-      pricing was correct to the cent while three blocks promised there were
-      no other fees. Here the terms are correct and the page promised there
-      were no other terms.
+      docs/OPEN-DECISIONS.md then asked DirectHired the one question that
+      would settle it — "are those five facts the whole of your replacement
+      terms?" — and named the three gaps a yes would have to cover: a
+      replaced helper who is already deployed, refund treatment, and how long
+      a replacement takes to arrange. The answer on 2026-08-16 was yes. So
+      the claim is no longer an inference from the facts; it is one of the
+      facts, and the sentence returns.
 
-      DELETED, NOT HEDGED. "As far as we can say" would be a claim about
-      completeness in the other direction and is equally unauthorised. The
-      page now says nothing about completeness at all, which is the only
-      position the sources support. Do not restore either form until the
-      T&Cs land — and when they do, this is the first sentence to revisit.
+      SCOPE, AND THIS IS THE PART THAT MATTERS. The confirmation covers the
+      REPLACEMENT TERMS. It does not cover /pricing, which deliberately
+      withholds the loan figure (§2.3, §7 forbid publishing a range) and the
+      repayment mechanics (§2.5's compliance gate). Hence "these are its
+      terms in full" — "its" being this package's replacement terms — rather
+      than anything about the page. The <h1> stays "Maid Agency Pricing,
+      Itemised" and the two other completeness claims deleted from
+      src/pages/pricing.astro stay deleted; see the notes there. One section
+      may now say its own terms are complete. The page may not say it is.
     */}
     <SectionHeader
       title="If the placement doesn’t work out"
-      lede="The fly-in package with replacement carries one replacement."
+      lede="The fly-in package with replacement carries one replacement, and these are its terms in full."
     />
 
     <div class="replacement-body">
