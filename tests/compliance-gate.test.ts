@@ -101,13 +101,46 @@ function builtPages(): { file: string; html: string }[] {
  *
  * NUMBER includes word forms because "seven monthly amounts" and "7
  * monthly amounts" are the same published fact.
+ *
+ * `pay cheque` / `paycheque` joined PERIOD on 2026-08-16. `payslips?` was
+ * already there and "settled over seven paycheques" walked through — the
+ * same pay-period noun in the other spelling, not a new synonym, so the
+ * standing ruling against chasing synonyms below does not reach it.
  */
 const SETTLE =
   'repay|repaid|repayment|repaying|settle|settled|settles|settling|settlement|clear|cleared|clears|clearing|clearance|spread|recover|recovered|recovers|recovery|recoup|recoups|recouped|recouping|(?:pays?|paid|paying)\\s+(?:\\w+\\s+){0,2}back|work(?:ed|s|ing)?\\s+off'
 const PERIOD =
-  'months?|monthly|pay\\s*cycles?|salary\\s*cycles?|wage\\s*cycles?|pay\\s*runs?|pay\\s*periods?|payslips?|pay\\s*packets?|wage\\s*packets?|pay\\s?days?|payroll|instal?ments?|portions?|tranches?'
+  'months?|monthly|pay\\s*cycles?|salary\\s*cycles?|wage\\s*cycles?|pay\\s*runs?|pay\\s*periods?|payslips?|pay\\s?cheques?|pay\\s*packets?|wage\\s*packets?|pay\\s?days?|payroll|instal?ments?|portions?|tranches?'
 const FUNDS = 'salary|salaries|wages?|pay|payslip|earnings|income|remuneration|take[-\\s]home'
 const NUMBER = '\\d+|one|two|three|four|five|six|seven|eight|nine|ten|a few|several|first few'
+
+/*
+ * DURATION_QUALIFIER — added 2026-08-16 (fix round 3, F-2) to carry the
+ * "arrangement" coverage that the previous round dropped. See the pattern
+ * labelled "a duration attached to the arrangement" below for the whole
+ * story; what matters here is the shape.
+ *
+ * Axis 1 gates a SPAN OF TIME. This alternation is every way of expressing
+ * one that does not already have its own pattern: the span named outright
+ * ("length", "duration", "term", "period", "window"), the span given a size
+ * ("short", "brief", "lengthy"), the span bounded ("until", "by the time",
+ * "no longer than six weeks"), and the span implied by a verb of running or
+ * ending ("lasts", "continues", "takes", "expires"). PERIOD is folded in so
+ * a pay-cycle count qualifies too.
+ *
+ * On its own it is far too broad to be a gate — "period" and "long" occur
+ * in ordinary copy. It is only ever used ADJACENT TO a noun that on this
+ * site can mean one thing, which is what makes it safe. It is not a
+ * general-purpose alternation and should not be reused as one.
+ */
+const DURATION_QUALIFIER =
+  'until|till|by\\s+the\\s+time|' +
+  'lasts?|lasted|lasting|runs?|ran|running|continues?|continued|continuing|' +
+  'takes?|took|taking|ends?|ended|ending|expires?|expired|finish\\w*|stops?|stopped|' +
+  'short|long|brief|lengthy|ongoing|' +
+  'length|duration|period|term|span|window|timeframe|time\\s+frame|' +
+  `(?:for|over|across|during|throughout|spanning|within|up\\s+to|no\\s+longer\\s+than)\\s+[^.!?]{0,20}?(?:${NUMBER}|weeks?|years?|days?)|` +
+  PERIOD
 
 /*
  * AXIS 3 vocabulary, added because that axis had none.
@@ -221,25 +254,68 @@ const GATED_PATTERNS: { label: string; pattern: RegExp }[] = [
      * pattern fired on it — and on nothing else in it. It was the only one
      * of the 26 that did.
      *
-     * The pattern was wrong, not the copy. This axis is DURATION: period,
-     * schedule, term, plan and window all name a span of time, which is
-     * what §2.3 gates. "Arrangement" names the thing itself, and saying
-     * that an arrangement EXISTS and is explained to the employer is
-     * exactly what §2.6.2 authorises — the sentence discloses no duration,
-     * no source of funds, and nothing the helper receives.
+     * Removing the token was right, for the reason given at the time: this
+     * axis is DURATION. Period, schedule, term, plan and window all name a
+     * span of time, which is what §2.3 gates. "Arrangement" names the thing
+     * itself, and saying that an arrangement EXISTS and is explained to the
+     * employer is exactly what §2.6.2 authorises — the approved sentence
+     * discloses no duration, no source of funds, and nothing the helper
+     * receives.
      *
-     * Nothing is lost from the axis. A duration attached to an arrangement
-     * is still caught by "a repayment duration" and the month-range
-     * patterns above; "salary-deduction arrangement" is still caught by "a
-     * salary deduction" on axis 2; and the whole paraphrase corpus below
-     * still fires without this token (checked by removing it and re-running,
-     * not assumed).
+     * WHAT THAT ROUND GOT WRONG. It also recorded that "nothing is lost
+     * from the axis". That was false, and the verification behind it —
+     * "all 23 paraphrases still fire" — could not have shown otherwise,
+     * because not one sentence in PARAPHRASES_THAT_MUST_BE_CAUGHT pairs
+     * "repayment arrangement" with a duration. Re-running a corpus that
+     * never exercised the token proves only that the token was not the
+     * corpus's only route to a match. Three sentences were caught before
+     * the removal and walked straight through after it:
      *
-     * The approved sentence is in COPY_THAT_MUST_NOT_BE_CAUGHT so this
-     * cannot silently come back.
+     *   "The deduction arrangement continues until the advance is fully
+     *    recovered."
+     *   "The repayment arrangement is short: it is done with by the time
+     *    she has drawn a handful of paycheques."
+     *   "Every helper is on the same repayment arrangement for the same
+     *    fixed length of time."
+     *
+     * All three are in PARAPHRASES_THAT_MUST_BE_CAUGHT now, so this claim
+     * is fixture-backed rather than asserted in a comment.
+     *
+     * AND THE OLD COVERAGE WAS AN ACCIDENT ANYWAY. Strip the single word
+     * "arrangement" out of those three and they walked through BEFORE the
+     * change too. So the token was never catching duration; it was a
+     * literal "repayment arrangement" tripwire that caught duration
+     * sentences by the accident of one adjacent word — which is precisely
+     * why it also fired on an approved sentence containing no duration at
+     * all. Restoring it as it was would restore a false positive to buy
+     * back an incidental true one.
+     *
+     * The real coverage is the pattern below: "arrangement" NEAR A
+     * DURATION EXPRESSION, in either order. It fires on all three sentences
+     * and not on the approved one, and it holds whichever word happens to
+     * sit next to "arrangement".
      */
     label: 'a repayment schedule',
     pattern: /\b(?:repayment|instal?ment|deduction)\s+(?:period|schedule|term|plan|window)\b/i,
+  },
+  {
+    // The replacement for the removed "arrangement" token — see the note
+    // above for why it is a pairing rather than a word. Either order,
+    // because "the arrangement lasts three months" and "for the first three
+    // months of the arrangement" publish the same fact.
+    //
+    // DURATION_QUALIFIER alone would be uselessly broad; what makes this
+    // safe is that it must land within 70 characters of "arrangement",
+    // which on this site names one thing. The approved §2.6.2 sentence sits
+    // in COPY_THAT_MUST_NOT_BE_CAUGHT and the whole-site inverse sweep runs
+    // over every published sentence, so a regression in either direction
+    // fails here rather than shipping.
+    label: 'a duration attached to the arrangement',
+    pattern: new RegExp(
+      `\\barrangements?\\b[^.!?]{0,70}\\b(?:${DURATION_QUALIFIER})\\b|` +
+        `\\b(?:${DURATION_QUALIFIER})\\b[^.!?]{0,70}\\barrangements?\\b`,
+      'i',
+    ),
   },
   {
     label: 'repayment described as instalments',
@@ -411,6 +487,23 @@ const PARAPHRASES_THAT_MUST_BE_CAUGHT = [
    */
   'Her entitlement for the weekly day she does not work remains payable in full',
   'She is not out of pocket for the days she is entitled to rest',
+  /*
+   * Fix round 3 (F-2). The hole left when "arrangement" came out of the
+   * repayment-schedule alternation. All three were caught before that
+   * change and walked through after it, and NOTHING in this fixture could
+   * have shown that: it had no sentence pairing "repayment arrangement"
+   * with a duration, so re-running it was a check that could not fail.
+   * They are here so the fixture now protects the axis the comment above
+   * "a duration attached to the arrangement" describes.
+   */
+  'The deduction arrangement continues until the advance is fully recovered',
+  'The repayment arrangement is short: it is done with by the time she has drawn a handful of paycheques',
+  'Every helper is on the same repayment arrangement for the same fixed length of time',
+  // The other half of the same round: `payslips` was covered and its other
+  // spelling was not, so this walked through. Here rather than only in a
+  // comment, because a coverage claim with no fixture behind it is what
+  // this whole round is correcting.
+  'The advance is settled over seven paycheques',
 ]
 
 /*
