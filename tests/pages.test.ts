@@ -736,22 +736,38 @@ describe('every built page spaces the markdown it renders', () => {
     expect(multiParagraph).toEqual(expect.arrayContaining(['/', '/pricing/']))
   })
 
+  /**
+   * A rule that puts space between ANY two adjacent blocks — the `* + *`
+   * shape, whatever combinator and whitespace it is written with.
+   *
+   * SPECIFIC ON PURPOSE, and a mutation is why. The first version of this
+   * accepted any `.rich-text` rule containing a `+`, which the `li + li`
+   * rule below satisfies on its own: zeroing the block margin left the
+   * paragraphs running together again and the assertion still passed,
+   * because a different rule in the same family carried a non-zero value.
+   * A between-BLOCKS guarantee has to be checked against the between-blocks
+   * rule.
+   */
+  const BETWEEN_BLOCKS = /\.rich-text\b[^,{]*\*\s*\+\s*\*/
+  const BETWEEN_LIST_ITEMS = /\.rich-text\b[^,{]*\bli\s*\+\s*li\b/
+  const NON_ZERO_TOP = /margin-top:\s*var\(--space-[1-9]\d*\)/
+
   it.each(withMarkdown)('$route separates one markdown block from the next', (page) => {
-    /*
-     * Derived from the page's own CSS rather than from a selector typed
-     * here: any rule whose selector names the shared class AND uses a
-     * sibling combinator, setting a non-zero top margin. That is the shape
-     * of the fix, not its exact text, so a later rewrite that keeps the
-     * behaviour keeps this passing and one that drops the behaviour does
-     * not.
-     */
-    const between = styleRules(page.html).filter(
-      (rule) => /\.rich-text\b/.test(rule.selector) && rule.selector.includes('+'),
-    )
+    const rules = styleRules(page.html)
+    const between = rules.filter((rule) => BETWEEN_BLOCKS.test(rule.selector))
     expect(between.length, `${page.route} has no rule between markdown blocks`).toBeGreaterThan(0)
     expect(
-      between.some((rule) => /margin-top:\s*var\(--space-[1-9]\d*\)/.test(rule.body)),
+      between.some((rule) => NON_ZERO_TOP.test(rule.body)),
       `${page.route} declares a between-blocks rule with no non-zero top margin`,
+    ).toBe(true)
+
+    // Asserted separately rather than folded in above, so neither can stand
+    // in for the other: a list of stacked lines and two paragraphs running
+    // together are the same defect at two scales.
+    const items = rules.filter((rule) => BETWEEN_LIST_ITEMS.test(rule.selector))
+    expect(
+      items.some((rule) => NON_ZERO_TOP.test(rule.body)),
+      `${page.route} does not separate markdown list items`,
     ).toBe(true)
   })
 
