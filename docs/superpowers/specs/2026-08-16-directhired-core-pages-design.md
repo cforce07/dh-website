@@ -70,7 +70,7 @@ Current site copy says these fees "may apply", which reads as a cost the employe
 
 ### 2.6 Supplied 2026-08-16 (second round)
 
-Five questions put to DirectHired in `docs/OPEN-DECISIONS.md`, answered the same day. Same rule as the rest of §2: nothing here may be extended, rounded or inferred beyond what is written.
+Five questions put to DirectHired in `docs/OPEN-DECISIONS.md`, answered the same day, plus **2.6.6** and **2.6.7** — two further questions raised by the `/why-directhired` review and answered by DirectHired on 2026-08-16. Same rule as the rest of §2: nothing here may be extended, rounded or inferred beyond what is written.
 
 - **2.6.1 — The replacement terms are complete.** Asked "are those five facts the whole of your replacement terms?", DirectHired answered **yes**. §2.1's five facts are therefore the whole of the replacement terms, and that is now a supplied fact rather than an inference.
 
@@ -89,6 +89,14 @@ Five questions put to DirectHired in `docs/OPEN-DECISIONS.md`, answered the same
 - **2.6.4 — What families ask after seeing the figures.** DirectHired: *"Normally they will ask similar question for re-assurance."* Families re-ask questions the page has already answered, seeking reassurance rather than new information. Consequence: an FAQ that restates what the page says is **correct behaviour, not duplication**, and copy answering these questions should be framed as reassurance. This does **not** license restoring near-verbatim adjacent repetition — the earlier de-duplication on `/pricing` removed entries that repeated the cards a screen above them, which remains right.
 
 - **2.6.5 — The requirements form stays on the legacy site.** DirectHired: *"Yes it's a different site. We can audit design on that later."* The employer requirement form is not migrating to this site. Consequence: **the primary conversion path leaves this domain**, so conversion cannot be measured from here and the form's design is outside this project. DirectHired has accepted both; a design audit of that form is deferred.
+
+- **2.6.6 — "No gallery of helpers to browse" is a PRINCIPLE, not a V1 scope note.** *Answered 2026-08-16.* Two pages state the absence of a browsable gallery as an argument rather than as a stage: `/find-your-helper` (*"Because a match is made from both halves, there is no list of helpers to browse here."*) and `/why-directhired` (*"It is also why this site has no gallery of helpers to browse. A shortlist assembled before anyone has heard about your household is a shortlist assembled from whoever happens to be available…"*). The review flagged that this sits against master brief §40's note that the architecture should stay **"future-ready for a future helper-matching platform"** — the copy argues the absence is right, while the architecture is being kept ready to reverse it.
+
+  **DirectHired chose to keep it as a principle**, on both pages, and **no copy changed**. Source brief §40's ban on search/filter/browse is therefore read as a product position, not a V1 limitation, and copy may keep arguing it.
+
+  **This is the record, so that it is not re-litigated by whoever reads §40 next.** It also cuts the other way and is written down for that reason: **if a browse or matching surface is ever built, these two pages argue against it on the record** and both must be rewritten in the same change — a gallery shipping under copy that calls a gallery the thing DirectHired was started to stop doing is worse than either alone. Whoever builds it inherits that as work, not as a surprise.
+
+- **2.6.7 — The "not asked to put your family into a category" clause is deleted.** *Answered 2026-08-16.* `/why-directhired`'s Personalised Service pillar claimed *"…you are not asked to put your family into a category before anyone has spoken to you."* That is a claim about the legacy employer-requirement form (§2.6.5) — outside this project, unseen by anyone in this repository, behind a URL that 404s today, and one click from this page's primary CTA. **DirectHired chose to delete it** rather than defend it. It is gone from the page; `src/pages/why-directhired.astro` records the exact wording and the one condition for restoring it — written confirmation of what fields that form asks for.
 
 ---
 
