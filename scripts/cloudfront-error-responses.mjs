@@ -113,6 +113,43 @@ function withoutErrorResponses(config) {
 }
 
 /**
+ * Do two CustomErrorResponses blocks say the same thing?
+ *
+ * FIELD BY FIELD, NOT `JSON.stringify`. This was a string comparison of two
+ * objects, which is a comparison of their KEY ORDER as much as of their
+ * values. Nothing guarantees the AWS CLI serialises a fetched
+ * CustomErrorResponses item in the order `desiredErrorResponses()` happens
+ * to build it, and nothing guarantees it will go on doing so; the day it
+ * does not, an already-correct distribution reads as changed, the script
+ * publishes an identical config and waits several minutes for a deploy that
+ * moved nothing. The idempotency this file's header promises would be a
+ * promise about formatting.
+ *
+ * ORDER OF ITEMS IS ALSO NOT SIGNIFICANT — CloudFront returns the array in
+ * whatever order it holds it — so both sides are sorted by ErrorCode first.
+ * `ResponseCode` is compared as a string and the numbers as numbers because
+ * the API is genuinely inconsistent about which it returns.
+ */
+export function sameErrorResponses(a, b) {
+  if (!a || !b) return false
+  if (Number(a.Quantity) !== Number(b.Quantity)) return false
+  if (!Array.isArray(a.Items) || !Array.isArray(b.Items)) return false
+  if (a.Items.length !== b.Items.length) return false
+
+  const byCode = (items) => [...items].sort((x, y) => Number(x.ErrorCode) - Number(y.ErrorCode))
+  const left = byCode(a.Items)
+  const right = byCode(b.Items)
+
+  return left.every(
+    (item, n) =>
+      Number(item.ErrorCode) === Number(right[n].ErrorCode) &&
+      item.ResponsePagePath === right[n].ResponsePagePath &&
+      String(item.ResponseCode) === String(right[n].ResponseCode) &&
+      Number(item.ErrorCachingMinTTL) === Number(right[n].ErrorCachingMinTTL),
+  )
+}
+
+/**
  * Everything that must be true of the patched config before it is allowed
  * anywhere near `update-distribution`. Returns a list of problems; empty
  * means safe.
@@ -149,6 +186,24 @@ export function verify(original, patched) {
             `${item.ErrorCode} answers with ${item.ResponseCode}, not ${RESPONSE_CODE} — a soft 404`,
           )
         }
+        /*
+         * THE TTL IS PART OF THE CONTRACT, not a tuning knob, and this
+         * verifier used to ignore it entirely — it checked the code, the
+         * path and the status and waved through any caching value at all.
+         *
+         * It matters for the reason this file's header gives: the commonest
+         * cause of a 404 on a growing site is a page that has not shipped
+         * yet, and a long ErrorCachingMinTTL means the edge goes on serving
+         * the 404 after the page exists, out of a cache that invalidating
+         * the missing path cannot usefully clear. A patch that quietly
+         * carried CloudFront's 300s default would have passed every other
+         * check here.
+         */
+        if (Number(item.ErrorCachingMinTTL) !== ERROR_CACHING_MIN_TTL) {
+          problems.push(
+            `${item.ErrorCode} caches errors for ${item.ErrorCachingMinTTL}s, not ${ERROR_CACHING_MIN_TTL}s`,
+          )
+        }
       }
     }
   }
@@ -169,7 +224,12 @@ export function verify(original, patched) {
 
 function selfTest() {
   const failures = []
+  // Counted rather than announced. The closing line used to claim "11
+  // checks" while there were twelve, which is the kind of drift that makes
+  // a reader stop trusting the number at all.
+  let checked = 0
   const check = (name, condition) => {
+    checked += 1
     if (!condition) failures.push(name)
   }
 
@@ -208,7 +268,49 @@ function selfTest() {
   // Idempotent: running it against an already-patched distribution must be a
   // no-op, so re-running the deploy script is safe.
   const twice = withErrorResponses(patched)
-  check('is idempotent', JSON.stringify(twice) === JSON.stringify(patched))
+  check(
+    'is idempotent',
+    sameErrorResponses(twice.CustomErrorResponses, patched.CustomErrorResponses),
+  )
+
+  /*
+   * The no-op decision must survive a REORDERED but identical block — which
+   * is exactly what it did not do when it was `JSON.stringify(a) ===
+   * JSON.stringify(b)`. The fixture below is the desired mapping with every
+   * item's keys written in the opposite order and the two items swapped, so
+   * its serialisation differs from `desiredErrorResponses()`'s in every
+   * respect except meaning.
+   */
+  const reordered = {
+    Items: [...desiredErrorResponses().Items]
+      .reverse()
+      .map(({ ErrorCachingMinTTL, ResponseCode, ResponsePagePath, ErrorCode }) => ({
+        ErrorCachingMinTTL,
+        ResponseCode,
+        ResponsePagePath,
+        ErrorCode,
+      })),
+    Quantity: MAPPED_ERROR_CODES.length,
+  }
+  check(
+    'the fixture really is serialised differently (guards the check below)',
+    JSON.stringify(reordered) !== JSON.stringify(desiredErrorResponses()),
+  )
+  check(
+    'treats a key-reordered, item-swapped block as unchanged',
+    sameErrorResponses(reordered, desiredErrorResponses()),
+  )
+  check(
+    'still treats a different caching TTL as changed',
+    !sameErrorResponses(
+      {
+        Quantity: MAPPED_ERROR_CODES.length,
+        Items: desiredErrorResponses().Items.map((i) => ({ ...i, ErrorCachingMinTTL: 300 })),
+      },
+      desiredErrorResponses(),
+    ),
+  )
+  check('treats a missing block as changed', !sameErrorResponses(undefined, desiredErrorResponses()))
 
   // Replaces a wrong existing mapping rather than appending to it — the
   // shape a half-finished earlier attempt would leave behind.
@@ -250,6 +352,16 @@ function selfTest() {
     verify(base, { ...withErrorResponses(base), Origins: { Quantity: 0, Items: [] } }).length > 0,
   )
   check('rejects a config with no error responses', verify(base, base).length > 0)
+  check(
+    'rejects an error-caching TTL that is not the agreed one',
+    verify(base, {
+      ...base,
+      CustomErrorResponses: {
+        Quantity: 2,
+        Items: desiredErrorResponses().Items.map((i) => ({ ...i, ErrorCachingMinTTL: 300 })),
+      },
+    }).length > 0,
+  )
 
   if (failures.length > 0) {
     console.error('\ncloudfront-error-responses self-test FAILED:')
@@ -258,7 +370,7 @@ function selfTest() {
     process.exit(1)
   }
 
-  console.log('    self-test ok (11 checks)')
+  console.log(`    self-test ok (${checked} checks)`)
 }
 
 /* ------------------------------------------------------------------------
@@ -290,9 +402,10 @@ if (command === '--self-test') {
     ).join(', ')}`,
   )
   // Compared as VALUES, not as formatted text — see the exit-code note in
-  // this file's header for why the caller cannot do this itself.
-  const unchanged = JSON.stringify(before) === JSON.stringify(desiredErrorResponses())
-  if (unchanged) process.exit(3)
+  // this file's header for why the caller cannot do this itself, and
+  // `sameErrorResponses` for why a JSON.stringify of two objects was not
+  // actually a comparison of values either.
+  if (sameErrorResponses(before, desiredErrorResponses())) process.exit(3)
 } else {
   console.error(
     '\nUsage:\n' +

@@ -12,8 +12,14 @@
 # document: no header, no footer, no way back, and a 403 status telling
 # search engines the page is forbidden rather than absent.
 #
-# Run this ONCE, after a deploy that has put dist/404.html into the bucket.
-# It is idempotent, so re-running it is safe and does nothing.
+# Run this after a deploy that has put dist/404.html into the bucket.
+#
+# It is idempotent: if the distribution already carries exactly this mapping
+# it sends nothing to AWS. It is NOT a no-op, though — it still checks the
+# live edge on the way out, because "the config says so" and "a missing page
+# actually answers 404 with our page" are two different facts and only the
+# second one is what anybody wanted. So re-running it is both safe and
+# useful.
 #
 # Usage:  bash scripts/deploy-cloudfront-error-pages.sh
 #
@@ -27,6 +33,15 @@
 #
 set -euo pipefail
 
+# THE PREVIEW/STAGING DISTRIBUTION, AND ONLY IT. When this script was
+# written EQFX1V1KHG4IS was the only distribution that existed. It is now the
+# staging one — it answers on staging.directhired.com as well as on the
+# cloudfront.net name below — and production is a separate distribution
+# (E3R68EGASPTMJ3, see scripts/deploy-production.sh). Production was BUILT
+# with these two error responses in its configuration, so it does not need
+# this script; nothing here reaches it, and nothing here should be pointed at
+# it without re-reading the side-effect note in
+# scripts/cloudfront-error-responses.mjs first.
 DIST_ID="EQFX1V1KHG4IS"
 PROFILE="directhired"
 DOMAIN="didceb5na1cjo.cloudfront.net"
@@ -36,6 +51,51 @@ cd "$(dirname "$0")/.."
 
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
+
+# ---------------------------------------------------------------------
+# Live verification, defined here because BOTH exit paths run it — see the
+# "nothing to do" branch below for why that matters.
+# ---------------------------------------------------------------------
+verify_live() {
+  local fail=0
+  local got
+
+  check() { # url, expected-status
+    got=$(curl -s -o "$TMP/body.html" -w '%{http_code}' "$1" || echo "000")
+    if [ "$got" = "$2" ]; then
+      echo "    ok   $1 -> $got"
+    else
+      echo "    FAIL $1 -> $got (expected $2)"
+      fail=1
+    fi
+  }
+
+  # A route that does not exist, in both shapes the directory-index function
+  # handles: extensionless and trailing-slash.
+  check "https://$DOMAIN/no-such-page"  "404"
+  check "https://$DOMAIN/no-such-page/" "404"
+  # ...and a nested one, which takes the same code path as /services/<slug>
+  # will when sub-project 3 ships.
+  check "https://$DOMAIN/services/no-such-service" "404"
+  # The pages that DO exist must be unaffected. A CustomErrorResponse that
+  # swallowed real pages would be the worst possible outcome of this change,
+  # and it is exactly the kind of thing nobody checks after a green deploy.
+  check "https://$DOMAIN/"         "200"
+  check "https://$DOMAIN/pricing/" "200"
+  check "https://$DOMAIN/contact/" "200"
+  check "https://$DOMAIN/404.html" "200"
+
+  # The body of a 404 must be OUR page, not CloudFront's generic one. Without
+  # this, a mapping pointing at a missing key would report four clean 404s.
+  if curl -s "https://$DOMAIN/no-such-page" | grep -q "That page isn"; then
+    echo "    ok   the 404 body is the DirectHired page"
+  else
+    echo "    FAIL the 404 body is not the DirectHired page"
+    fail=1
+  fi
+
+  return "$fail"
+}
 
 # ---------------------------------------------------------------------
 # Tests. Every one of these runs BEFORE update-distribution is called, and
@@ -90,10 +150,41 @@ echo "    ok   https://$DOMAIN/404.html -> 200"
 
 echo
 echo "==> Fetching the current distribution config"
+#
+# ONE CALL. This was two — one `--query DistributionConfig`, one
+# `--query ETag` — and the pair defeated the very thing an ETag is for.
+#
+# `--if-match` is optimistic locking: it is supposed to make the update fail
+# if the distribution changed after we read it. With two calls, a change
+# landing BETWEEN them gives us the OLD config and the NEW ETag. The patch is
+# then applied to the stale document, `--if-match` matches happily because
+# the ETag is current, and `update-distribution` replaces the whole
+# configuration — silently reverting whatever the other change was. That is
+# precisely the outcome the lock exists to prevent, and it is not
+# hypothetical on this repo: another session has been changing CloudFront
+# here today.
+#
+# So: one response, both fields read out of it, and they are therefore
+# guaranteed to describe the same version.
 aws cloudfront get-distribution-config --id "$DIST_ID" --profile "$PROFILE" \
-  --query 'DistributionConfig' --output json > "$TMP/config.json"
-ETAG=$(aws cloudfront get-distribution-config --id "$DIST_ID" --profile "$PROFILE" \
-  --query 'ETag' --output text)
+  --output json > "$TMP/response.json"
+
+# node rather than jq, for the reason recorded in
+# scripts/cloudfront-error-responses.mjs's header: jq is not guaranteed to be
+# installed and Node is (package.json requires >= 20.3.0). The absent-field
+# check is not ceremony — `--output json` on a failed call can still write a
+# document, and an empty ETAG would be sent as `--if-match ''`.
+ETAG=$(node -e '
+  const { readFileSync, writeFileSync } = require("node:fs")
+  const dir = process.argv[1]
+  const response = JSON.parse(readFileSync(`${dir}/response.json`, "utf8"))
+  if (!response.ETag || !response.DistributionConfig) {
+    console.error("get-distribution-config returned no ETag or no DistributionConfig")
+    process.exit(1)
+  }
+  writeFileSync(`${dir}/config.json`, JSON.stringify(response.DistributionConfig, null, 2))
+  process.stdout.write(response.ETag)
+' "$TMP")
 echo "    etag: $ETAG"
 
 echo
@@ -115,7 +206,31 @@ else
   if [ "$rc" -eq 3 ]; then
     echo
     echo "==> Nothing to do: the distribution already carries this mapping."
-    exit 0
+    #
+    # AND IT STILL VERIFIES. This used to `exit 0` right here, which meant a
+    # re-run — the thing someone does specifically to CONFIRM the deployment
+    # — confirmed nothing at all and reported success. The config carrying
+    # the mapping and the edge actually serving our 404 page are two
+    # different facts: the mapping can point at a key that is missing from
+    # the bucket, in which case every 404 is CloudFront's generic error page
+    # and the config looks perfect.
+    #
+    # This is now the LIKELY path rather than an edge case. Both
+    # distributions in infra/ were created carrying these two error
+    # responses, so on a fresh run there is genuinely nothing to patch and
+    # the verification below is the entire value of running the script.
+    echo
+    echo "==> Verifying against the live distribution"
+    if verify_live; then
+      echo
+      echo "==> Done. The mapping was already in place and is working."
+      exit 0
+    fi
+    echo
+    echo "The config carries the mapping but the live site does not behave as expected."
+    echo "Most likely /404.html is missing from the bucket. Deploy the content:"
+    echo "  bash scripts/deploy-preview.sh"
+    exit 1
   fi
   echo
   echo "Patch refused — NOT publishing. The distribution is unchanged."
@@ -152,46 +267,15 @@ aws cloudfront wait distribution-deployed --id "$DIST_ID" --profile "$PROFILE"
 
 echo
 echo "==> Verifying against the live distribution"
-fail=0
-check() { # url, expected-status
-  got=$(curl -s -o "$TMP/body.html" -w '%{http_code}' "$1" || echo "000")
-  if [ "$got" = "$2" ]; then
-    echo "    ok   $1 -> $got"
-  else
-    echo "    FAIL $1 -> $got (expected $2)"
-    fail=1
-  fi
-}
-
-# A route that does not exist, in both shapes the directory-index function
-# handles: extensionless and trailing-slash.
-check "https://$DOMAIN/no-such-page"  "404"
-check "https://$DOMAIN/no-such-page/" "404"
-# ...and a nested one, which takes the same code path as /services/<slug>
-# will when sub-project 3 ships.
-check "https://$DOMAIN/services/no-such-service" "404"
-# The pages that DO exist must be unaffected. A CustomErrorResponse that
-# swallowed real pages would be the worst possible outcome of this change,
-# and it is exactly the kind of thing nobody checks after a green deploy.
-check "https://$DOMAIN/"         "200"
-check "https://$DOMAIN/pricing/" "200"
-check "https://$DOMAIN/contact/" "200"
-check "https://$DOMAIN/404.html" "200"
-
-# The body of a 404 must be OUR page, not CloudFront's generic one. Without
-# this, a mapping pointing at a missing key would report four clean 404s.
-if curl -s "https://$DOMAIN/no-such-page" | grep -q "That page isn"; then
-  echo "    ok   the 404 body is the DirectHired page"
-else
-  echo "    FAIL the 404 body is not the DirectHired page"
-  fail=1
-fi
-
-echo
-if [ "$fail" -ne 0 ]; then
+# `if !` rather than a bare call: `set -e` would abort on the non-zero return
+# before the diagnostic below could be printed, and after a successful
+# update-distribution the diagnostic is the only useful thing left to say.
+if ! verify_live; then
+  echo
   echo "Live verification failed. The config WAS updated — inspect it with:"
   echo "  aws cloudfront get-distribution-config --id $DIST_ID --profile $PROFILE"
   exit 1
 fi
 
+echo
 echo "==> Done. Missing pages now answer 404 with the DirectHired 404 page."
