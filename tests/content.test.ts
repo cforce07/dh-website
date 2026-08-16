@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { packages, packageTotalCents } from '../src/data/pricing'
+import { company } from '../src/data/company'
 import { formatSgd, formatSgdProse } from '../src/lib/money'
 import {
   EXEMPT_PLACES,
@@ -1313,6 +1314,113 @@ describe('the /pricing sources contain no hardcoded money', () => {
  * and the third quietly does not — and it is invisible until someone reads
  * the two files side by side, which is what a test is for.
  */
+/*
+ * THE FOUNDING STORY IS SOURCED, NOT RETYPED — spec §3.4, master brief §35.
+ *
+ * §3.4 requires the brief's sentence VERBATIM. Until 2026-08-17 three
+ * surfaces published it and none of them shared a string:
+ *
+ *   src/pages/about.astro:151            correct, hardcoded literal
+ *   src/pages/why-directhired.astro:130  correct, hardcoded literal
+ *   src/sections/Difference.astro:71     "…not finding the right PERSON",
+ *                                        against the mandated "…instead of
+ *                                        finding the right FIT"
+ *
+ * Two of three correct is what a hand-typed mandate looks like shortly before
+ * it is three of three wrong. And spec §9 lists "Founding story in
+ * DirectHired's words" as an OPEN INPUT — the client's own account is going
+ * to replace this, on every surface, in one change, by somebody who did not
+ * write any of it.
+ *
+ * WHY THE PARAPHRASE MATTERED BEYOND THE RULE. "The right fit" is the claim
+ * the section it sat in is making. A person can be the right person and the
+ * wrong fit for a household; that distinction is the business. The paraphrase
+ * lost the argument as well as the authority.
+ */
+describe('the founding story is sourced, not retyped', () => {
+  /** The three surfaces that publish it, and the file that owns it. */
+  const OWNER = 'src/data/company.ts'
+  const SURFACES = [
+    'src/pages/about.astro',
+    'src/pages/why-directhired.astro',
+    'src/sections/Difference.astro',
+  ]
+
+  it('matches master brief §35 verbatim', () => {
+    // Read off the brief rather than typed here, so the constant is checked
+    // against its actual authority and not against a second copy of itself.
+    const brief = readFileSync(
+      'DirectHired Website — Master Context & Design Brief for Claude Code + Taste Skills.md',
+      'utf8',
+    )
+    expect(brief).toContain(company.foundingStory)
+  })
+
+  it('names DirectHired, the vacancy framing and the fit framing', () => {
+    // Named parts, so a truncation or a drift in the constant itself fails
+    // here rather than passing because the brief is a long document.
+    expect(company.foundingStory).toMatch(/^DirectHired was created after seeing families/)
+    expect(company.foundingStory).toMatch(/filling vacancies/)
+    expect(company.foundingStory).toMatch(/finding the right fit\.$/)
+  })
+
+  it('is retyped by no template, on any surface', () => {
+    /*
+     * The sweep runs over EVERY .astro file, not the three named above — a
+     * fourth page carrying a fourth copy is the next instance of this defect
+     * and would not be caught by checking only the three that had it.
+     *
+     * Matched on a distinctive fragment rather than the whole sentence,
+     * because a retype that drifted (which is exactly what Difference.astro
+     * did) would not contain the whole sentence to match.
+     */
+    const offenders = ['src/sections', 'src/components', 'src/layouts', 'src/pages']
+      .flatMap(walk)
+      .filter((f) => f.endsWith('.astro'))
+      .map((file) => ({ file, text: template(readFileSync(file, 'utf8')) }))
+      .filter(({ text }) => /DirectHired was created after seeing families/i.test(text))
+      .map(({ file }) => file)
+    expect(offenders, 'the founding story is hardcoded rather than read from company.ts').toEqual(
+      [],
+    )
+  })
+
+  it('the paraphrase that shipped is caught by that sweep', () => {
+    // The rule has to fire on the DRIFTED form, or it only catches the copies
+    // that were already correct — which is the useless half of the problem.
+    expect(
+      /DirectHired was created after seeing families/i.test(
+        'DirectHired was created after seeing families go through agencies focused on filling a vacancy, not finding the right person.',
+      ),
+    ).toBe(true)
+  })
+
+  it('every surface reads the constant', () => {
+    for (const file of SURFACES) {
+      const source = readFileSync(file, 'utf8')
+      expect(source, `${file} does not read company.foundingStory`).toContain(
+        'company.foundingStory',
+      )
+    }
+  })
+
+  it('the constant is defined once, in company.ts', () => {
+    expect(readFileSync(OWNER, 'utf8')).toContain(company.foundingStory)
+  })
+
+  it('all three surfaces publish it, verbatim, in the build', () => {
+    // The half that stops the rule being satisfied by deleting the sentence.
+    const built = ['dist/index.html', 'dist/about/index.html', 'dist/why-directhired/index.html']
+    for (const file of built) {
+      const html = readFileSync(file, 'utf8')
+        .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+      expect(html, `${file} does not publish the founding story`).toContain(company.foundingStory)
+    }
+  })
+})
+
 describe('the response pledge is sourced, not retyped', () => {
   const SOURCE = 'src/content/faq/submit-requirements.md'
 

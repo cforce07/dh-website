@@ -126,10 +126,13 @@ const description =
         the hardest kind to remove later — it would read as history.
       */}
       <h1>We don’t just fill vacancies.</h1>
-      <p class="origin-story">
-        DirectHired was created after seeing families struggle with agencies that focused on filling
-        vacancies instead of finding the right fit.
-      </p>
+      {/*
+        SOURCED, NOT RETYPED (2026-08-17) — see src/data/company.ts's
+        `foundingStory`. This and /about carried the mandated §3.4 sentence as
+        two separate hardcoded literals, and Difference.astro carried a
+        paraphrase of it. One string now feeds all three.
+      */}
+      <p class="origin-story">{company.foundingStory}</p>
       <p class="origin-answer">
         We take time to understand your needs before recommending a helper.
       </p>

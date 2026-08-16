@@ -8,6 +8,7 @@
  */
 import Container from '../components/Container.astro'
 import SectionHeader from '../components/SectionHeader.astro'
+import { company } from '../data/company'
 
 const pillars = [
   {
@@ -67,10 +68,28 @@ const pillars = [
   <Container>
     <SectionHeader title="We understand first. We recommend second." />
 
+    {/*
+      THE PARAPHRASE IS GONE (2026-08-17).
+
+      This read "…after seeing families go through agencies focused on filling
+      a vacancy, not finding the right PERSON." Core-pages design spec §3.4
+      requires master brief §35 VERBATIM, and the mandated ending is "…instead
+      of finding the right FIT". /about and /why-directhired both had it
+      right, as two separate hardcoded literals; this was the third copy and
+      the one that had drifted.
+
+      "The right fit" is also the phrase this whole section is arguing, and it
+      is not interchangeable with "the right person": a person can be the
+      right person and the wrong fit for a household, which is the distinction
+      DirectHired exists to make. The paraphrase cost the sentence its point
+      as well as its authority.
+
+      Single-sourced from src/data/company.ts now — spec §9 has DirectHired's
+      own account replacing it on all three surfaces at once.
+    */}
     <p class="origin-story">
-      DirectHired was created after seeing families go through agencies focused on filling a vacancy, not finding
-      the right person. We built a different process: one that starts with understanding your family before any
-      name is suggested.
+      {company.foundingStory} We built a different process: one that starts with understanding your
+      family before any name is suggested.
     </p>
 
     <div class="pillars">

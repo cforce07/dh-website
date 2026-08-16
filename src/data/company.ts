@@ -94,6 +94,30 @@ export const company = {
   registeredName: 'DIRECT HIRED PTE. LTD.',
   uen: '202240964Z',
 
+  // THE FOUNDING STORY — master brief §35, VERBATIM.
+  //
+  // Core-pages design spec §3.4 requires this sentence verbatim and records
+  // it as a DECISION TAKEN BY DEFAULT: DirectHired has not given us their own
+  // account, so the brief's line ships meanwhile. Spec §9 lists "Founding
+  // story in DirectHired's words" as an open input. It is going to be
+  // replaced, by people who are not us, and that is the whole reason it lives
+  // here rather than in three page templates.
+  //
+  // IT WAS HAND-TYPED TWICE AND PARAPHRASED ONCE. Until 2026-08-17 /about
+  // (about.astro:151) and /why-directhired (why-directhired.astro:130) each
+  // carried it as a separate hardcoded literal — correct in both, and correct
+  // by coincidence — while src/sections/Difference.astro published
+  // "…agencies focused on filling a vacancy, not finding the right PERSON"
+  // against the mandated "…instead of finding the right FIT". Three copies of
+  // a sentence a spec requires verbatim, one of them already wrong, and the
+  // client's own words due to replace all three.
+  //
+  // MASTER BRIEF §70'S RULE APPLIES: never invent, modify, guess or
+  // substitute it. tests/content.test.ts asserts that no template retypes it
+  // — every surface must read this constant.
+  foundingStory:
+    'DirectHired was created after seeing families struggle with agencies that focused on filling vacancies instead of finding the right fit.',
+
   // The form is built but not yet wired to the production domain.
   // This is the ONLY definition of the destination. Repoint here at launch.
   requirementFormUrl: 'https://www.directhired.com/employer-requirement',
