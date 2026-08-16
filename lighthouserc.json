@@ -1,6 +1,11 @@
 {
   "ci": {
-    "collect": { "staticDistDir": "./dist", "numberOfRuns": 3 },
+    "_maxAutodiscoverUrlsIsNotOptional": "maxAutodiscoverUrls: 0 means NO CAP. Do not delete it and do not set it to a number. With staticDistDir and no explicit `url` list, @lhci/cli autodiscovers pages and then imposes a DEFAULT CAP OF 5 as a silent .slice(0, 5) — no warning, no log line, no non-zero exit. Discovery order is root files first, then subdirectories alphabetically, so at the seven pages this branch is building toward it would have audited /, /about, /contact, /faq and /find-your-helper, and dropped /pricing and /why-directhired. Every assertion below — performance, accessibility, SEO, LCP, CLS, TBT — would have stopped applying to the highest-value page on the site while CI stayed green. staticDirFileDiscoveryDepth is left at its default of 2, which already reaches the nested routes.",
+    "collect": {
+      "staticDistDir": "./dist",
+      "numberOfRuns": 3,
+      "maxAutodiscoverUrls": 0
+    },
     "assert": {
       "_comment": "aggregationMethod: 'median' (not the lhci default 'optimistic', which grades every assertion on the single best of the 3 runs and would mask a regression that shows up in only 1 or 2 of them).",
       "aggregationMethod": "median",
