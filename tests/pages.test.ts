@@ -1125,7 +1125,35 @@ describe('the sitemap', () => {
   const indexableRoutes = pages.map((p) => p.route).filter((r) => r !== '/404')
 
   it('lists every built page except the 404, and nothing else', () => {
-    expect(indexableRoutes.length, 'no indexable pages were found').toBe(7)
+    /*
+     * A FLOOR, NOT A COUNT — corrected 2026-08-17.
+     *
+     * This read `.toBe(7)` with the message "no indexable pages were found",
+     * and the message is the intent: the equality below compares two derived
+     * lists, and two EMPTY lists are equal. Something has to say that the
+     * left-hand side is not empty, or a build that emitted nothing would make
+     * the real assertion pass with nothing to say.
+     *
+     * `toBe(7)` expressed that as an exact count, which is a different claim
+     * and one nothing here wanted to make. It contradicts this file's own
+     * doctrine, stated directly above — "DERIVED from dist/ rather than
+     * typed, ... so a page added next month has to appear here without
+     * anybody remembering this test exists" — and sub-project 3 adds eleven
+     * pages, every one of which would have failed this line.
+     *
+     * NOT A WEAKENING. What `toBe(7)` actually protected was the floor: 7 is
+     * still the minimum, so the sitemap cannot silently shrink. The EXACTNESS
+     * — that the sitemap holds these routes and no others — was never carried
+     * by this line at all. It is carried by the `toEqual` below, which
+     * compares the full sorted sets, and by the uniqueness check added with
+     * this change. Growth is the one thing the old form caught, and growth is
+     * not a defect here.
+     */
+    expect(
+      indexableRoutes.length,
+      'no indexable pages were found, so the equality below would compare two empty lists',
+    ).toBeGreaterThanOrEqual(7)
+    expect(new Set(indexableRoutes).size, 'a route was built twice').toBe(indexableRoutes.length)
     expect([...locations].sort()).toEqual(
       indexableRoutes.map((r) => `${company.siteUrl}${r}`).sort(),
     )
