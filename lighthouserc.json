@@ -6,17 +6,43 @@
       "numberOfRuns": 3,
       "maxAutodiscoverUrls": 0
     },
+    "_whyThereAreTwoMatrixEntries": "THE 404 CANNOT SCORE 1.00 ON SEO, AND MUST NOT. Task 12 got Lighthouse to run for the first time in this project's history (see docs/runbooks/lighthouse-on-windows.md) and graded the results with `lhci assert` and the config as it then stood. Seven pages passed every assertion. dist/404.html failed one: categories.seo scored 0.63 on all three runs, because `is-crawlable` scores 0 — the page carries `<meta name=\"robots\" content=\"noindex, follow\">`. That tag is correct and deliberate: /404.html answers 200 as a real object and would otherwise be an indexable thin page, which is why tests/pages.test.ts asserts BOTH that the 404 carries noindex AND that no other page does. So the site was one working Lighthouse run away from a red CI on a page doing exactly what it is supposed to do — and the natural repair under time pressure would have been to lower `categories:seo` for every page, or to drop the 404 from discovery, either of which loses real coverage. Neither was done.",
+    "_whatTheSecondEntryTradesAway": "Only `is-crawlable`, and only on the 404. The 404 entry keeps performance, accessibility, LCP, CLS and TBT at the identical thresholds the other seven pages carry, and replaces the SEO CATEGORY score with the seven SEO audits that page actually scores, each asserted at 1. That is stricter than the category it replaces, not looser: a category score is a weighted average that can absorb one failing audit and stay above a threshold, whereas each audit below must pass on its own. The one audit not listed is `is-crawlable`, and the property that makes it fail is itself asserted — positively and negatively — in tests/pages.test.ts's 'the 404 page is the only page kept out of the index'. Remove the noindex and that suite fails; nothing here has to notice. If Lighthouse adds a scored SEO audit, it appears in the category on the other seven pages but must be added here by hand — that is the cost of this arrangement and it is written down rather than discovered.",
     "assert": {
-      "_comment": "aggregationMethod: 'median' (not the lhci default 'optimistic', which grades every assertion on the single best of the 3 runs and would mask a regression that shows up in only 1 or 2 of them).",
-      "aggregationMethod": "median",
-      "assertions": {
-        "categories:performance": ["error", { "minScore": 0.9 }],
-        "categories:accessibility": ["error", { "minScore": 1 }],
-        "categories:seo": ["error", { "minScore": 1 }],
-        "largest-contentful-paint": ["error", { "maxNumericValue": 2500 }],
-        "cumulative-layout-shift": ["error", { "maxNumericValue": 0.1 }],
-        "total-blocking-time": ["error", { "maxNumericValue": 200 }]
-      }
+      "_comment": "aggregationMethod: 'median' (not the lhci default 'optimistic', which grades every assertion on the single best of the 3 runs and would mask a regression that shows up in only 1 or 2 of them). It is repeated in BOTH matrix entries because lhci reads it per-entry: `assertMatrix` may not be combined with a top-level `aggregationMethod` (it throws 'Cannot use assertMatrix with other options'), so an entry that omits it silently falls back to the 'optimistic' default this project rejected.",
+      "_patternsAreUnanchoredAndBothEntriesRunAgainstEveryUrl": "lhci applies EVERY matrix entry to EVERY url group and filters with `new RegExp(pattern).test(lhr.finalUrl)` — unanchored, no implicit exclusivity. So the first entry needs the negative lookahead to keep the seven real pages from ALSO being graded by the 404's SEO rules; without it a real page missing a canonical would pass, because the 404 entry does not assert canonical. Do not simplify the lookahead to `.*`.",
+      "assertMatrix": [
+        {
+          "matchingUrlPattern": "^(?!.*404\\.html).*$",
+          "aggregationMethod": "median",
+          "assertions": {
+            "categories:performance": ["error", { "minScore": 0.9 }],
+            "categories:accessibility": ["error", { "minScore": 1 }],
+            "categories:seo": ["error", { "minScore": 1 }],
+            "largest-contentful-paint": ["error", { "maxNumericValue": 2500 }],
+            "cumulative-layout-shift": ["error", { "maxNumericValue": 0.1 }],
+            "total-blocking-time": ["error", { "maxNumericValue": 200 }]
+          }
+        },
+        {
+          "matchingUrlPattern": "404\\.html",
+          "aggregationMethod": "median",
+          "assertions": {
+            "categories:performance": ["error", { "minScore": 0.9 }],
+            "categories:accessibility": ["error", { "minScore": 1 }],
+            "largest-contentful-paint": ["error", { "maxNumericValue": 2500 }],
+            "cumulative-layout-shift": ["error", { "maxNumericValue": 0.1 }],
+            "total-blocking-time": ["error", { "maxNumericValue": 200 }],
+            "document-title": ["error", { "minScore": 1 }],
+            "meta-description": ["error", { "minScore": 1 }],
+            "http-status-code": ["error", { "minScore": 1 }],
+            "link-text": ["error", { "minScore": 1 }],
+            "crawlable-anchors": ["error", { "minScore": 1 }],
+            "robots-txt": ["error", { "minScore": 1 }],
+            "hreflang": ["error", { "minScore": 1 }]
+          }
+        }
+      ]
     },
     "_totalBlockingTimeIsInpLabProxy": "The design budget is INP < 200ms, but INP is a field metric (real-user CrUX data) that Lighthouse cannot measure in a single-page lab run. total-blocking-time above is the standard lab proxy for JS-driven responsiveness, asserted at the same 200ms threshold as the INP budget -- it is NOT a measurement of INP itself, and a passing TBT does not guarantee a passing field INP."
   }
