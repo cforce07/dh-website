@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { experimental_AstroContainer as AstroContainer } from 'astro/container'
-import type { TotalOnlyPackage } from '../src/data/pricing'
-import { packages, packageTotalCents } from '../src/data/pricing'
+import type { Package, TotalOnlyPackage } from '../src/data/pricing'
+import { divergingLineItemLabels, packages, packageTotalCents } from '../src/data/pricing'
 import { formatSgd } from '../src/lib/money'
 import PricingCard from '../src/components/PricingCard.astro'
 
@@ -367,5 +367,173 @@ describe('TotalOnlyPackage — the guard against an invented breakdown', () => {
     expect(html).toContain('Agent fees')
     expect(html).toContain('$1,640.10')
     expect(html).not.toMatch(/class="[^"]*\btotal-only\b/)
+  })
+})
+
+/*
+ * divergingLineItemLabels — W-8.4, 2026-08-17. It had NO TEST AT ALL.
+ *
+ * It drives the `.differs` treatment on every line item of every PricingCard
+ * (src/components/PricingCard.astro), and /pricing publishes, directly under
+ * those cards, "The two packages differ by $500 — the agent fee". If this
+ * function ever marked the wrong row, the page would visually contradict its
+ * own sentence — a reader comparing two cards would see the emphasis on
+ * `Insurance` while the prose named the agent fee — and NOTHING WOULD FAIL.
+ * Not the build, not axe, not a single assertion in this suite.
+ *
+ * The function's own docblock explains at length why it is DERIVED rather
+ * than listed, and the reasoning is right. What was missing is anything that
+ * checks the derivation.
+ *
+ * THE FIXTURES ARE SYNTHETIC ON PURPOSE. Asserting only against `packages`
+ * would test today's data, and today's data has exactly one diverging label,
+ * which is the single easiest case. The interesting behaviour is at the
+ * edges: a label present in one package and absent from another, a
+ * total-only package in the mix, fewer than two itemised packages. Each gets
+ * a case, and each is a state src/data/pricing.ts has actually been in — the
+ * without-replacement package was `total-only` until 2026-08-16, and
+ * "Transport" was harmonised to "Handling & transport" on the same day
+ * precisely so the two cards would stop diverging on a label.
+ */
+describe('divergingLineItemLabels', () => {
+  const itemised = (id: string, items: [string, number][]): Package => ({
+    kind: 'itemised',
+    id,
+    name: id,
+    replacementTerm: 'x',
+    recommendedFor: null,
+    lineItems: items.map(([label, amountCents]) => ({ label, amountCents })),
+  })
+
+  const totalOnly = (id: string, totalCents: number): Package => ({
+    kind: 'total-only',
+    id,
+    name: id,
+    replacementTerm: 'x',
+    recommendedFor: null,
+    totalCents,
+  })
+
+  const sorted = (set: ReadonlySet<string>) => [...set].sort()
+
+  it('marks the row whose amount differs, and only that row', () => {
+    const result = divergingLineItemLabels([
+      itemised('a', [['Agent fees', 88800], ['MOM', 7000], ['Insurance', 42510]]),
+      itemised('b', [['Agent fees', 38800], ['MOM', 7000], ['Insurance', 42510]]),
+    ])
+    expect(sorted(result)).toEqual(['Agent fees'])
+  })
+
+  it('marks a label that one package has and another does not', () => {
+    /*
+     * The docblock's own claim — "a label that appears in one package and
+     * not another counts as diverging too, its absence is a difference".
+     * This is the `amounts.length !== itemised.length` branch, and it is the
+     * branch a naive implementation (compare the amounts you happen to have)
+     * gets wrong.
+     */
+    const result = divergingLineItemLabels([
+      itemised('a', [['MOM', 7000], ['SIP', 7700]]),
+      itemised('b', [['MOM', 7000]]),
+    ])
+    expect(sorted(result)).toEqual(['SIP'])
+  })
+
+  it('marks a label that differs in BOTH ways at once', () => {
+    const result = divergingLineItemLabels([
+      itemised('a', [['Agent fees', 88800], ['MOM', 7000], ['SIP', 7700]]),
+      itemised('b', [['Agent fees', 38800], ['MOM', 7000]]),
+    ])
+    expect(sorted(result)).toEqual(['Agent fees', 'SIP'])
+  })
+
+  it('marks nothing when the packages are identical', () => {
+    // The emphasis must DISAPPEAR if the packages are ever harmonised — the
+    // docblock says so, and a "differs" mark on two identical rows is a lie
+    // told in bold.
+    const rows: [string, number][] = [['Agent fees', 88800], ['MOM', 7000]]
+    expect(sorted(divergingLineItemLabels([itemised('a', rows), itemised('b', rows)]))).toEqual([])
+  })
+
+  it('marks nothing when there is fewer than one package to compare against', () => {
+    // Nothing diverges from nothing. A single card has no comparison to make,
+    // and marking every row on it would be the worst possible rendering.
+    expect(sorted(divergingLineItemLabels([]))).toEqual([])
+    expect(
+      sorted(divergingLineItemLabels([itemised('a', [['Agent fees', 88800], ['MOM', 7000]])])),
+    ).toEqual([])
+  })
+
+  it('skips total-only packages rather than treating them as differing in everything', () => {
+    /*
+     * Not hypothetical: the without-replacement package WAS `total-only`
+     * until DirectHired supplied its breakdown on 2026-08-16. A total-only
+     * package carries no line items, so counting it in `itemised.length`
+     * would make every label fail the count check and mark the entire card.
+     */
+    const withTotalOnly = divergingLineItemLabels([
+      itemised('a', [['Agent fees', 88800], ['MOM', 7000]]),
+      itemised('b', [['Agent fees', 38800], ['MOM', 7000]]),
+      totalOnly('c', 125210),
+    ])
+    expect(sorted(withTotalOnly)).toEqual(['Agent fees'])
+
+    // And one itemised package beside a total-only one has nothing to
+    // compare against at all.
+    expect(
+      sorted(
+        divergingLineItemLabels([itemised('a', [['MOM', 7000]]), totalOnly('c', 125210)]),
+      ),
+    ).toEqual([])
+  })
+
+  it('compares three packages, not just two', () => {
+    // `itemised.length` is a count, not a pair. A label matching in two of
+    // three still diverges.
+    const result = divergingLineItemLabels([
+      itemised('a', [['MOM', 7000], ['SIP', 7700]]),
+      itemised('b', [['MOM', 7000], ['SIP', 7700]]),
+      itemised('c', [['MOM', 7000], ['SIP', 9900]]),
+    ])
+    expect(sorted(result)).toEqual(['SIP'])
+  })
+
+  it('agrees with the sentence /pricing publishes under the cards', () => {
+    /*
+     * The claim this function exists to render, checked against the real
+     * data: "The two packages differ by $500 — the agent fee." The emphasis
+     * and the prose have to name the same row, or the page contradicts
+     * itself in front of the reader.
+     */
+    const diverging = divergingLineItemLabels()
+    expect(sorted(diverging)).toEqual(['Agent fees'])
+
+    const both = packages.filter(
+      (pkg): pkg is Extract<Package, { kind: 'itemised' }> => pkg.kind === 'itemised',
+    )
+    expect(both.length).toBe(2)
+    const agentFees = both.map(
+      (pkg) => pkg.lineItems.find((item) => item.label === 'Agent fees')!.amountCents,
+    )
+    expect(Math.abs(agentFees[0] - agentFees[1])).toBe(50000)
+    expect(
+      Math.abs(packageTotalCents(both[0]) - packageTotalCents(both[1])),
+      'the whole difference between the packages is the diverging row',
+    ).toBe(50000)
+  })
+
+  it('is what PricingCard marks, and exactly one row is marked per card', () => {
+    /*
+     * The consumer end. PricingCard.astro puts `.differs` on
+     * `diverging.has(item.label)`, so this asserts the rendered artefact
+     * rather than the function twice: one marked row per card, and its label
+     * is the one the function names.
+     */
+    const diverging = divergingLineItemLabels()
+    for (const pkg of packages) {
+      if (pkg.kind !== 'itemised') continue
+      const marked = pkg.lineItems.filter((item) => diverging.has(item.label))
+      expect(marked.map((m) => m.label), `${pkg.id} marks the wrong rows`).toEqual(['Agent fees'])
+    }
   })
 })
