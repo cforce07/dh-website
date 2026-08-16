@@ -70,7 +70,7 @@ Current site copy says these fees "may apply", which reads as a cost the employe
 
 ### 2.6 Supplied 2026-08-16 (second round)
 
-Five questions put to DirectHired in `docs/OPEN-DECISIONS.md`, answered the same day, plus **2.6.6** and **2.6.7** — two further questions raised by the `/why-directhired` review and answered by DirectHired on 2026-08-16 — plus **2.6.8** and **2.6.9**, the two `docs/OPEN-DECISIONS.md` "facts to confirm in writing" raised by `/about`, answered by DirectHired on 2026-08-16, plus **2.6.10** and **2.6.11**, which separate the package's `Medical` and `Insurance` line items into the two different obligations they are, supplied by DirectHired on 2026-08-16. Same rule as the rest of §2: nothing here may be extended, rounded or inferred beyond what is written.
+Five questions put to DirectHired in `docs/OPEN-DECISIONS.md`, answered the same day, plus **2.6.6** and **2.6.7** — two further questions raised by the `/why-directhired` review and answered by DirectHired on 2026-08-16 — plus **2.6.8** and **2.6.9**, the two `docs/OPEN-DECISIONS.md` "facts to confirm in writing" raised by `/about`, answered by DirectHired on 2026-08-16, plus **2.6.10** and **2.6.11**, which separate the package's `Medical` and `Insurance` line items into the two different obligations they are, supplied by DirectHired on 2026-08-16. **2.6.12** was answered by DirectHired on 2026-08-17 and is a RECORD ONLY — it changes no copy. Same rule as the rest of §2: nothing here may be extended, rounded or inferred beyond what is written.
 
 **One exception, and it is confined to §2.6.11.** The two insurance minimums in that entry are **MOM's**, read off the regulator's own page rather than supplied by DirectHired — the only values in §2 that do not rest on the client's word. That entry records what was checked, what it corrected, and what it therefore may not be extended past.
 
@@ -131,6 +131,16 @@ Five questions put to DirectHired in `docs/OPEN-DECISIONS.md`, answered the same
   **"DEATH" IS NOT WRITTEN ANYWHERE.** MOM folds it into personal accident ("permanent disability or death") rather than listing it as its own cover; it entered this project only in the client answer that turned out to be wrong; and no source available here states it as a separate policy or a separate figure. There is no wording it could be added in that would not be one of those three things.
 
   **MOM FORBIDS PASSING THE INSURANCE COST TO THE WORKER** — verbatim from the same page: *"You cannot pass on the cost of purchasing the insurance to your helper."* Nothing on the site suggests otherwise and nothing needs changing for it. It is written down because **§2.4 sits close to it and points the other way**: the employer *advances* the loan and placement fee and *recovers* them through the helper's repayment, so those are ultimately the helper's cost. Insurance is not. It is inside the package the employer bears and it stays there, and the boundary between the two framings is one word of drift wide. §2.4's framing is unchanged by this entry and must not be extended to reach the package.
+
+- **2.6.12 — `dev.directhired.com` is a PROTOTYPE that is not launching. §2.6.6 stands unchanged and no copy moves.** *Answered 2026-08-17.*
+
+  A reviewer found `docs/runbooks/2026-08-16-dns-cutover.md` describing that host as a live application, and it was verified directly: `/login`, `/register`, `/apply`, `/helpers` and `/pricing` all return **200**, titled *"Direct Hired"*. The `/helpers` route is a **browse surface**, which appeared to contradict §2.6.6 — where DirectHired chose to keep *"no gallery of helpers to browse"* as a stated principle on `/find-your-helper` and `/why-directhired`.
+
+  **DirectHired confirmed it is a prototype that is not launching.** So the apparent contradiction is not one: §2.6.6's principle is unchanged, and **no copy on either page moves**.
+
+  **THE REVERSE-DIRECTION NOTE IN §2.6.6 STILL APPLIES AND IS RESTATED HERE ON PURPOSE.** If a browse or matching surface is ever shipped — this prototype promoted, or anything else — then `/find-your-helper` and `/why-directhired` **argue against it on the record** and both must be rewritten in the same change. A gallery shipping under copy that calls a gallery the thing DirectHired was started to stop doing is worse than either alone. Whoever builds it inherits that as work, not as a surprise.
+
+  **THE HOST IS REACHABLE TODAY AND SHOULD NOT BE AT LAUNCH.** A prototype answering on a public subdomain of the production domain, with `/login` and `/register` working, is a deployment concern rather than a copy one: it is indexable, it is confusable with the real site, and it publishes a browse surface the marketing site argues against. **It belongs to the infrastructure work, not to this sub-project** — nothing on this branch touches it — but it is written down here because this is the document the next person reads. The DNS cutover runbook's description of it as a "live application" is accurate about its HTTP behaviour and misleading about its status; read it with this entry.
 
 ---
 
