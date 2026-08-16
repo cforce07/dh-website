@@ -368,20 +368,22 @@ const faqSchema = faqPageSchema(
     margin-bottom: 0;
   }
 
-  /* ------------------------------------------------------------------
-   * End of the duplicated item. Everything below is this file's own.
-   * ------------------------------------------------------------------ */
-
   /*
-   * Answers are markdown, so they can contain paragraphs and lists that
-   * Faq.astro's six homepage entries do not exercise. The homepage renders
-   * one bulleted entry (fly-in-package) and one numbered one
-   * (how-matching-works) with global.css's list reset in force — no
-   * markers, no indent — which reads as stacked lines rather than a list.
-   * That is a pre-existing treatment on a live page and is NOT changed
-   * here; changing it would mean changing / and /pricing in a task that
-   * has no mandate to. What is fixed here is only the spacing between
-   * blocks, which markdown needs on any surface.
+   * THE BLOCK SPACING, and as of 2026-08-16 it is part of the duplicated
+   * item rather than this file's own.
+   *
+   * It arrived here alone because Task 9's byte-identical ruling for / and
+   * /pricing forbade touching Faq.astro, so the two surfaces differed in one
+   * respect on purpose and the homepage went on running its multi-paragraph
+   * answers together. That ruling was narrowed by the person who made it —
+   * it existed to stop an extraction refactor altering live pages, not to
+   * freeze a readability defect — and Faq.astro now declares these two rules
+   * identically. See its header for what changed on the two live pages.
+   *
+   * The list RESET is still untouched on every surface. global.css's `ul, ol
+   * { list-style: none; padding: 0 }` means a bulleted answer renders as
+   * unmarked stacked lines here and on the homepage alike; that is a
+   * decision about the site's list treatment, not about this widget.
    */
   .faq-answer :global(p),
   .faq-answer :global(ul),
@@ -392,6 +394,10 @@ const faqSchema = faqPageSchema(
   .faq-answer :global(li + li) {
     margin-top: var(--space-2);
   }
+
+  /* ------------------------------------------------------------------
+   * End of the duplicated item. Everything below is this file's own.
+   * ------------------------------------------------------------------ */
 
   /* --color-accent (5.83:1 on white), never --color-brand-teal, which
      measures 2.89:1 and carries no text anywhere on this site. */

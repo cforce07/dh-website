@@ -610,6 +610,85 @@ describe('the empty-FAQ check has sections to check (sanity check)', () => {
 })
 
 // ---------------------------------------------------------------------
+// FAQ answers with more than one block must show more than one block
+// ---------------------------------------------------------------------
+//
+// A live readability defect, found by the /faq task on 2026-08-16 and fixed
+// in the same round. global.css resets `* { margin: 0 }`; Faq.astro's only
+// paragraph rules were `p:first-child { margin-top: 0 }` and
+// `p:last-child { margin-bottom: 0 }`, which zero margins that are already
+// zero. Nothing restored spacing BETWEEN blocks, so a two-paragraph answer
+// rendered as one unbroken block on the homepage and on /pricing — measured
+// in Chrome at 320px, both paragraphs of faq/cost.md computing 0px.
+//
+// It was invisible to the suite because every FAQ assertion in this file
+// counted <details> elements or read the schema. Asserted here, over dist/
+// rather than over a component, because the question is what a visitor's
+// browser is handed: the answer markup and the CSS that spaces it have to
+// arrive on the SAME page, and a component-level check cannot say that.
+
+/** Every rule in a built page's inlined CSS, as [selector, body] pairs. */
+function styleRules(html: string): { selector: string; body: string }[] {
+  const css = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n')
+  return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({
+    selector: m[1].trim(),
+    body: m[2].trim(),
+  }))
+}
+
+/** The rendered text of each FAQ answer on a page, still as markup. */
+function faqAnswers(html: string): string[] {
+  return [...html.matchAll(/<div class="faq-answer"[^>]*>([\s\S]*?)<\/div>\s*<\/details>/g)].map(
+    (m) => m[1],
+  )
+}
+
+describe('every built page spaces its FAQ answer blocks', () => {
+  const withFaq = pages.filter((p) => /<div class="faq-answer"/.test(p.html))
+
+  it('has pages to check, and a multi-paragraph answer among them', () => {
+    /*
+     * Both halves matter. Without the first, a page sweep that stopped
+     * finding FAQs would make the rule below pass on an empty list. Without
+     * the second, the rule would be about a defect no visitor could meet —
+     * and the whole point is that this one HAS been shipping, on the two
+     * pages named here, apparently since sub-project 1.
+     */
+    expect(withFaq.map((p) => p.route)).toEqual(
+      expect.arrayContaining(['/', '/pricing/', '/faq/']),
+    )
+    const multiParagraph = withFaq.flatMap((p) =>
+      faqAnswers(p.html)
+        .filter((answer) => (answer.match(/<p[\s>]/g) ?? []).length > 1)
+        .map(() => p.route),
+    )
+    expect(multiParagraph).toEqual(expect.arrayContaining(['/', '/pricing/']))
+  })
+
+  it.each(withFaq)('$route gives every answer block after the first a top margin', (page) => {
+    /*
+     * Derived from the page's own CSS rather than from a selector typed
+     * here, so it holds for the flat list (Faq.astro) and the grouped one
+     * (FaqGrouped.astro) alike, and for whatever scope attribute Astro
+     * stamps on them. `:first-child` and `:last-child` rules are excluded
+     * because zeroing the first block's top margin is the OTHER half of the
+     * fix — a rule that only ever set those two is exactly the state this
+     * defect was in.
+     */
+    const spacing = styleRules(page.html).filter(
+      (rule) =>
+        /\.faq-answer\b[^,{]*\sp\s*(?:,|$)/.test(rule.selector) &&
+        !/:(?:first|last)-child/.test(rule.selector),
+    )
+    expect(spacing.length, `${page.route} has no rule spacing FAQ answer blocks`).toBeGreaterThan(0)
+    expect(
+      spacing.some((rule) => /(?:margin-block|margin-top):\s*var\(--space-\d+\)/.test(rule.body)),
+      `${page.route} declares a block rule for FAQ answers but no non-zero top margin`,
+    ).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------
 // BreadcrumbList — a spec requirement that currently fails by omission
 // ---------------------------------------------------------------------
 //

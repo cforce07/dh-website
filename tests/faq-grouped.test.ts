@@ -123,6 +123,13 @@ const SHARED_ITEM_RULES = [
   '.faq-answer',
   '.faq-answer :global(p:first-child)',
   '.faq-answer :global(p:last-child)',
+  // Added 2026-08-16 with the block-spacing fix. These two lived in
+  // FaqGrouped.astro alone while Task 9's byte-identical ruling kept
+  // Faq.astro frozen, which is why the homepage ran its multi-paragraph
+  // answers together. Both files declare them now, so they are part of the
+  // contract and a future edit to one has to be an edit to both.
+  '.faq-answer :global(p), .faq-answer :global(ul), .faq-answer :global(ol)',
+  '.faq-answer :global(li + li)',
 ]
 
 describe('the duplicated FAQ item stays identical in both files', () => {
