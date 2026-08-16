@@ -212,8 +212,34 @@ const GATED_PATTERNS: { label: string; pattern: RegExp }[] = [
     ),
   },
   {
+    /*
+     * "arrangement" WAS in this alternation and was removed on 2026-08-16.
+     *
+     * DirectHired approved one sentence for publication that day (core-pages
+     * spec §2.6.2): "We go through the repayment arrangement in full with
+     * you before you commit, and it is set out in the contract." This
+     * pattern fired on it — and on nothing else in it. It was the only one
+     * of the 26 that did.
+     *
+     * The pattern was wrong, not the copy. This axis is DURATION: period,
+     * schedule, term, plan and window all name a span of time, which is
+     * what §2.3 gates. "Arrangement" names the thing itself, and saying
+     * that an arrangement EXISTS and is explained to the employer is
+     * exactly what §2.6.2 authorises — the sentence discloses no duration,
+     * no source of funds, and nothing the helper receives.
+     *
+     * Nothing is lost from the axis. A duration attached to an arrangement
+     * is still caught by "a repayment duration" and the month-range
+     * patterns above; "salary-deduction arrangement" is still caught by "a
+     * salary deduction" on axis 2; and the whole paraphrase corpus below
+     * still fires without this token (checked by removing it and re-running,
+     * not assumed).
+     *
+     * The approved sentence is in COPY_THAT_MUST_NOT_BE_CAUGHT so this
+     * cannot silently come back.
+     */
     label: 'a repayment schedule',
-    pattern: /\b(?:repayment|instal?ment|deduction)\s+(?:period|schedule|term|plan|window|arrangement)\b/i,
+    pattern: /\b(?:repayment|instal?ment|deduction)\s+(?:period|schedule|term|plan|window)\b/i,
   },
   {
     label: 'repayment described as instalments',
@@ -422,6 +448,7 @@ const COPY_THAT_MUST_NOT_BE_CAUGHT = [
    * ships, which is what this list is for.
    */
   'Our team goes through the exact amount for the helper you choose.',
+  'We go through the repayment arrangement in full with you before you commit, and it is set out in the contract.',
 ]
 
 /** Every pattern label that fires on a string. */
