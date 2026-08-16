@@ -94,6 +94,41 @@ export const company = {
   registeredName: 'DIRECT HIRED PTE. LTD.',
   uen: '202240964Z',
 
+  // THE STANDING OF THE PUBLISHED CREDENTIALS — one story, two pages.
+  //
+  // /about and /why-directhired both publish a block of the company's
+  // particulars, and until 2026-08-17 they framed the same three values in
+  // opposite directions. /about called them "DirectHired's particulars, as
+  // the company gives them" — accurate, and slightly under-claiming for the
+  // licence. /why-directhired headed its block "What you can check" and led
+  // with "Everything above is a description of how we work. These three are
+  // not." — a claim that all three are matters of record — and then
+  // contradicted itself three rows later, where the licence note called
+  // itself "the one fact on this page that does not rest on our word".
+  //
+  // THE TRUE STORY, and it is the same on both pages:
+  //
+  //   THE MOM LICENCE is the one published value a family can check without
+  //   asking DirectHired. It is on the Ministry of Manpower's public
+  //   register, and a public search returned it against the (unpunctuated)
+  //   company name — see registeredName's note above.
+  //
+  //   EVERYTHING ELSE is DirectHired's word. The registered entity name and
+  //   the UEN are client-supplied and verification of both was ATTEMPTED AND
+  //   FAILED (spec §2.6.8, §2.6.9 — the note above records how). The founded
+  //   year is theirs. The placement count is theirs and is registered
+  //   nowhere at all.
+  //
+  // Both sentences are single-sourced HERE rather than written twice, because
+  // written twice is exactly how the two pages came to disagree. Note what
+  // `suppliedStanding` does NOT say: it does not say no register holds these
+  // values. ACRA holds an entity name and a UEN; what this repository lacks
+  // is a reading of them, which is a different claim and the only one we are
+  // entitled to make.
+  licenceStanding:
+    'The Employment Agency licence DirectHired operates under, issued by the Ministry of Manpower and listed in its public register. It is the one value here you can check without asking us.',
+  suppliedStanding: 'Every other value here is DirectHired’s own, published on the company’s word.',
+
   // THE FOUNDING STORY — master brief §35, VERBATIM.
   //
   // Core-pages design spec §3.4 requires this sentence verbatim and records

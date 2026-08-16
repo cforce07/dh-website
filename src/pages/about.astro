@@ -320,7 +320,18 @@ const description =
         independently check is the licence, and the note beside it already
         says where: MOM's public register.
       */}
-      <p class="record-lede">DirectHired’s particulars, as the company gives them.</p>
+      {/*
+        THE SAME STORY /why-directhired TELLS (2026-08-17). "…as the company
+        gives them" was true but flat: it put the MOM licence, which is on a
+        public register, on the same footing as a placement count that is
+        registered nowhere. /why-directhired had the opposite defect — it
+        claimed all three of its values were checkable. Both pages now open
+        the block on the same distinction and close it on the same two
+        sentences, single-sourced from src/data/company.ts.
+      */}
+      <p class="record-lede">
+        DirectHired’s particulars — what you can check, and what rests on our word.
+      </p>
 
       {/*
         EVERY VALUE COMES FROM src/data/company.ts. Not one is retyped:
@@ -370,10 +381,12 @@ const description =
         <div class="record-row">
           <dt>MOM licence</dt>
           <dd class="record-value">{company.momLicence}</dd>
-          <dd class="record-note">
-            Employment Agency licence, issued by the Ministry of Manpower and listed in its public
-            register.
-          </dd>
+          {/*
+            Sourced, not retyped. The same sentence renders in the same role
+            on /why-directhired; it used to be two different sentences making
+            two different-sized claims.
+          */}
+          <dd class="record-note">{company.licenceStanding}</dd>
         </div>
 
         <div class="record-row">
@@ -402,6 +415,13 @@ const description =
           </dd>
         </div>
       </dl>
+      {/*
+        The standing of everything above the licence, said once and in the
+        same words on /why-directhired. It closes the block rather than
+        opening it because it is a statement ABOUT the rows, and it cannot be
+        read until the reader has seen which one the exception is.
+      */}
+      <p class="record-standing">{company.suppliedStanding}</p>
     </Container>
   </section>
 
@@ -642,6 +662,20 @@ const description =
   .record {
     max-width: 60rem;
     margin: var(--space-8) 0 0;
+  }
+
+  /*
+   * The standing sentence under the table. Set at note size and in the muted
+   * ink, the same treatment .record-note gets, because it is doing the same
+   * job for the block that a note does for a row — not a second lede.
+   */
+  .record-standing {
+    max-width: 46ch;
+    margin: var(--space-6) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink-muted);
   }
 
   /*

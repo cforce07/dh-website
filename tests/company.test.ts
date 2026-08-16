@@ -587,3 +587,155 @@ describe('the licence number, the registered entity and the UEN are never retype
     expect(offenders).toEqual([])
   })
 })
+
+/*
+ * THE CREDENTIALS TELL ONE STORY, ON BOTH PAGES — W-5, 2026-08-17.
+ *
+ * /about and /why-directhired each publish a block of the company's
+ * particulars, and they framed the same values in opposite directions.
+ *
+ *   /about:318            "DirectHired’s particulars, as the company gives
+ *                          them." — accurate, and flat: it put the MOM
+ *                          licence, which is on a public register, on the
+ *                          same footing as a placement count that is
+ *                          registered nowhere. The page's own comment at :303
+ *                          already noted that only the licence is
+ *                          independently checkable; the copy did not.
+ *
+ *   /why-directhired:292  "What you can check"
+ *                   :300  "Everything above is a description of how we work.
+ *                          These three are not." — a claim that all three
+ *                          values are matters of record.
+ *                   :323  "…the one fact on this page that does not rest on
+ *                          our word." — the page contradicting itself three
+ *                          rows later.
+ *
+ * WHAT IS TRUE. The MOM licence is the one published value a family can check
+ * without asking DirectHired. The registered entity and the UEN are
+ * client-supplied and verification of both was ATTEMPTED AND FAILED (spec
+ * §2.6.8, §2.6.9; src/data/company.ts records how). The founded year is
+ * DirectHired's. The placement count is DirectHired's and no register holds
+ * it.
+ *
+ * THE FIX IS STRUCTURAL, not a pair of edits. Both sentences are single
+ * definitions in src/data/company.ts and both pages render both, because two
+ * pages hand-writing the same claim is how these two came to disagree — the
+ * same failure W-4 records for the founding story, in the same week.
+ */
+describe('the credentials tell the same story on both pages', () => {
+  const PAGES = {
+    '/about': 'dist/about/index.html',
+    '/why-directhired': 'dist/why-directhired/index.html',
+  } as const
+
+  /** Rendered text, entities decoded, so a sentence matches as a reader reads it. */
+  function rendered(file: string): string {
+    return readFileSync(file, 'utf8')
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
+      .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/\s+/g, ' ')
+  }
+
+  it('both pages publish the licence standing, verbatim and from the constant', () => {
+    for (const [page, file] of Object.entries(PAGES)) {
+      expect(rendered(file), `${page} does not publish company.licenceStanding`).toContain(
+        company.licenceStanding,
+      )
+    }
+  })
+
+  it('both pages publish the supplied-value standing, verbatim and from the constant', () => {
+    for (const [page, file] of Object.entries(PAGES)) {
+      expect(rendered(file), `${page} does not publish company.suppliedStanding`).toContain(
+        company.suppliedStanding,
+      )
+    }
+  })
+
+  it('the two sentences say what they are claimed to say', () => {
+    /*
+     * Named parts rather than a byte comparison, so a rewrite of either
+     * constant that quietly dropped the register — or quietly promoted a
+     * client-supplied value to a checked one — fails here.
+     */
+    expect(company.licenceStanding).toMatch(/Ministry of Manpower/)
+    expect(company.licenceStanding).toMatch(/public register/i)
+    expect(company.licenceStanding).toMatch(/check without asking us/i)
+    expect(company.suppliedStanding).toMatch(/every other value/i)
+    expect(company.suppliedStanding).toMatch(/company[’']s word/i)
+    // It must NOT claim no register holds them. ACRA holds an entity name and
+    // a UEN; what this repository lacks is a READING of them, which is a
+    // different and much smaller claim — see company.ts.
+    expect(company.suppliedStanding).not.toMatch(/no (?:public )?register/i)
+  })
+
+  it('neither page retypes either sentence', () => {
+    // The whole mechanism. If a page ever holds its own copy, the two can
+    // drift apart again and nothing above would notice — both would still be
+    // "published verbatim", from two different literals.
+    for (const file of ['src/pages/about.astro', 'src/pages/why-directhired.astro']) {
+      const source = readFileSync(file, 'utf8')
+      const markup = source.slice(source.indexOf('---', 3))
+      expect(markup, `${file} retypes licenceStanding`).not.toContain(company.licenceStanding)
+      expect(markup, `${file} retypes suppliedStanding`).not.toContain(company.suppliedStanding)
+      expect(markup, `${file} does not read company.licenceStanding`).toContain(
+        'company.licenceStanding',
+      )
+      expect(markup, `${file} does not read company.suppliedStanding`).toContain(
+        'company.suppliedStanding',
+      )
+    }
+  })
+
+  it('neither page publishes the claims that contradicted each other', () => {
+    /*
+     * The three sentences that shipped, banned by their distinguishing
+     * wording rather than in full, so a lightly-reworded return is caught
+     * too. Each is a claim about the STANDING of the block, which is the
+     * thing the two constants above now own.
+     */
+    const BANNED: { why: string; pattern: RegExp }[] = [
+      {
+        why: '/about flattening the licence onto the client-supplied values',
+        pattern: /particulars,\s*as the company gives them/i,
+      },
+      {
+        why: '/why-directhired claiming every value in the block is a matter of record',
+        pattern: /description of how we work\.\s*These three are not/i,
+      },
+      {
+        why: '/why-directhired scoping the licence claim to the whole page',
+        pattern: /the one fact on this page that does not rest on our word/i,
+      },
+      {
+        why: 'a heading that claims checkability for values that are not checkable',
+        pattern: /<h2[^>]*>\s*What you can check\s*<\/h2>/i,
+      },
+    ]
+    const offenders = Object.entries(PAGES).flatMap(([page, file]) => {
+      const html = readFileSync(file, 'utf8')
+      const text = rendered(file)
+      return BANNED.filter(({ pattern }) => pattern.test(text) || pattern.test(html)).map(
+        ({ why }) => `${page}: ${why}`,
+      )
+    })
+    expect(offenders).toEqual([])
+  })
+
+  it('the licence is still named on both pages, so the story has a subject', () => {
+    // A rule made only of prohibitions passes on a page that deleted the
+    // block. This is the half that says the credentials are still published.
+    for (const [page, file] of Object.entries(PAGES)) {
+      expect(rendered(file), `${page} no longer publishes the licence`).toContain(
+        company.momLicence,
+      )
+    }
+  })
+})

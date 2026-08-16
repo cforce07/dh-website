@@ -292,15 +292,32 @@ const description =
 
   <section class="why-credentials">
     <Container>
-      <h2 class="section-title">What you can check</h2>
       {/*
-        The turn the page needs. Everything above is a description of how
-        DirectHired works, which a visitor can only take on trust; these
-        three are matters of record, and saying so is the difference
-        between a credentials row and a badge decoration.
+        THE HEADING AND THE LEDE BOTH OVERCLAIMED, and the page said so
+        itself three rows later (2026-08-17).
+
+        The heading was "What you can check" and the lede was "Everything
+        above is a description of how we work. These three are not." — which
+        asserts that all three values below are matters of record. They are
+        not. The licence is: it is on MOM's public register. The founded year
+        and the placement count are DirectHired's own, and a count of
+        placements is registered nowhere at all. The licence note itself then
+        called the licence "the one fact on this page that does not rest on
+        our word", contradicting the lede two paragraphs above it.
+
+        Meanwhile /about published the same values under "as the company
+        gives them" — the opposite error, flattening the one value a family
+        CAN check onto the same footing as the ones they cannot.
+
+        The turn is still here and it is still what the page needs; what
+        changed is that it now names both halves. Both pages open on this
+        distinction and close on company.suppliedStanding, and both render
+        company.licenceStanding on the licence row, so neither can drift from
+        the other again.
       */}
+      <h2 class="section-title">What you can check, and what rests on our word</h2>
       <p class="credentials-lede">
-        Everything above is a description of how we work. These three are not.
+        Everything above is a description of how we work. Below is the record behind it.
       </p>
 
       {/*
@@ -321,11 +338,14 @@ const description =
             "MOM-approved" (D-7). A number set in type is safe; a
             government mark is a permission nobody here holds.
           */}
-          <dd class="credential-note">
-            The Employment Agency licence DirectHired operates under. It is issued by the Ministry of
-            Manpower and recorded in its register — the one fact on this page that does not rest on
-            our word.
-          </dd>
+          {/*
+            Sourced, not retyped. This said "the one fact on THIS PAGE that
+            does not rest on our word" — true of the block, false of the page,
+            and it contradicted the lede that used to sit above it. The
+            single-sourced sentence scopes the claim to the block ("the one
+            value HERE") and renders identically on /about.
+          */}
+          <dd class="credential-note">{company.licenceStanding}</dd>
         </div>
 
         <div class="credential">
@@ -356,6 +376,13 @@ const description =
           </dd>
         </div>
       </dl>
+      {/*
+        The same closing sentence /about carries, in the same position and
+        from the same constant. It goes after the list rather than before it
+        because it is a statement about the rows, and it cannot be read until
+        the reader has seen which row is the exception.
+      */}
+      <p class="credentials-standing">{company.suppliedStanding}</p>
     </Container>
   </section>
 
@@ -560,6 +587,20 @@ const description =
     font-weight: var(--font-weight-semibold);
     letter-spacing: var(--tracking-wide);
     text-transform: uppercase;
+    color: var(--color-ink-muted);
+  }
+
+  /*
+   * The standing sentence under the list. Note size and muted ink — the same
+   * treatment .credential-note gets, because it does for the block what a
+   * note does for a row. It is not a second lede.
+   */
+  .credentials-standing {
+    max-width: 46ch;
+    margin: var(--space-8) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
     color: var(--color-ink-muted);
   }
 
