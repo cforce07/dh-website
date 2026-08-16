@@ -1713,3 +1713,183 @@ describe('/find-your-helper sources its closing sentences, it does not retype th
     expect(code(raw)).toMatch(/depends on your requirements/i)
   })
 })
+
+/*
+ * NO PAGE STATES §2.4'S FRAMING TWICE IN THE SAME WORDS — W-6, 2026-08-17.
+ *
+ * Spec §2.4 is binding on all copy and six surfaces carry it, which is right:
+ * the employer advances the loan and the placement fee and recovers them
+ * through the helper's repayment, and both halves must be stated. Spec §2.6.4
+ * then records that families RE-ASK questions the page has answered, so an
+ * FAQ restating the page is correct behaviour — and says in the same breath
+ * that this "does not license restoring near-verbatim adjacent repetition".
+ *
+ * THAT LINE HAS BEEN CROSSED TWICE, and both times the same way. On the
+ * homepage, PricingSection's qualifier, faq/cost.md and faq/fly-in-package.md
+ * all co-rendered, the last two ~628 characters apart; fly-in-package.md was
+ * untagged from `home` (src/pages/index.astro records it). On /pricing,
+ * <LoanAndPlacement />'s "Who actually bears these" and
+ * faq/helper-loan-placement-fee.md sat 847 characters apart and OPENED WITH
+ * THE SAME CLAUSE VERBATIM — "you advance both amounts at the start, and you
+ * recover them through the helper's repayment" — with a third statement of
+ * the framing between them. An earlier ruling called those "three
+ * well-differentiated statements". Measured on built HTML they were not.
+ *
+ * SO THE RULE IS MEASURED RATHER THAN JUDGED. Both defects were found by a
+ * person reading a page and both were argued about afterwards; a character
+ * count settles it. Two blocks on ONE page that both carry the framing may
+ * not share a verbatim run of 50 characters or more.
+ *
+ * AND THE MEASUREMENT IMMEDIATELY FOUND TWO MORE, both worse than either of
+ * the two that were argued about — which is the whole case for measuring:
+ *
+ *   dist/index.html       160 shared characters. PricingSection's qualifier
+ *                         under the cards, and faq/cost.md's answer in the
+ *                         accordion below them. The homepage de-duplication
+ *                         untagged fly-in-package.md and left these two,
+ *                         which were the same sentence with "these packages"
+ *                         and "those totals" swapped.
+ *   dist/faq/index.html   142 shared characters. faq/cost.md and
+ *                         faq/fly-in-package.md, two answers to two
+ *                         different questions closing on one sentence.
+ *
+ * Both were fixed by a single edit, because cost.md was half of each pair:
+ * its closing now states the framing in its own words. UNTAGGING WAS NOT
+ * AVAILABLE for the /faq pair — both answers belong on /faq — so the remedy
+ * there is differentiation rather than removal. §2.6.4 permits both; what it
+ * refuses is the repetition, not the second statement.
+ *
+ * WHY 50. The shared clause on /pricing was 88 characters. The longest run
+ * shared by two co-rendering blocks in the current build is well under 50 —
+ * asserted below with the real margin printed, so the threshold is a
+ * measurement rather than a preference, and so that anyone tempted to raise
+ * it can see how much room they would be taking.
+ *
+ * IT IS A REPETITION RULE, NOT A DELETION RULE. Nothing here says the framing
+ * may appear only once; a page may state it as often as it has something new
+ * to say. The "both halves are still published" assertion below is what stops
+ * this being satisfiable by cutting §2.4 off a surface.
+ */
+describe('no built page states the §2.4 framing twice in the same words', () => {
+  /** The framing: the employer advances an amount and recovers it. */
+  const FRAMING =
+    /\badvanced?s?\b[\s\S]{0,200}?\brecover(?:s|ed|ing)?\b|\brecover(?:s|ed|ing)?\b[\s\S]{0,200}?\badvanced?s?\b/i
+
+  /** One entry per block-level element, entities decoded. */
+  function pageBlocks(html: string): string[] {
+    return html
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<\/?(?:p|li|h[1-6]|td|th|dt|dd|blockquote|figcaption|summary)\b[^>]*>/gi, '\u0000')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
+      .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&[a-z]+;/gi, ' ')
+      .split('\u0000')
+      .map((block) => block.replace(/\s+/g, ' ').trim())
+      .filter(Boolean)
+  }
+
+  /** Normalised for comparison: case and curly quotes folded, nothing else. */
+  const norm = (s: string) => s.toLowerCase().replace(/[’`]/g, "'")
+
+  /** The longest run of characters two strings share. */
+  function longestCommonRun(a: string, b: string): string {
+    const x = norm(a)
+    const y = norm(b)
+    let best = ''
+    let prev = new Array<number>(y.length + 1).fill(0)
+    for (let i = 1; i <= x.length; i++) {
+      const row = new Array<number>(y.length + 1).fill(0)
+      for (let j = 1; j <= y.length; j++) {
+        if (x[i - 1] === y[j - 1]) {
+          row[j] = prev[j - 1] + 1
+          if (row[j] > best.length) best = x.slice(i - row[j], i)
+        }
+      }
+      prev = row
+    }
+    return best
+  }
+
+  const THRESHOLD = 50
+
+  /** Every page's framing blocks, derived from dist/ — never a listed page set. */
+  function framingBlocks(): { file: string; blocks: string[] }[] {
+    return walk('dist')
+      .filter((f) => f.endsWith('.html'))
+      .map((file) => ({
+        file,
+        blocks: pageBlocks(readFileSync(file, 'utf8')).filter((b) => FRAMING.test(b)),
+      }))
+      .filter(({ blocks }) => blocks.length > 0)
+  }
+
+  it('finds the framing on the pages that carry it, so the rule has a subject', () => {
+    const pages = framingBlocks()
+    expect(pages.length).toBeGreaterThanOrEqual(2)
+    expect(pages.map((p) => p.file)).toContain('dist/pricing/index.html')
+    expect(pages.flatMap((p) => p.blocks).length).toBeGreaterThanOrEqual(4)
+  })
+
+  it('no two blocks on one page share 50 characters of it', () => {
+    const offenders = framingBlocks().flatMap(({ file, blocks }) => {
+      const found: string[] = []
+      for (let i = 0; i < blocks.length; i++) {
+        for (let j = i + 1; j < blocks.length; j++) {
+          const run = longestCommonRun(blocks[i], blocks[j])
+          if (run.length >= THRESHOLD) {
+            found.push(`${file}: ${run.length} shared chars — "${run.trim()}"`)
+          }
+        }
+      }
+      return found
+    })
+    expect(offenders).toEqual([])
+  })
+
+  it('reports the margin, so the threshold is a measurement and not a preference', () => {
+    const runs = framingBlocks().flatMap(({ blocks }) =>
+      blocks.flatMap((a, i) => blocks.slice(i + 1).map((b) => longestCommonRun(a, b).length)),
+    )
+    const longest = runs.reduce((max, run) => Math.max(max, run), 0)
+    expect(longest, `longest shared run in the current build is ${longest} chars`).toBeLessThan(
+      THRESHOLD,
+    )
+  })
+
+  it('catches the /pricing repetition that shipped', () => {
+    // The two blocks as they were built, so the rule is measured against the
+    // defect rather than against itself.
+    const section =
+      'You advance both amounts at the start, and you recover them through the helper’s repayment. Both halves matter: the money does leave your account first, and it does come back.'
+    const faq =
+      'As the employer you advance both amounts at the start, and you recover them through the helper’s repayment. The money leaves your account first, but it is not a cost you carry.'
+    expect(longestCommonRun(section, faq).length).toBeGreaterThanOrEqual(THRESHOLD)
+  })
+
+  it('does not fire on two statements that genuinely differ', () => {
+    const a =
+      'Two further amounts — the helper’s loan and the placement fee — sit outside both totals. They are not an extra charge you carry: you advance them and recover them, and they are explained further down this page.'
+    const b =
+      'You advance both amounts at the start, and you recover them through the helper’s repayment. Both halves matter: the money does leave your account first, and it does come back.'
+    expect(longestCommonRun(a, b).length).toBeLessThan(THRESHOLD)
+  })
+
+  it('both halves of §2.4 are still published on /pricing and on /faq', () => {
+    /*
+     * The half that stops this being satisfied by deleting the framing. §2.4
+     * is binding: the money leaves the employer's account first, AND it comes
+     * back, AND it is ultimately the helper's cost. Both surfaces must still
+     * say all three.
+     */
+    for (const file of ['dist/pricing/index.html', 'dist/faq/index.html']) {
+      const text = pageBlocks(readFileSync(file, 'utf8')).join(' ')
+      expect(text, `${file} lost the advance half`).toMatch(/\badvance\b/i)
+      expect(text, `${file} lost the recover half`).toMatch(/\brecover\b/i)
+      expect(text, `${file} lost whose cost it ultimately is`).toMatch(/helper['’]s cost/i)
+    }
+  })
+})

@@ -1,6 +1,6 @@
 ---
 question: What does the helper loan and placement fee mean?
-surfaces: [faq, pricing]
+surfaces: [faq]
 category: cost
 order: 30
 ---

@@ -7,4 +7,4 @@ order: 10
 
 Our fly-in package costs **$1,640.10** with 1 replacement within 6 months, or **$1,140.10** without replacement.
 
-The helper’s loan and placement fee sit outside those totals. You advance both at the start and recover them through the helper’s repayment, so they are ultimately the helper’s cost rather than an extra charge you carry. See our [Pricing](/pricing) page for the full breakdown.
+Two further amounts are not in either total: the helper’s loan and the placement fee. You fund both at the start, and her repayment brings them back — so they end up being her cost rather than an extra you carry. See our [Pricing](/pricing) page for the full breakdown.

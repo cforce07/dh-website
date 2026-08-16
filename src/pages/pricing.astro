@@ -311,7 +311,42 @@ const description =
   <LoanAndPlacement />
 
   {/*
-    Three entries, not five.
+    Two entries, not five — and the third went for exactly the reason the
+    first two did. 2026-08-17.
+
+    "WHAT DOES THE HELPER LOAN AND PLACEMENT FEE MEAN?"
+    (src/content/faq/helper-loan-placement-fee.md) was untagged from this
+    surface. All three of its paragraphs reprinted <LoanAndPlacement /> — the
+    section immediately above this block:
+
+      "The placement fee is fixed at one month's salary… the same amount for
+       a new helper and for a transfer helper"   <- the Placement fee card
+      "The loan is assessed case by case… no standard figure we can publish"
+                                                 <- the Helper loan card
+      "As the employer you advance both amounts at the start, and you recover
+       them through the helper's repayment"      <- "Who actually bears
+                                                     these", 847 characters
+                                                     earlier in the built
+                                                     page, sharing that
+                                                     opening clause VERBATIM
+
+    A ruling in the earlier round called these "three well-differentiated
+    statements" and it was wrong on its own standard: the homepage's version
+    of the same defect was ~628 characters apart and was fixed (see
+    src/pages/index.astro), and this one is closer in kind — not a family of
+    related sentences but one clause typed twice with "As the employer" in
+    front of it, with a third statement of the framing sitting between them.
+    Spec §2.6.4 says in terms that reassurance is not a licence for
+    near-verbatim adjacent repetition.
+
+    NEITHER HALF OF §2.4 IS LOST, on this surface or any other. /pricing
+    still states the framing twice: the qualifier under the cards ("They are
+    not an extra charge you carry: you advance them and recover them") and
+    <LoanAndPlacement />'s "Who actually bears these", which carries both
+    halves in full and is the section the page exists to deliver. The FAQ
+    answer is untagged, not deleted, and still carries both halves on /faq,
+    where the reader has not just read the cards. That is the same remedy,
+    for the same reason, as the two entries below.
 
     "How much does it cost to hire a helper?" gave both totals again and
     "What is included in the fly-in package?" reprinted the entire line-item
