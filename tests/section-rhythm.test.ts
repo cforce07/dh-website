@@ -381,6 +381,28 @@ const CONTACT_BLOCKS = [
   { block: 'C4', path: 'src/sections/FinalCta.astro', selector: '.final-cta' },
 ] as const
 
+/**
+ * The one block src/pages/404.astro renders.
+ *
+ * Task 10, and the shortest sequence on the site by some distance: ONE
+ * block, defined in the page file, with no FinalCta under it.
+ *
+ * THAT ABSENCE IS THE DESIGN, NOT AN OMISSION, and it is worth stating here
+ * because a one-entry list looks like a list somebody forgot to finish. A
+ * 404 is a page a visitor did not ask for, arriving instead of the thing
+ * they wanted; the useful thing to give them is the way back, in as few
+ * lines as possible. FinalCta is the site's designated conversion surface at
+ * --space-section-lg — it would be taller than the entire page it was
+ * appended to, and it is fixed at --color-surface, which is also the ground
+ * this block opens on, so adding it would put two cream sections back to
+ * back and fail the register's own adjacency rule. Both CTAs still reach
+ * the visitor: Footer and MobileCtaBar render on every page, which is what
+ * satisfies tests/pages.test.ts's per-page CTA assertions here.
+ */
+const NOT_FOUND_BLOCKS = [
+  { block: 'X1', path: 'src/pages/404.astro', selector: '.notfound' },
+] as const
+
 const PAGE_SEQUENCES: PageSequence[] = [
   {
     page: 'src/pages/index.astro',
@@ -400,6 +422,7 @@ const PAGE_SEQUENCES: PageSequence[] = [
   { page: 'src/pages/about.astro', blocks: ABOUT_BLOCKS },
   { page: 'src/pages/faq.astro', blocks: FAQ_BLOCKS },
   { page: 'src/pages/contact.astro', blocks: CONTACT_BLOCKS },
+  { page: 'src/pages/404.astro', blocks: NOT_FOUND_BLOCKS },
 ]
 
 /**
@@ -1115,6 +1138,59 @@ describe('the /contact ground sequence alternates', () => {
     const home12 = BLOCKS.find((b) => b.block === '12')!
     expect(c4.path).toBe(`src/sections/${home12.file}.astro`)
     expect(c4.selector).toBe(home12.selector)
+  })
+})
+
+describe('the /404 ground sequence is one block, deliberately', () => {
+  /*
+   * A one-block page satisfies every adjacency rule in the register
+   * vacuously — there is no second block to collide with the first — so the
+   * assertions that matter here are about WHAT IS ABSENT. All three of them
+   * would fail if somebody appended a section to this page without thinking
+   * about which ground it lands on, which is the only way this page's rhythm
+   * can go wrong.
+   */
+  const grounds = NOT_FOUND_BLOCKS.map((b) => ({ ...b, ground: groundOfPath(b.path, b.selector) }))
+
+  it('is exactly the approved sequence', () => {
+    expect(grounds.map((g) => `${g.block} ${g.ground}`)).toEqual(['X1 --color-surface'])
+  })
+
+  it('renders no section component at all — not FinalCta, not TwoSidedMatch', () => {
+    /*
+     * The assertion NOT_FOUND_BLOCKS' docblock is really about. Appending
+     * <FinalCta /> is the obvious thing to reach for on a page that has a
+     * CTA-shaped hole at the bottom, and it is wrong twice over: it is fixed
+     * at --color-surface, which this block already uses, so it would put two
+     * cream sections back to back; and it is the site's designated
+     * conversion surface at --space-section-lg, taller than the entire page
+     * it would be appended to.
+     *
+     * Checked against the page source rather than against the list, because
+     * the list is what a mistake would forget to update.
+     */
+    const source = stripComments(readFileSync('src/pages/404.astro', 'utf8'))
+    const sectionComponents = readdirSync('src/sections')
+      .filter((f) => f.endsWith('.astro'))
+      .map((f) => f.replace('.astro', ''))
+    const rendered = sectionComponents.filter((name) =>
+      new RegExp(`<${name}[\\s/>]`).test(source),
+    )
+    expect(rendered).toEqual([])
+  })
+
+  it('opens on the site page ground, like every other page', () => {
+    // --color-surface is the body ground global.css sets, and every page on
+    // the site opens on it. A 404 painting itself white or teal would be the
+    // one page that announces itself as a different kind of surface, which
+    // is the opposite of what it should do: it is the site, minus the page
+    // that was asked for.
+    expect(grounds[0].ground).toBe('--color-surface')
+  })
+
+  it('adds neither a dark band nor a brand wash', () => {
+    expect(grounds.filter((g) => g.ground === '--color-deep')).toEqual([])
+    expect(grounds.filter((g) => g.ground === '--color-surface-teal')).toEqual([])
   })
 })
 

@@ -21,10 +21,32 @@ import ogSource from '../assets/og-share.png'
 interface Props {
   title: string
   description: string
+  /**
+   * Declares that this page must not be indexed, and that it has no
+   * canonical URL of its own. ONE FLAG FOR BOTH, deliberately — they are the
+   * same fact said twice, and letting a page set one without the other is
+   * how a page ends up noindexed with a self-canonical (a contradiction) or
+   * indexable with none (a duplicate-content risk).
+   *
+   * Exactly one page passes it: src/pages/404.astro. A 404 is served in
+   * place of EVERY URL that does not exist, so "this page's URL" is not a
+   * thing that exists — a self-canonical pointing at /404/ would name a URL
+   * that itself returns 404 once
+   * scripts/deploy-cloudfront-error-pages.sh is applied. The `noindex` is
+   * for the other half of the same page's life: dist/404.html is a real
+   * object at /404.html, where it answers 200 and is a thin, contentless,
+   * perfectly indexable page.
+   *
+   * tests/pages.test.ts asserts both directions — the 404 carries it, and
+   * no other page does. A stray `noindex` on a marketing page removes it
+   * from Google silently, which is the most expensive one-line mistake
+   * available on this site.
+   */
+  noindex?: boolean
 }
 
-const { title, description } = Astro.props
-const canonical = new URL(Astro.url.pathname, Astro.site).href
+const { title, description, noindex = false } = Astro.props
+const canonical = noindex ? null : new URL(Astro.url.pathname, Astro.site).href
 
 /*
  * The share card. Two things about it are not negotiable:
@@ -87,11 +109,19 @@ const ogImageAlt = 'Illustration of two people working side by side at one kitch
     <meta name="theme-color" content="#FAF8F5" />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, follow" />}
+    {/*
+      Both of these are claims about THIS PAGE'S URL, so both are omitted
+      together when the page has none — see the `noindex` prop's docblock.
+      "follow" rather than "none" above: the links out of the 404 are the
+      whole point of it, and there is no reason to tell a crawler to ignore
+      them.
+    */}
+    {canonical && <link rel="canonical" href={canonical} />}
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content={canonical} />
+    {canonical && <meta property="og:url" content={canonical} />}
     {/*
       og:image, with width and height declared. Several consumers —
       WhatsApp among them — lay the card out before the image finishes

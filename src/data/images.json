@@ -26,11 +26,11 @@
     "assetPath": "src/assets/og-share.png",
     "usedBy": [
       { "file": "src/layouts/BaseLayout.astro", "line": 19, "what": "import ogSource from '../assets/og-share.png'" },
-      { "file": "src/layouts/BaseLayout.astro", "line": 46, "what": "getImage({ src: ogSource, format: 'jpeg', quality: 78 }) — JPEG on purpose; several share consumers still refuse WebP and AVIF" },
-      { "file": "src/layouts/BaseLayout.astro", "line": 47, "what": "new URL(ogImage.src, Astro.site).href — the absolute URL, built exactly the way `canonical` is" },
-      { "file": "src/layouts/BaseLayout.astro", "line": 102, "what": "<meta property=\"og:image\" content={ogImageUrl} /> — :width, :height, :type and :alt follow on the four lines below" },
-      { "file": "src/layouts/BaseLayout.astro", "line": 127, "what": "<meta name=\"twitter:card\" content=\"summary_large_image\" /> — valid only while an og:image ships; back to \"summary\" in the same commit if this image is ever removed" },
-      { "file": "src/layouts/BaseLayout.astro", "line": 128, "what": "<meta name=\"twitter:image\" content={ogImageUrl} /> — twitter:image:alt follows on the next line" }
+      { "file": "src/layouts/BaseLayout.astro", "line": 68, "what": "getImage({ src: ogSource, format: 'jpeg', quality: 78 }) — JPEG on purpose; several share consumers still refuse WebP and AVIF" },
+      { "file": "src/layouts/BaseLayout.astro", "line": 69, "what": "new URL(ogImage.src, Astro.site).href — the absolute URL, built exactly the way `canonical` is" },
+      { "file": "src/layouts/BaseLayout.astro", "line": 132, "what": "<meta property=\"og:image\" content={ogImageUrl} /> — :width, :height, :type and :alt follow on the four lines below" },
+      { "file": "src/layouts/BaseLayout.astro", "line": 157, "what": "<meta name=\"twitter:card\" content=\"summary_large_image\" /> — valid only while an og:image ships; back to \"summary\" in the same commit if this image is ever removed" },
+      { "file": "src/layouts/BaseLayout.astro", "line": 158, "what": "<meta name=\"twitter:image\" content={ogImageUrl} /> — twitter:image:alt follows on the next line" }
     ],
     "provenance": "ai-generated",
     "sourcePrompt": "Prompt B1 (\"the shared counter, at share-card scale\", recommended) under \"Slot B — og-share\" in docs/design/image-prompts-2026-08-16.md. Generated with DALL·E and supplied by DirectHired on 2026-08-16 as images/image_slotb_promp1.png (1730x909 PNG, 2.0MB), which is kept as the untouched master. src/assets/og-share.png is that master centre-cropped and downscaled to exactly 1200x630 (Lanczos 3): 1730x909 is 1.9032 against the 1.9048 Open Graph wants, so the crop discards about half a pixel of height and nothing else — in particular it does not touch the clear right-hand third the wordmark is meant to sit in.",
@@ -132,12 +132,12 @@
     "title": "Favicon — the H mark alone",
     "assetPath": "public/favicon.svg",
     "usedBy": [
-      { "file": "src/layouts/BaseLayout.astro", "line": 78, "what": "<link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\" />" }
+      { "file": "src/layouts/BaseLayout.astro", "line": 100, "what": "<link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\" />" }
     ],
     "provenance": "real-photo",
     "renderedAt": "Browser tab, typically 16-32px. Vector; byte-identical to src/assets/logo-mark.svg.",
     "depicts": "The H from the wordmark — two figures joined at a crossbar — in teal #00a4a6.",
-    "replaceWith": "Nothing outstanding for the SVG. A rasterised 16/32/48 .ico is still missing and deliberately not faked; see the comment at BaseLayout.astro:57-77.",
+    "replaceWith": "Nothing outstanding for the SVG. A rasterised 16/32/48 .ico is still missing and deliberately not faked; see the comment at BaseLayout.astro:79-99.",
     "aiPermitted": false,
     "aiForbiddenReason": "Same as logo-wordmark. The .ico, when it is made, must be rasterised from this vector — not redrawn and not generated.",
     "promptSection": null,

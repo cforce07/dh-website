@@ -127,9 +127,29 @@ describe('the page sweep', () => {
     const staticFiles = routeFiles.filter((f) => !isDynamic(f))
     const dynamicFiles = routeFiles.filter(isDynamic)
 
-    /** src/pages/index.astro → "/", src/pages/a/b.astro → "/a/b/". */
+    /**
+     * src/pages/index.astro → "/", src/pages/a/b.astro → "/a/b/".
+     *
+     * Task 10, ONE EXCEPTION, AND IT IS ASTRO'S RATHER THAN OURS. Every
+     * other route builds as `<route>/index.html` under `build.format:
+     * 'directory'` (the default, and what astro.config.mjs leaves alone).
+     * `src/pages/404.astro` does not: Astro emits it as `dist/404.html`,
+     * a file rather than a directory, because a CDN's error-page mapping
+     * needs a single object key to point at — which is exactly what
+     * scripts/deploy-cloudfront-error-pages.sh points its
+     * `ResponsePagePath` at. The route this file's own walker derives from
+     * that output is therefore "/404", not "/404/".
+     *
+     * Written as a mapping rather than by filtering 404 out of the check.
+     * Filtering would exempt the page from "every static route file built a
+     * page", which is the assertion that would notice if the 404 stopped
+     * building at all — and a 404 that silently stopped building is a site
+     * that silently goes back to serving a bare 403.
+     */
     const expectedRoute = (file: string) =>
-      file.replace(/^src\/pages/, '').replace(/index\.astro$/, '').replace(/\.astro$/, '/')
+      file === 'src/pages/404.astro'
+        ? '/404'
+        : file.replace(/^src\/pages/, '').replace(/index\.astro$/, '').replace(/\.astro$/, '/')
 
     const built = new Set(pages.map((p) => p.route))
     const missing = staticFiles.map(expectedRoute).filter((route) => !built.has(route))
@@ -199,6 +219,14 @@ describe.each(pages)('$route', (page) => {
     // is worse than none: it tells Google this page is a duplicate of that
     // one and de-indexes it. BaseLayout builds it from Astro.url, so the
     // failure mode is a page hardcoding its own — which this catches.
+    //
+    // ONE PAGE HAS NO CANONICAL, AND THAT IS THE POINT OF IT (Task 10).
+    // /404 is served in place of every URL that does not exist, so it has no
+    // URL of its own; BaseLayout's `noindex` prop drops the tag and the
+    // robots meta together. Its absence is asserted, in both directions, in
+    // "the 404 page is the only page kept out of the index" below — this is
+    // not an exemption that quietly checks nothing.
+    if (page.route === '/404') return
     const match = page.html.match(/<link rel="canonical" href="([^"]*)"/)
     expect(match, 'no canonical link').not.toBeNull()
     expect(match![1]).toBe(`${company.siteUrl}${page.route}`)
@@ -817,7 +845,8 @@ describe('every built page spaces the markdown it renders', () => {
 // and delete this whole block when the list reaches zero.
 
 /**
- * Built routes that ship no `BreadcrumbList`, enumerated — not derived.
+ * Built routes that ship no `BreadcrumbList` because Task 11 has not run
+ * yet. Enumerated — not derived.
  *
  * Every entry is a defect against spec §4 awaiting Task 11, which adds the
  * helper to src/lib/structured-data.ts and applies it to every page. The one
@@ -825,13 +854,15 @@ describe('every built page spaces the markdown it renders', () => {
  * asks for `BreadcrumbList` "on nested pages", and the site root is not
  * nested. That is Task 11's call to make and to record here — it is listed
  * today because today it carries none, not because it has been excused.
+ *
+ * Task 11 shrinks THIS list to empty. It must not touch the one below it.
  */
-const ROUTES_WITHOUT_BREADCRUMBS: readonly string[] = [
+const ROUTES_AWAITING_BREADCRUMBS: readonly string[] = [
   '/',
   // Added by Task 8 in the same commit that created the route, which is
   // what the block comment above asks for: a new page carrying no
   // BreadcrumbList must fail until it is enumerated here, so the gap cannot
-  // widen silently. Task 11 shrinks this list to empty.
+  // widen silently.
   '/about/',
   // Added by Task 9 in the same commit that created the route, for the same
   // reason as '/about/' above.
@@ -841,6 +872,44 @@ const ROUTES_WITHOUT_BREADCRUMBS: readonly string[] = [
   '/why-directhired/',
   // Added by Task 10, same commit as the route, same reason.
   '/contact/',
+]
+
+/**
+ * Routes that must NEVER carry a `BreadcrumbList` — a separate list, because
+ * these are not waiting for anything.
+ *
+ * Task 10 was asked to decide whether '/404' belongs in the deferred list or
+ * permanently outside the requirement. It is permanent, for three reasons,
+ * any one of which would be enough:
+ *
+ *   1. A BreadcrumbList states WHERE A PAGE SITS in the site's hierarchy.
+ *      A 404 sits nowhere. The URL that produced it is not a node in any
+ *      hierarchy — that is the entire meaning of the response — and
+ *      /404.html itself is not a destination anybody navigates to. Any
+ *      trail written here would be fiction: either a trail to the missing
+ *      URL, which does not exist, or a trail to /404, which nothing links
+ *      to.
+ *   2. Google's breadcrumb guidance requires the markup to describe a real
+ *      navigational path to the page. Structured data that describes a
+ *      position the page does not occupy is a structured-data mismatch, and
+ *      the penalty for those falls on the whole site rather than on the one
+ *      page.
+ *   3. It could never be used anyway. Once
+ *      scripts/deploy-cloudfront-error-pages.sh is applied this page is
+ *      served with a 404 STATUS, and a crawler drops a 404 rather than
+ *      indexing it — while the directly-reachable /404.html carries
+ *      `noindex`. Rich results are computed for indexed pages.
+ *
+ * So Task 11 must leave this alone. If it ever empties
+ * ROUTES_AWAITING_BREADCRUMBS and deletes the whole block, this list is what
+ * has to survive the deletion — which is why it is stated separately rather
+ * than as a comment on an entry in the other one.
+ */
+const ROUTES_EXEMPT_FROM_BREADCRUMBS: readonly string[] = ['/404']
+
+const ROUTES_WITHOUT_BREADCRUMBS: readonly string[] = [
+  ...ROUTES_AWAITING_BREADCRUMBS,
+  ...ROUTES_EXEMPT_FROM_BREADCRUMBS,
 ]
 
 /**
@@ -882,6 +951,66 @@ function jsonLdTypes(html: string): string[] {
   return types
 }
 
+describe('the 404 page is the only page kept out of the index', () => {
+  /*
+   * Task 10. Two halves of one property, asserted together so neither can be
+   * traded for the other.
+   *
+   * THE 404 MUST CARRY noindex. Once
+   * scripts/deploy-cloudfront-error-pages.sh is applied, a missing route is
+   * served this page's body with a 404 STATUS, which a crawler drops. But
+   * the file also sits at /404.html as a real object, where it answers 200
+   * and is a perfectly indexable thin page with no content of its own. The
+   * robots meta is what closes that, and it is invisible on the rendered
+   * page — exactly the kind of thing a tidy-up deletes.
+   *
+   * NO OTHER PAGE MAY CARRY IT. A stray `noindex` on /contact or /pricing
+   * removes that page from Google silently: nothing breaks, nothing looks
+   * wrong, and the traffic simply stops. This is the cheapest possible guard
+   * against the single most expensive one-line mistake on a marketing site.
+   */
+  const NOINDEX = /<meta[^>]+name="robots"[^>]+content="[^"]*noindex/i
+
+  it('the 404 page declines indexing', () => {
+    const notFound = pages.find((p) => p.route === '/404')
+    expect(notFound, 'dist/404.html was not built').toBeDefined()
+    expect(notFound!.html).toMatch(NOINDEX)
+  })
+
+  it('no other page does', () => {
+    const offenders = pages
+      .filter((p) => p.route !== '/404')
+      .filter((p) => NOINDEX.test(p.html))
+      .map((p) => p.route)
+    expect(offenders).toEqual([])
+  })
+
+  it('the 404 page claims no canonical URL, and every other page does', () => {
+    /*
+     * The other half of the same flag. BaseLayout drops the self-canonical
+     * and the og:url with the robots meta, because all three are claims
+     * about "this page's URL" and a 404 has none — it is served in place of
+     * every URL that does not exist, and the tag BaseLayout would otherwise
+     * write (…/404/) is itself a URL that returns 404.
+     *
+     * Asserted here rather than only as an early return in the per-page
+     * canonical check above, which is what keeps that early return from
+     * being an exemption that checks nothing. Both directions, so a change
+     * that dropped canonicals site-wide fails loudly.
+     */
+    const CANONICAL = /<link rel="canonical"/i
+    const notFound = pages.find((p) => p.route === '/404')!
+    expect(notFound.html).not.toMatch(CANONICAL)
+    expect(notFound.html).not.toMatch(/<meta property="og:url"/i)
+
+    const withoutCanonical = pages
+      .filter((p) => p.route !== '/404')
+      .filter((p) => !CANONICAL.test(p.html))
+      .map((p) => p.route)
+    expect(withoutCanonical).toEqual([])
+  })
+})
+
 describe('BreadcrumbList (spec §4) — deferred to Task 11, and enumerated so it cannot be forgotten', () => {
   it('the pages carrying no BreadcrumbList are exactly the enumerated ones', () => {
     const missing = pages
@@ -889,6 +1018,21 @@ describe('BreadcrumbList (spec §4) — deferred to Task 11, and enumerated so i
       .map((p) => p.route)
       .sort()
     expect(missing).toEqual([...ROUTES_WITHOUT_BREADCRUMBS].sort())
+  })
+
+  it('keeps the deferred list and the permanent exemption apart', () => {
+    /*
+     * Task 11 shrinks ROUTES_AWAITING_BREADCRUMBS to empty and must not
+     * touch ROUTES_EXEMPT_FROM_BREADCRUMBS. A route in both lists would let
+     * that task "resolve" a permanent exemption by deleting it from the
+     * deferred half and leave the combined list unchanged, which is the one
+     * way the separation could be undone without anybody noticing.
+     */
+    const overlap = ROUTES_AWAITING_BREADCRUMBS.filter((r) =>
+      ROUTES_EXEMPT_FROM_BREADCRUMBS.includes(r),
+    )
+    expect(overlap).toEqual([])
+    expect(ROUTES_EXEMPT_FROM_BREADCRUMBS.length).toBeGreaterThan(0)
   })
 
   it('every enumerated route is a page that actually exists', () => {
