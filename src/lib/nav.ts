@@ -24,11 +24,36 @@
  * in the same commit. It is no longer derived from this file, precisely
  * so that adding a link cannot silently permit itself.
  */
+/*
+ * 'Services' AND 'Helper Sources' ARE GONE, 2026-08-17, by DirectHired's
+ * decision. They return when sub-project 3 ships /services and /helpers.
+ *
+ * Neither page exists. Both were linked from the header and the mobile panel
+ * on all 8 built pages, which is 16 broken links, and this file's own note
+ * below — "if you add a nav entry for a route that does not exist yet, add it
+ * to that enumeration" — is what made that legal: they were enumerated in
+ * tests/links.test.ts's DEFERRED_ROUTES, and that suite ALSO required every
+ * enumerated route to be linked. So the suite actively enforced the two
+ * broken nav items.
+ *
+ * Linking a route before it exists is defensible when the page is weeks away
+ * and the link is groundwork. It stopped being defensible when it became the
+ * top-level navigation of a live site: a visitor clicking "Services" in the
+ * header gets a 404, and it is the second item in the list.
+ *
+ * DO NOT RE-ADD THEM BEFORE THE PAGES SHIP. Both routes were also removed
+ * from DEFERRED_ROUTES, so a link to either now FAILS tests/links.test.ts
+ * rather than being allowlisted — which is stricter than before, and
+ * deliberately so. Sub-project 3 adds the entries back in the same commit as
+ * the pages, and the entries can then be deleted again immediately, because
+ * the pages will resolve.
+ *
+ * The header was re-measured after the trim: tests/header-fit.test.ts's
+ * MEASURED block carries the new nav width and item count.
+ */
 export const navItems = [
   { label: 'Find Your Helper', href: '/find-your-helper' },
-  { label: 'Services', href: '/services' },
   { label: 'Pricing', href: '/pricing' },
-  { label: 'Helper Sources', href: '/helpers' },
   { label: 'Why Us', href: '/why-directhired' },
   { label: 'About Us', href: '/about' },
   { label: 'FAQ', href: '/faq' },

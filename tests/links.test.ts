@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs'
 import { join, extname } from 'node:path'
 import { company } from '../src/data/company'
+import { navItems, footerItems, legalItems } from '../src/lib/nav'
 
 // dist/ is built once by tests/global-setup.ts, before any file here is
 // collected. This suite used to run `npm run build:dev` in its own
@@ -126,8 +127,34 @@ const DEFERRED_ROUTES: readonly string[] = [
   // sub-project 3.
 
   // --- Sub-project 3: the two family index pages, spec §1 ---
-  '/services',
-  '/helpers',
+  //
+  // '/services' and '/helpers' WERE HERE AND ARE NOT ANY MORE, 2026-08-17.
+  //
+  // Both were in the header nav and the mobile panel on all 8 built pages —
+  // 16 broken links — and this enumeration is what made that legal. Worse,
+  // the third assertion below ("every enumerated deferred route is actually
+  // linked") REQUIRED them to stay linked, so the suite was actively
+  // enforcing two broken nav items. DirectHired chose to remove them from the
+  // navigation until sub-project 3 ships the index pages
+  // (src/lib/nav.ts records the decision), and the prose link to '/helpers'
+  // in src/content/faq/helper-sources.md went with them.
+  //
+  // WHY THEY ARE DROPPED FROM THE ENUMERATION RATHER THAN MOVED TO A SECOND,
+  // "RESERVED" LIST. This array means one thing: "linked before it exists".
+  // Nothing links these two now, so by the array's own definition they do not
+  // belong in it, and the third assertion below would fail if they stayed —
+  // correctly, since an entry nothing links is "an exemption granted in
+  // advance", which is that assertion's own wording. A parallel
+  // reserved-and-unlinked list would be a list of routes with no assertions
+  // attached, i.e. a comment with array syntax.
+  //
+  // THE PROPERTY THIS PRESERVES — and it is preserved STRICTLY MORE STRONGLY
+  // than before: a link to a route that does not exist fails. Today a link to
+  // '/services' is not allowlisted by anything, so the first assertion below
+  // fails on it. Before this change it was allowlisted and could not fail.
+  // Sub-project 3 adds the entries back in the same commit as the links, and
+  // deletes them again as soon as the pages resolve, which the second
+  // assertion insists on.
 
   // --- Sub-project 3: the 6 service detail pages ---
   '/services/direct-hire-processing',
@@ -582,5 +609,102 @@ describe('conditional block content-cache guard', () => {
     const html = readFileSync('dist/index.html', 'utf8')
     const sectionOpenTags = html.match(/<section[\s>]/g) ?? []
     expect(sectionOpenTags).toHaveLength(11)
+  })
+})
+
+/*
+ * WHAT REMOVING THE TWO NAV ITEMS ACTUALLY BOUGHT — W-9, 2026-08-17.
+ *
+ * DirectHired removed 'Services' and 'Helper Sources' from the navigation
+ * until sub-project 3 ships /services and /helpers. Measured on the build,
+ * before and after:
+ *
+ *                        before   after
+ *   broken link instances   57      41
+ *   per page                 6       4
+ *   homepage                15      13
+ *
+ * ZERO IS NOT REACHED, AND CANNOT BE BY THIS CHANGE. What is left is two
+ * groups, both of them deliberate and neither of them navigation:
+ *
+ *   4 per page  the legal routes in the footer's BOTTOM BAR
+ *               (src/lib/nav.ts's `legalItems`): /privacy-policy, /terms,
+ *               /pdpa, /disclaimer. Sub-project 3 owns them.
+ *   9 on /      the detail links inside two homepage SECTIONS —
+ *               Services.astro's six cards (/services/<slug>) and
+ *               HelperSources.astro's three (/helpers/<slug>).
+ *
+ * Removing those would not be the same kind of change and was not what
+ * DirectHired decided. The nav items were TOP-LEVEL NAVIGATION on every page;
+ * the card links are the content of two sections that would have to be
+ * redesigned to lose them, and the legal links are the four a Singapore
+ * footer is expected to carry. They are reported here rather than fixed, and
+ * they remain enumerated in DEFERRED_ROUTES above, which is what keeps them
+ * from being forgotten.
+ *
+ * SO THE ASSERTIONS BELOW STATE WHAT IS TRUE AND LOAD-BEARING:
+ *   - the navigation itself has zero broken links, with NO allowlist
+ *   - /services and /helpers are linked from nothing, anywhere
+ *   - the residual set is EXACTLY the enumerated deferred routes, so it
+ *     cannot grow by one without a visible diff
+ */
+describe('the navigation links nothing that does not exist', () => {
+  it('every navItems and footerItems href resolves — no allowlist consulted', () => {
+    /*
+     * The strongest statement this change supports, and the reason it is
+     * stated without the allowlist: the allowlist is what let two broken
+     * routes sit in the header for weeks. Navigation is the one surface
+     * where "deferred" is not an excuse a visitor can see.
+     */
+    const unresolved = [...navItems, ...footerItems]
+      .filter(({ href }) => !resolvesInDist(href))
+      .map(({ label, href }) => `${label} → ${href}`)
+    expect(unresolved).toEqual([])
+  })
+
+  it('/services and /helpers are linked from no built page', () => {
+    // Named, because these two are the decision. If either comes back before
+    // its page does, this says so by name rather than as an allowlist diff.
+    const linked = allInternalLinks().filter(({ href }) => href === '/services' || href === '/helpers')
+    expect(linked.map(({ page, href }) => `${page} → ${href}`)).toEqual([])
+  })
+
+  it('neither route is in navItems, footerItems or legalItems', () => {
+    const hrefs = [...navItems, ...footerItems, ...legalItems].map((item) => item.href)
+    expect(hrefs).not.toContain('/services')
+    expect(hrefs).not.toContain('/helpers')
+    // …and the nav still has the pages that DO exist, so this is not passing
+    // because somebody emptied the array.
+    expect(hrefs).toContain('/find-your-helper')
+    expect(hrefs).toContain('/pricing')
+    expect(hrefs).toContain('/faq')
+    expect(hrefs).toContain('/contact')
+  })
+
+  it('the only broken links left are the enumerated deferred routes, exactly', () => {
+    /*
+     * The residual, stated as a set rather than as a count — a count would
+     * break the moment a page is added, which is the defect W-7 records in
+     * tests/pages.test.ts. Set equality cannot go slack in either direction:
+     * a new broken link fails it, and so does a route that quietly stopped
+     * being linked while staying enumerated.
+     */
+    const unresolved = new Set(
+      allInternalLinks()
+        .filter(({ href }) => !resolvesInDist(href))
+        .map(({ href }) => href),
+    )
+    expect([...unresolved].sort()).toEqual([...DEFERRED_ROUTES].sort())
+  })
+
+  it('the residual is legal pages and section detail links, and nothing else', () => {
+    // Named by shape, so the character of what is left is asserted rather
+    // than left to a reader to infer from the list. A broken TOP-LEVEL route
+    // reappearing would not match either shape and fails here.
+    const LEGAL = new Set(['/privacy-policy', '/terms', '/pdpa', '/disclaimer'])
+    const stray = [...DEFERRED_ROUTES].filter(
+      (route) => !LEGAL.has(route) && !/^\/(?:services|helpers)\/[a-z0-9-]+$/.test(route),
+    )
+    expect(stray).toEqual([])
   })
 })

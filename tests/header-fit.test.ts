@@ -199,10 +199,16 @@ describe('the header still fits the column at --bp-desktop', () => {
    */
   const MEASURED = {
     logoPx: 178.01, // logo-wordmark.svg at height: 26px
-    navPx: 568.76, // 7 nav items, --space-3 (12px) gaps
+    // 5 nav items, --space-3 (12px) gaps. Was 568.76 for 7 items; re-measured
+    // in real Chrome on 2026-08-17 after DirectHired removed 'Services' and
+    // 'Helper Sources' from the nav until sub-project 3 ships those pages
+    // (src/lib/nav.ts records the decision). The logo and CTA figures below
+    // re-measured IDENTICAL to their 2026-08-16 values, which is the check
+    // that the two measurements were taken the same way.
+    navPx: 372.69,
     ctaPx: 242.52, // one primary Button at its normal --space-6 padding
     gapPx: 32, // 2 x --space-4 between the three children
-    navItemCount: 7,
+    navItemCount: 5,
     scrollbarPx: 15, // classic Windows Chrome; the worst case we design for
   }
   // Read from Container.astro and tokens.css rather than transcribed, so the
