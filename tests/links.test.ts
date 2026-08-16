@@ -116,8 +116,8 @@ const DEFERRED_ROUTES: readonly string[] = [
   // for a route that now exists would exempt that route from ever having
   // to resolve again, so a later regression deleting the page would not
   // fail this suite. '/why-directhired' went the same way when Task 7
-  // shipped it. The remaining two go the same way as their tasks land.
-  '/about',
+  // shipped it, and '/about' when Task 8 did. The last one goes the same
+  // way as its task lands.
   '/faq',
 
   // --- Sub-project 3: the two family index pages, spec §1 ---

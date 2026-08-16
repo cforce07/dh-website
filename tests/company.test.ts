@@ -298,13 +298,14 @@ describe('the licence number and the registered entity are never retyped', () =>
     expect(files).toContain('src/pages/why-directhired.astro')
   })
 
-  it('the licence really is published (the checks below have a subject)', () => {
+  it('both values really are published (the checks below have a subject)', () => {
     // A guard against retyping a value nothing prints would be green
     // forever and mean nothing. The trust bar carries the licence on every
-    // page; the registered entity is published by /about alone, and its
-    // equivalent assertion lands with that page.
+    // page; the registered entity is published by /about alone, which is
+    // also the assertion that catches that page silently dropping it.
     const pages = builtPages()
     expect(pages.some((p) => p.text.includes(company.momLicence))).toBe(true)
+    expect(pages.some((p) => p.text.includes(company.registeredName))).toBe(true)
   })
 
   it('no authored surface types the licence number as a literal', () => {

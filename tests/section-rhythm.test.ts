@@ -292,6 +292,38 @@ const WHY_DIRECTHIRED_BLOCKS = [
   { block: 'W5', path: 'src/sections/FinalCta.astro', selector: '.final-cta' },
 ] as const
 
+/**
+ * Section files in the order src/pages/about.astro renders them.
+ *
+ * Task 8. Four of its five blocks are defined in the page file — the company
+ * story, the philosophy, the Singapore presence and the record are this
+ * page's own content and belong to no other route — so they are addressed by
+ * `path: <the page>` exactly as /pricing's hero block and the two earlier
+ * Phase B pages' inline blocks are.
+ *
+ * THE ONLY GROUND HERE THAT IS A CHOICE IS A3. FinalCta is fixed at
+ * --color-surface because the homepage renders the same component, which
+ * forces A4 off cream; opening on cream is what every other page does; and
+ * A2 then cannot be cream either. That leaves the Singapore block, which
+ * could have been cream and is --color-surface-teal instead: this page has
+ * no --color-deep section to spend its register change on, and a metronomic
+ * cream/white/cream/white/cream is the exact defect the /pricing audit
+ * found (5,201px of alternation at identical padding). The wash lands on
+ * the block about where the company physically is, which is the one place
+ * on the page where the brand ground means something.
+ *
+ * TwoSidedMatch is deliberately NOT rendered here — spec §3.2 does not list
+ * it for this page, and the "adds no dark band" assertion in this page's own
+ * describe holds that by consequence rather than by convention.
+ */
+const ABOUT_BLOCKS = [
+  { block: 'A1', path: 'src/pages/about.astro', selector: '.about-company' },
+  { block: 'A2', path: 'src/pages/about.astro', selector: '.about-philosophy' },
+  { block: 'A3', path: 'src/pages/about.astro', selector: '.about-singapore' },
+  { block: 'A4', path: 'src/pages/about.astro', selector: '.about-record' },
+  { block: 'A5', path: 'src/sections/FinalCta.astro', selector: '.final-cta' },
+] as const
+
 const PAGE_SEQUENCES: PageSequence[] = [
   {
     page: 'src/pages/index.astro',
@@ -308,6 +340,7 @@ const PAGE_SEQUENCES: PageSequence[] = [
   // --- Phase B: one entry per page, in the shape above. ---
   { page: 'src/pages/find-your-helper.astro', blocks: FIND_YOUR_HELPER_BLOCKS },
   { page: 'src/pages/why-directhired.astro', blocks: WHY_DIRECTHIRED_BLOCKS },
+  { page: 'src/pages/about.astro', blocks: ABOUT_BLOCKS },
 ]
 
 /**
@@ -820,6 +853,71 @@ describe('the /why-directhired ground sequence alternates', () => {
       expect(p.path).toBe(`src/sections/${h.file}.astro`)
       expect(p.selector).toBe(h.selector)
     }
+  })
+})
+
+describe('the /about ground sequence alternates', () => {
+  /*
+   * The generic rules in the register above already hold for this page.
+   * What they cannot say is which sequence was CHOSEN — a page could satisfy
+   * every one of them with white / cream / white / teal / cream and still
+   * not be the arrangement anybody approved. So the sequence is stated here,
+   * the way the four pages before it state theirs. Changing one entry
+   * changes at least two adjacencies; re-derive the whole thing rather than
+   * editing a line.
+   */
+  const grounds = ABOUT_BLOCKS.map((b) => ({ ...b, ground: groundOfPath(b.path, b.selector) }))
+
+  it('is exactly the approved sequence', () => {
+    expect(grounds.map((g) => `${g.block} ${g.ground}`)).toEqual([
+      'A1 --color-surface',
+      'A2 --color-surface-raised',
+      'A3 --color-surface-teal',
+      'A4 --color-surface-raised',
+      'A5 --color-surface',
+    ])
+  })
+
+  it('adds no dark band', () => {
+    // TwoSidedMatch is not rendered on this page — spec §3.2 does not list
+    // it here — and this is the assertion that keeps it that way by
+    // consequence rather than by convention. Block 07 of the homepage,
+    // reused by /why-directhired, remains the site's only --color-deep
+    // section, and spec §6 requires a second one to be justified on its own
+    // terms.
+    expect(grounds.filter((g) => g.ground === '--color-deep')).toEqual([])
+  })
+
+  it('grounds exactly one section in the brand wash, and it is the Singapore block', () => {
+    /*
+     * The register's rule is "at most one". This page has exactly one, and
+     * WHICH block it is was the only ground decision available here (see
+     * ABOUT_BLOCKS' docblock) — so it is named, not counted. Moving the wash
+     * to the record block, or adding a second, is a decision somebody takes
+     * in this file rather than a background flipped in the page.
+     */
+    const teal = grounds.filter((g) => g.ground === '--color-surface-teal')
+    expect(teal.map((g) => g.block)).toEqual(['A3'])
+    expect(teal[0].selector).toBe('.about-singapore')
+  })
+
+  it('shares FinalCta with the homepage rather than copying it', () => {
+    /*
+     * The coupling this page's last two grounds rest on: FinalCta is fixed
+     * at --color-surface because the homepage renders the same component,
+     * and that is what forces A4 white. A page-local copy of the CTA would
+     * keep every ground assertion above passing while quietly breaking the
+     * single-sourced CTA pair (spec §3.1: order, labels and both hrefs are
+     * not parameterised).
+     *
+     * File paths, not grounds: comparing grounds here would be x === x, both
+     * sides calling the same reader on the same file — the mistake caught in
+     * /pricing's equivalent test.
+     */
+    const a5 = ABOUT_BLOCKS.find((b) => b.block === 'A5')!
+    const home12 = BLOCKS.find((b) => b.block === '12')!
+    expect(a5.path).toBe(`src/sections/${home12.file}.astro`)
+    expect(a5.selector).toBe(home12.selector)
   })
 })
 

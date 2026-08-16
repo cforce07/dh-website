@@ -1,0 +1,625 @@
+---
+/**
+ * /about — WHO DIRECTHIRED IS. Not why to choose it.
+ *
+ * Core-pages design spec §3.2 gives it five parts and no others: company
+ * story · philosophy · Singapore presence · credentials with the verified
+ * MOM licence · CTA. Spec §4 gives it brand and trust intent, which it
+ * shares with /why-directhired.
+ *
+ * THE DIVISION OF LABOUR WITH /why-directhired, WHICH IS THIS PAGE'S ONE
+ * REAL PROBLEM. Both pages are trust pages, both draw on the same small
+ * pool of supplied facts, and a visitor who reads both must not feel they
+ * read one page twice. The split adopted, and it is a hard line:
+ *
+ *   /why-directhired ARGUES. It is the case for choosing DirectHired —
+ *   the three pillars at length, the consequence that there is no gallery
+ *   to browse, the two-sided match, and a credentials block whose job is
+ *   to close that argument ("Everything above is a description of how we
+ *   work. These three are not.").
+ *
+ *   /about STATES. It is the company as an entity: what it is, what it
+ *   holds to, where it operates from, what it is licensed to do and how
+ *   long it has done it. Nothing on this page argues a case; the one
+ *   sentence that would have is a link to the page that does.
+ *
+ * Concretely, that is what keeps the two credentials blocks from being the
+ * same block twice. /why-directhired publishes three facts as EVIDENCE,
+ * each with the scope it was measured over spelled out, under a heading
+ * that tells the reader to check them. This page publishes the company's
+ * PARTICULARS, as a register entry — including the registered entity, which
+ * that page does not carry and which is the fact an About page exists to
+ * give. Same values, single-sourced from src/data/company.ts so they cannot
+ * disagree; different jobs.
+ *
+ * THE FOUNDING LINE IS SOURCE BRIEF §35, AND ONLY ITS ORIGIN SENTENCE.
+ * Spec §3.4 records that sentence, by name, as the About founding story —
+ * a decision taken BY DEFAULT because DirectHired has not supplied their
+ * own words, and §9 still lists "founding story in DirectHired's words" as
+ * an open input. So it ships as written: no founder, no year of insight,
+ * no anecdote. /why-directhired carries all three of §35's lines because
+ * §35 is that page's whole origin block; this page takes the one sentence
+ * §3.4 assigns to it, which is also why the overlap is a sentence rather
+ * than a section. When DirectHired supplies their own account, BOTH change.
+ *
+ * THE COMPANY, NOT ITS FOUNDERS — master brief §45, and it is a hard rule
+ * rather than a preference. There is no named founder here, no photograph,
+ * no personal history and no "our team of experts", because every one of
+ * those needs a fact nobody has supplied. The one thing the brief itself
+ * says about people — that the company was established because "the
+ * founders saw families struggling" — is deliberately NOT written as a
+ * founder's story: §45 asks for a trusted company rather than a
+ * personal-founder brand, and §35's sentence is the same event told the
+ * way the client approved it.
+ *
+ * NO IMAGERY, and that is on the record before anyone reaches for some.
+ * src/data/images.json registers a `team-and-office` slot with no consumer
+ * and aiPermitted: false, whose stated reason is exactly this page: "a
+ * generated office or generated staff photograph is a claim about a real,
+ * licensed business (MOM 23C1443) that is simply false… the prohibition is
+ * on record before anyone adds an About block and reaches for a plausible-
+ * looking interior." Real photography is Priority 2 of the shot brief and
+ * sub-project 4's work.
+ *
+ * NO MOM CREST, SEAL OR MARK — open decision D-7, unchanged. Whether
+ * DirectHired may display one is a permission nobody in this repository
+ * holds. A licence number set in type is safe; an official-looking mark on
+ * the page whose whole subject is the licence is exactly the wrong place to
+ * find out.
+ *
+ * THE SINGAPORE BLOCK IS NOT /contact. Task 10 owns the contact treatment
+ * and this page must not pre-empt it: no phone, no email, no hours, no
+ * socials, no map, and no link to /contact (which does not exist yet and is
+ * not in tests/links.test.ts's DEFERRED_ROUTES, so a link to it would fail
+ * the suite as a dead link, correctly). What ships is the one fact that
+ * belongs to the company's identity rather than to getting in touch: it is
+ * a Singapore business, and the office is in Singapore. The address string
+ * is assembled from src/data/company.ts exactly as Footer.astro assembles
+ * it — never retyped.
+ *
+ * NO SECOND DARK BAND. Spec §6 keeps block 07's --color-deep as the site's
+ * only palette register shift, and §3.2 does not list TwoSidedMatch in this
+ * page's composition — so it is not rendered here, for the same reason
+ * /find-your-helper declined it. /why-directhired renders it because §3.2
+ * names it there; that reasoning does not reach this page.
+ *
+ * Section grounds run cream / white / teal / white / cream across the five
+ * blocks (.about-company, .about-philosophy, .about-singapore, .about-record,
+ * FinalCta), registered and asserted in tests/section-rhythm.test.ts. The
+ * brand wash lands on the Singapore block: --color-surface-teal exists to
+ * give #00a4a6 real graphic area, and the block about where the company IS
+ * is the one place on this page a brand ground carries meaning rather than
+ * decoration. The record block stays white, because a record reads as a
+ * record on paper.
+ *
+ * NO INLINE CTA PAIR, unlike /why-directhired and /find-your-helper. Those
+ * two run long enough that a reader meets an argument's conclusion far
+ * above the foot of the page. This page is four short blocks and FinalCta
+ * sits directly under the record; a second pair of buttons a few hundred
+ * pixels above it would put two conversion surfaces in one screen. The
+ * mobile CTA bar is fixed on every page regardless.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro'
+import Container from '../components/Container.astro'
+import FinalCta from '../sections/FinalCta.astro'
+import { company } from '../data/company'
+
+/*
+ * Assembled from company.ts the same way Footer.astro assembles it. The
+ * address is not retyped here — it is one of the "consistent company
+ * details" master brief §51 asks for, and two copies of an address is how
+ * a move half-lands.
+ */
+const addressLine = `${company.address.street}, ${company.address.locality} ${company.address.postalCode}`
+
+/*
+ * Both the title and the description resolve the licence from company.ts
+ * rather than typing it. That is not fussiness: the literal in
+ * /why-directhired's description was a second copy of a regulator-issued
+ * identifier sitting where nobody sees it rendered, and it is now guarded
+ * site-wide in tests/company.test.ts. The title carries the brand name and
+ * the licence because this page owns spec §4's brand-and-trust intent, and
+ * "directhired mom licence" is the shape those searches take.
+ */
+const title = `About DirectHired — Singapore Maid Agency, MOM Licence ${company.momLicence}`
+const description =
+  `${company.registeredName} is a licensed Singapore maid agency placing domestic helpers with ` +
+  `households here since ${company.foundedYear}. MOM Employment Agency licence ${company.momLicence}.`
+---
+
+<BaseLayout title={title} description={description}>
+  <section class="about-company">
+    <Container>
+      {/*
+        The <h1> states the identity rather than making a claim, because
+        that is the question this page answers. /why-directhired opens on
+        an argument ("We don't just fill vacancies."); this opens on a
+        fact, and the difference between the two openings is the whole
+        division of labour in one line.
+      */}
+      <h1>DirectHired is a Singapore employment agency.</h1>
+
+      {/*
+        SOURCE BRIEF §35's ORIGIN SENTENCE, AS WRITTEN. Spec §3.4 assigns
+        exactly this sentence to the About page. Do not embroider it, do
+        not name a founder and do not add a year of insight: it is a
+        default decision, taken because DirectHired has not given us their
+        own account, and an invented detail here would read as history and
+        be the hardest kind to remove later.
+      */}
+      <p class="about-lede">
+        DirectHired was created after seeing families struggle with agencies that focused on filling
+        vacancies instead of finding the right fit.
+      </p>
+
+      <p class="about-body">
+        It has been placing domestic helpers with households in Singapore since {company.foundedYear}.
+      </p>
+
+      {/*
+        The division of labour, said to the visitor rather than only to the
+        next author. A family that arrived here looking for the case gets
+        sent to the page that makes it, on the first screen, instead of
+        reading four blocks that decline to make it.
+      */}
+      <p class="about-body">
+        This page is about the company itself — what it holds to, where it works from, and what is on
+        record. The case for choosing it is made on the
+        <a href="/why-directhired">why DirectHired</a> page.
+      </p>
+    </Container>
+  </section>
+
+  <section class="about-philosophy">
+    <Container>
+      {/*
+        Structural as well as editorial: the two statements below are
+        <h3>s, so without this <h2> the document would run <h1> straight to
+        <h3> and break its own outline. tests/pages.test.ts asserts it —
+        heading-order is an axe BEST-PRACTICE rule and sits outside the
+        wcag2a/wcag2aa tags scripts/run-axe.mjs filters to, so nothing else
+        would catch it.
+      */}
+      <h2 class="section-title">What the company holds to</h2>
+
+      <div class="tenets">
+        {/*
+          "Happy Employer. Happy Helper." IS DirectHired's philosophy, in
+          the brief's own words: master brief §1 introduces it as "DirectHired's
+          core philosophy is:". Spec §3.2 gives this page a philosophy
+          section, and a philosophy section that declines to state the
+          philosophy would be a strange thing to ship.
+
+          IT APPEARS ONCE, HERE, WHICH IS THE RULE. Brief §3 warns against
+          turning the line into a slogan repeated on every block, and the
+          brand assessment states it as "appears once on the whole page".
+          This page renders no TwoSidedMatch (spec §3.2 does not list it),
+          so this is the page's single appearance — and it is a different
+          use from block 07's, which is a composition about the outcome of
+          a match. Here it is quoted as what the company stands for. If a
+          future change ever puts TwoSidedMatch on this page, this heading
+          comes out in the same commit.
+
+          Both sides mattering is supplied, not inferred: brief §44's core
+          themes include "We care about both employer and helper", and
+          block 07 already resolves on "Better matching happens when both
+          sides are understood."
+        */}
+        <div class="tenet">
+          <h3>Happy Employer. Happy Helper.</h3>
+          <p>
+            DirectHired’s own statement of what a placement is for. There are two people in a
+            placement, and it has to work for the household and for the helper — not for one of them.
+          </p>
+        </div>
+
+        {/*
+          The second half of brief §1: "DirectHired takes the opposite
+          approach: Understand first. Recommend second."
+
+          TWO SENTENCES, AND THAT IS DELIBERATE. What this order looks like
+          in practice — the list of what is understood before a
+          recommendation, and the consequence that there is no gallery of
+          helpers to browse — is /why-directhired's Better Matching pillar,
+          argued at length. Restating it here would be the second copy of
+          the same argument that this page exists not to be, and the link
+          on the first screen already points at it.
+        */}
+        <div class="tenet">
+          <h3>Understand first. Recommend second.</h3>
+          <p>
+            The order the work runs in, in DirectHired’s own words. The household is understood
+            before any helper is put forward.
+          </p>
+        </div>
+      </div>
+    </Container>
+  </section>
+
+  <section class="about-singapore">
+    <Container>
+      <h2 class="section-title">Based in Singapore</h2>
+
+      {/*
+        Master brief §51 asks the site to communicate Singapore presence
+        with consistent company details. This is that, and no more than
+        that: the address comes from company.ts, and the phone, email,
+        hours and socials are deliberately absent because /contact (Task
+        10) owns them. Nothing here characterises the district, describes
+        the office or counts the staff — none of which anybody has
+        supplied, and all of which are the natural next sentence.
+      */}
+      <p class="about-body">
+        DirectHired is a Singapore business. The families it works with are here, the helpers it
+        places work in households here, and so is the office those placements are handled from:
+      </p>
+
+      <p class="about-address">{addressLine}</p>
+
+      <p class="about-body">
+        What the company is licensed to do here is a matter of public record rather than of
+        description. That record is below.
+      </p>
+    </Container>
+  </section>
+
+  <section class="about-record">
+    <Container>
+      <h2 class="section-title">The company on record</h2>
+      <p class="record-lede">DirectHired’s particulars, as registered and published.</p>
+
+      {/*
+        EVERY VALUE COMES FROM src/data/company.ts. Not one is retyped:
+        master brief §70 for the licence and the entity it is held in
+        (never invent, modify, guess or substitute; verify against the
+        official MOM source before publication), and §68 for the count,
+        which was revised down from "1,000+" once already. Both rules are
+        enforced across every surface by tests/company.test.ts.
+
+        A ROW EACH, not the three-abreast grid /why-directhired uses. That
+        page's block is an argument's evidence and gives each fact the
+        scope it was measured over in a paragraph; this is a register
+        entry, so it takes the site's established fact-table shape — term
+        in a fixed column, value beside it, hairline between rows, the
+        same treatment /find-your-helper gives its timings.
+      */}
+      <dl class="record">
+        <div class="record-row">
+          <dt>Registered entity</dt>
+          <dd class="record-value">{company.registeredName}</dd>
+          {/*
+            The fact an About page exists to give and the one credential
+            /why-directhired does not carry: the legal person behind the
+            brand name. Master brief §45 wants a trusted COMPANY rather
+            than a personal-founder brand, and a registered entity is the
+            most literal form that takes.
+          */}
+          <dd class="record-note">The company the DirectHired name belongs to.</dd>
+        </div>
+
+        <div class="record-row">
+          <dt>MOM licence</dt>
+          <dd class="record-value">{company.momLicence}</dd>
+          <dd class="record-note">
+            Employment Agency licence, issued by the Ministry of Manpower and listed in its public
+            register.
+          </dd>
+        </div>
+
+        <div class="record-row">
+          <dt>Placing helpers since</dt>
+          <dd class="record-value">{company.foundedYear}</dd>
+        </div>
+
+        <div class="record-row">
+          <dt>Track record</dt>
+          {/*
+            DirectHired's own basis sentence, whole: "500+ placements
+            across all services since 2022". "Placements", never "helpers
+            placed" — that reads as new placements only, which is a
+            smaller and stronger claim than this number supports, and a
+            guard in tests/company.test.ts refuses it on every surface a
+            visitor reads. A second guard asserts that every printing of
+            the figure names what it counts, which is why the scope is in
+            the value line rather than left to the note.
+          */}
+          <dd class="record-value">
+            {company.placementCount} placements across all services since {company.foundedYear}
+          </dd>
+          <dd class="record-note">
+            “All services” is DirectHired’s own scope for the figure: transfers, replacements and
+            direct-hire processing are counted in it as well as new placements.
+          </dd>
+        </div>
+      </dl>
+    </Container>
+  </section>
+
+  {/*
+    The page's one conversion surface, framed for this page: a record is
+    the part of a company that can be published, and the part that cannot
+    is what a first submission actually starts. "A consultant reads every
+    submission" is already published site copy — master brief line 353's
+    intake role, which the FAQ states — and it deliberately stops short of
+    a response time, which the FAQ owns and states as within 1 business day.
+  */}
+  <FinalCta
+    heading="Start with your requirements."
+    lede="Send us what your household needs. A consultant reads every submission, and that is where working with DirectHired begins."
+  />
+</BaseLayout>
+
+<style>
+  .about-company {
+    /*
+     * --space-12 top, --space-section bottom — Hero's treatment, and the
+     * treatment /pricing, /find-your-helper and /why-directhired all give
+     * their opening block, for the same reason: this block carries the
+     * page's hero, and a full --space-section (128px at ≥1280) above an
+     * image-less single-column headline spends the first screen on cream.
+     */
+    padding-block: var(--space-12) var(--space-section);
+    background: var(--color-surface);
+  }
+
+  .about-company h1 {
+    margin: 0;
+    max-width: 18ch;
+    font-family: var(--font-display);
+    font-size: var(--size-h1);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.1;
+    color: var(--color-ink);
+  }
+
+  /* Brief §35's sentence, in full ink at lede size: it is the reason the
+     company exists and the only line on this page a visitor is likely to
+     read word for word rather than scan. */
+  .about-lede {
+    max-width: 52ch;
+    margin: var(--space-6) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-lede);
+    line-height: 1.5;
+    color: var(--color-ink);
+  }
+
+  .about-body {
+    max-width: 56ch;
+    margin: var(--space-6) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+  }
+
+  /* --color-accent (6.03:1 on cream, 5.83:1 on white, 5.54:1 on the teal
+     wash), never --color-brand-teal, which measures 2.89:1 and carries no
+     text anywhere on this site. */
+  .about-body a {
+    color: var(--color-accent);
+    text-decoration: none;
+    border-bottom: 1px solid var(--color-accent);
+  }
+
+  .about-body a:hover {
+    color: var(--color-accent-hover);
+    border-color: var(--color-accent-hover);
+  }
+
+  .about-philosophy {
+    padding-block: var(--space-section);
+    /* White, between the cream hero above and the teal wash below.
+       Registered in tests/section-rhythm.test.ts; the grounds have to be
+       judged as a sequence, so do not flip this one alone. */
+    background: var(--color-surface-raised);
+  }
+
+  /* Shared by all three page-local <h2>s, at --size-h3 rather than
+     --size-h2: these head a sub-part of a page the <h1> has already
+     opened, and setting them at section-header scale would put three
+     competing display sizes on one screen. Same size and role as
+     /pricing's `.grid-heading` and /why-directhired's `.section-title`. */
+  .section-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--size-h3);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  .tenets {
+    display: grid;
+    gap: var(--space-8);
+    margin-top: var(--space-8);
+  }
+
+  /*
+   * Opened by a hairline in --color-border (decorative, ~1.3:1 — see
+   * tokens.css; it carries no text and bounds no control), never
+   * --color-brand-teal. Teal as a drawn line is reserved for exactly two
+   * places on this site, block 07's crossbar and FinalCta's mark, and
+   * spending it on routine section furniture is what makes those two stop
+   * meaning anything.
+   */
+  .tenet {
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* Fraunces at 1.25rem — the same treatment /why-directhired gives a
+     pillar title. These two headings are quoted lines rather than labels,
+     so they are set as display type and not as tracked eyebrows. */
+  .tenet h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  .tenet p {
+    max-width: 52ch;
+    margin: var(--space-3) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+  }
+
+  .about-singapore {
+    padding-block: var(--space-section);
+    /*
+     * The page's one section in the brand wash, and the only ground here
+     * that is a choice rather than a consequence. --color-surface-teal is
+     * 8% --color-brand-teal over cream (tokens.css) and exists to give the
+     * logo colour real graphic AREA without ever setting text in it;
+     * measured, --color-ink reads 12.87:1 on it and --color-ink-muted
+     * 7.32:1. The block about where the company physically is is the one
+     * place on this page where a brand ground means something. One per
+     * page is the rule — tests/section-rhythm.test.ts asserts it.
+     */
+    background: var(--color-surface-teal);
+  }
+
+  .about-singapore .about-body {
+    max-width: 56ch;
+    margin-top: var(--space-6);
+    /* Full ink rather than --color-ink-muted on this ground: the wash
+       lifts the page's lightness, and the muted step that reads as
+       secondary on white starts to read as faded here. */
+    color: var(--color-ink);
+  }
+
+  /*
+   * The address as its own line at display size — it is a fact rather
+   * than prose, and it is the one thing in this block a visitor might
+   * copy. Tabular figures for the same reason TrustBadge uses them:
+   * a postal code should read as a number.
+   */
+  .about-address {
+    max-width: 30ch;
+    margin: var(--space-6) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-h3);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.3;
+    color: var(--color-ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .about-record {
+    padding-block: var(--space-section);
+    /* White, between the teal wash above and FinalCta's cream below.
+       FinalCta is fixed at --color-surface because the homepage renders it
+       too, which is what fixes this one. */
+    background: var(--color-surface-raised);
+  }
+
+  .record-lede {
+    max-width: 46ch;
+    margin: var(--space-4) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-lede);
+    line-height: 1.5;
+    color: var(--color-ink);
+  }
+
+  .record {
+    max-width: 60rem;
+    margin: var(--space-8) 0 0;
+  }
+
+  /*
+   * A term/value pair per row with the rule between rows rather than
+   * around them — the shape /find-your-helper gives its timings, and for
+   * the same reason: a card each would box four short facts into four
+   * surfaces on a white ground (the generic-UI-kit reading Card.astro's
+   * own header warns about), and a paragraph each would bury the values,
+   * which are what a visitor is in this block for.
+   */
+  .record-row {
+    padding-block: var(--space-6);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .record-row:last-child {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  /* The site's established eyebrow treatment (TrustBadge's .trust-label):
+     small, semibold, uppercase, tracked. --tracking-wide's contract
+     requires text-transform: uppercase in the same rule — asserted in
+     tests/tokens.test.ts, which scans src/pages too. */
+  .record dt {
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+  }
+
+  /* Figtree, not Fraunces, and tabular figures — the same treatment
+     TrustBadge and /why-directhired's credentials give these values, so a
+     licence number reads as a number rather than as display copy. */
+  .record-value {
+    max-width: 40ch;
+    margin: var(--space-2) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-h3);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.25;
+    color: var(--color-ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .record-note {
+    max-width: 46ch;
+    margin: var(--space-3) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+  }
+
+  /* 48em = --bp-tablet (tokens.css); the literal is repeated by hand
+     because custom properties do not resolve inside a media condition. */
+  @media (min-width: 48em) {
+    .tenets {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    /*
+     * The term column is fixed rather than fluid so all four values start
+     * on one axis; `minmax(0, 1fr)` on the second track lets it shrink
+     * below its content's min-content width instead of pushing the row
+     * wider than the container.
+     *
+     * The dt is pinned to the first cell and every dd to the second, in
+     * explicit placement rather than auto-flow: a row with a value AND a
+     * note auto-places the note back under the term in column 1, which
+     * fills the term column with body copy — the layout this row shape
+     * exists to avoid.
+     */
+    .record-row {
+      display: grid;
+      grid-template-columns: 16rem minmax(0, 1fr);
+      column-gap: var(--space-8);
+      align-items: baseline;
+    }
+
+    .record dt {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .record dd {
+      grid-column: 2;
+    }
+
+    .record-value {
+      margin-top: 0;
+    }
+  }
+</style>

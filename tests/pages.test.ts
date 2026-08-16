@@ -648,6 +648,11 @@ describe('the empty-FAQ check has sections to check (sanity check)', () => {
  */
 const ROUTES_WITHOUT_BREADCRUMBS: readonly string[] = [
   '/',
+  // Added by Task 8 in the same commit that created the route, which is
+  // what the block comment above asks for: a new page carrying no
+  // BreadcrumbList must fail until it is enumerated here, so the gap cannot
+  // widen silently. Task 11 shrinks this list to empty.
+  '/about/',
   '/find-your-helper/',
   '/pricing/',
   '/why-directhired/',
