@@ -2,7 +2,7 @@
 question: What does the 6-month replacement mean?
 surfaces: [faq, pricing]
 category: replacement
-order: 7
+order: 130
 ---
 
 Our fly-in package with replacement entitles you to **one replacement helper**, requested within **6 months of your helper’s deployment date**.

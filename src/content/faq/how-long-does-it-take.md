@@ -2,7 +2,7 @@
 question: How long does the process take?
 surfaces: [faq, home]
 category: process
-order: 5.1
+order: 80
 ---
 
 Once you have confirmed your helper, it takes approximately **2 weeks** for a helper coming to Singapore from overseas, and approximately **1 week** for a transfer helper who is already here.

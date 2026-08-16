@@ -2,7 +2,7 @@
 question: What is the difference between a new helper and a transfer helper?
 surfaces: [home, faq]
 category: sources
-order: 3
+order: 50
 ---
 
 A **new helper placement** brings a helper into Singapore from overseas. A **transfer helper** is a domestic helper already working in Singapore who is moving to a new employer.

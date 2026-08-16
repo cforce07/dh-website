@@ -2,7 +2,7 @@
 question: What is included in the replacement package?
 surfaces: [faq, pricing]
 category: replacement
-order: 8
+order: 140
 ---
 
 When you request a replacement, the third-party components are paid again for the new helper:

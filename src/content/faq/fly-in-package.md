@@ -2,7 +2,7 @@
 question: What is included in the fly-in package?
 surfaces: [home, faq]
 category: cost
-order: 2
+order: 20
 ---
 
 The fly-in package with replacement (**$1,640.10**) covers:

@@ -2,7 +2,7 @@
 question: Do you provide insurance?
 surfaces: [faq]
 category: cost
-order: 2.2
+order: 40
 ---
 
 Yes. Insurance is one of the components included in our fly-in package. DirectHired arranges this coverage as part of your placement and coordinates it on your behalf, alongside the rest of the process.

@@ -2,7 +2,7 @@
 question: What does the helper loan and placement fee mean?
 surfaces: [faq, pricing]
 category: cost
-order: 2.1
+order: 30
 ---
 
 These sit alongside the fly-in package, and they are ultimately the **helper’s** cost rather than yours.

@@ -2,7 +2,7 @@
 question: Do you arrange medical examinations?
 surfaces: [faq]
 category: process
-order: 6.2
+order: 100
 ---
 
 Yes. The medical examination is one of the components included in our fly-in package. DirectHired arranges it for you, coordinated alongside the rest of your placement — one less step for you to organise.

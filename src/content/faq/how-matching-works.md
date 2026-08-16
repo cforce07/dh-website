@@ -2,7 +2,7 @@
 question: How does the matching process work?
 surfaces: [home, faq]
 category: process
-order: 5
+order: 70
 ---
 
 Matching is a personalised, human process. Our team will:
