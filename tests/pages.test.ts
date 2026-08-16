@@ -608,3 +608,137 @@ describe('the empty-FAQ check has sections to check (sanity check)', () => {
     expect(total).toBeGreaterThan(0)
   })
 })
+
+// ---------------------------------------------------------------------
+// BreadcrumbList — a spec requirement that currently fails by omission
+// ---------------------------------------------------------------------
+//
+// Task 7 fix round, W-2. Spec §4 requires `BreadcrumbList` per page. Four
+// pages ship zero of them, src/lib/structured-data.ts has no breadcrumb code,
+// and until this block there was no test, no TODO and no allowlist entry
+// anywhere that named it. Task 11 owns building it — but a requirement that
+// fails by OMISSION has nothing to notice if that task silently does not
+// happen, which is strictly worse than a rule that passes by omission.
+//
+// So: no breadcrumbs are built here. Shipping them on one route while the
+// other three carry none would be worse than shipping none at all — an
+// inconsistent trail is a worse SEO signal than an absent one, and Task 11
+// exists precisely so all seven pages get the same treatment in one sitting.
+// What ships instead is the cheap self-policing version, modelled on
+// tests/links.test.ts's DEFERRED_ROUTES, which works because it is policed in
+// BOTH directions:
+//
+//   - a page that GAINS a BreadcrumbList fails until it is removed from the
+//     list, so Task 11 is forced to shrink the list to empty as it goes;
+//   - a NEW page without one fails until it is added, so the gap cannot widen
+//     silently while nobody is looking.
+//
+// Delete an entry in the same commit that gives its route a BreadcrumbList,
+// and delete this whole block when the list reaches zero.
+
+/**
+ * Built routes that ship no `BreadcrumbList`, enumerated — not derived.
+ *
+ * Every entry is a defect against spec §4 awaiting Task 11, which adds the
+ * helper to src/lib/structured-data.ts and applies it to every page. The one
+ * entry that may legitimately survive that task is '/': foundation spec §242
+ * asks for `BreadcrumbList` "on nested pages", and the site root is not
+ * nested. That is Task 11's call to make and to record here — it is listed
+ * today because today it carries none, not because it has been excused.
+ */
+const ROUTES_WITHOUT_BREADCRUMBS: readonly string[] = [
+  '/',
+  '/find-your-helper/',
+  '/pricing/',
+  '/why-directhired/',
+]
+
+/**
+ * Every `@type` in every JSON-LD block on a page, however nested — an array at
+ * the top level, a `@graph`, an `itemListElement`, all of it.
+ *
+ * A raw string search for "BreadcrumbList" would also fire on the word
+ * appearing in page copy or in a comment, which would let a page look
+ * compliant without carrying any structured data at all. A block that does not
+ * parse contributes nothing, which is the right reading: malformed JSON-LD is
+ * not a shipped BreadcrumbList.
+ */
+function jsonLdTypes(html: string): string[] {
+  const blocks = [
+    ...html.matchAll(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi),
+  ].map((m) => m[1])
+
+  const types: string[] = []
+  const visit = (node: unknown): void => {
+    if (Array.isArray(node)) {
+      node.forEach(visit)
+      return
+    }
+    if (node && typeof node === 'object') {
+      for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+        if (key === '@type' && typeof value === 'string') types.push(value)
+        else visit(value)
+      }
+    }
+  }
+
+  for (const block of blocks) {
+    try {
+      visit(JSON.parse(block))
+    } catch {
+      // Unparseable — contributes no types, deliberately.
+    }
+  }
+  return types
+}
+
+describe('BreadcrumbList (spec §4) — deferred to Task 11, and enumerated so it cannot be forgotten', () => {
+  it('the pages carrying no BreadcrumbList are exactly the enumerated ones', () => {
+    const missing = pages
+      .filter((p) => !jsonLdTypes(p.html).includes('BreadcrumbList'))
+      .map((p) => p.route)
+      .sort()
+    expect(missing).toEqual([...ROUTES_WITHOUT_BREADCRUMBS].sort())
+  })
+
+  it('every enumerated route is a page that actually exists', () => {
+    // The DEFERRED_ROUTES lesson: an entry for a route nothing builds is an
+    // exemption granted in advance, and it would let a deleted page hide here.
+    const built = new Set(pages.map((p) => p.route))
+    expect(ROUTES_WITHOUT_BREADCRUMBS.filter((r) => !built.has(r))).toEqual([])
+  })
+
+  it('the detector recognises a BreadcrumbList, and does not invent one', () => {
+    /*
+     * Without this, a detector that found nothing anywhere would report every
+     * page as missing, the enumeration would match, and the whole guard would
+     * be green while checking nothing — the vacuous pass this suite keeps
+     * finding. These strings live in this file and are never built.
+     */
+    const script = (json: string) =>
+      `<script type="application/ld+json">${json}</script>`
+    expect(
+      jsonLdTypes(
+        script(
+          '{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://x/"}]}',
+        ),
+      ),
+    ).toContain('BreadcrumbList')
+    // Nested inside a @graph, which is how a page carrying two schemas would
+    // most likely ship it.
+    expect(
+      jsonLdTypes(script('{"@graph":[{"@type":"EmploymentAgency"},{"@type":"BreadcrumbList"}]}')),
+    ).toContain('BreadcrumbList')
+    // The word in prose is not structured data.
+    expect(jsonLdTypes('<p>We add a BreadcrumbList later.</p>')).toEqual([])
+    expect(jsonLdTypes(script('{"@type":"FAQPage"}'))).not.toContain('BreadcrumbList')
+  })
+
+  it('reads the structured data the site really ships (the detector is wired to dist/)', () => {
+    // The other half of non-vacuity: the detector must work on real built
+    // markup, not only on the literals above.
+    const all = pages.flatMap((p) => jsonLdTypes(p.html))
+    expect(all).toContain('EmploymentAgency')
+    expect(all).toContain('FAQPage')
+  })
+})
