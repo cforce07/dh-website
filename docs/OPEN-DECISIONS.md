@@ -45,7 +45,7 @@ something you never said.
 | | What's there now | What we would use instead |
 |---|---|---|
 | **Your founding story** | The one line from your brief, word for word: *"DirectHired was created after seeing families struggle with agencies that focused on filling vacancies instead of finding the right fit."* It opens `/why-directhired`, and as of 2026-08-16 it opens `/about` too — one sentence carrying a whole About page's origin | **The story in your own words** — who saw it, when, and what specifically went wrong. This is the single most persuasive paragraph a family reads on a trust page, and right now it is one sentence long. We will not invent a founder, a year or an anecdote to lengthen it |
-| **What your insurance actually covers** | `/faq` answers *"Do you provide insurance?"* with the two things we can stand behind: you arrange it, and it is a priced line inside the fly-in package. The entry then says, in as many words, that it does **not** tell the reader what the policy covers. Added 2026-08-16, because the answer previously stopped after the cost and read as though that were the whole of it — a family asking whether you provide insurance is asking what they and their helper are protected against, and we were answering a different question without saying so | **What is insured, to what limit, and on what conditions** — or simply the insurer and product name, or a policy summary we can link to. Any of the three lets that entry answer the question it was asked. We will not paraphrase a policy nobody here has read |
+| **What your insurance actually covers** | **Narrowed 2026-08-16 by your own answer, not closed.** `/faq` now states both required policies and their cover: medical insurance with an annual claim limit of at least **$60,000**, and personal accident at a sum assured of at least **$60,000**. Both are attributed in the copy to **MOM's minimums** rather than to you, because that is exactly what they are — the regulator's floor, which we could read off MOM ourselves. What the entry still cannot say is what **your** policies do above that floor | **The insurer and product name, or a policy summary we can link to.** That is the whole of what is left. A statutory minimum tells a family what the law guarantees; it does not tell them whose policy they hold, what it pays beyond the floor, or what it excludes. We will not paraphrase a policy nobody here has read |
 | **Whether one consultant carries a placement end to end** | Your brief already answers who picks a submission up: *"Employer requirements are received and reviewed by the sales consultant, with a target response within 1 business day"* (line 353), repeated at §74/line 1856. That is published — the FAQ says a consultant reviews every submission and aims to respond within 1 business day. The `/why-directhired` pillar adds that the guidance is human throughout | **One thing only: does the same person stay with a family from that first review through to the placement?** Everything else here you have already told us. If it is one consultant end to end, that is a sentence the trust pillar can carry and cannot write without you; if a placement passes between people, we will not imply otherwise. *(This question used to ask what "personalised service" consists of, on the basis that the brief supplied two lines. That was inaccurate — lines 353 and 1856 supply the intake role, and the pages use them. Narrowed on 2026-08-16 to the part that is genuinely unconfirmed.)* |
 
 ---
@@ -67,10 +67,16 @@ the answer where the question was asked.
 
 ## Decisions with a recommendation (answer when convenient)
 
-Three of these (**D-1**, **D-2**, **D-11**) are **already implemented**. They are
-listed anyway, and they are not questions — answering "no" now means requesting a
-reversal, which is a small change but a real one. They were previously written as
-open questions, which read as though the site were waiting on you; it is not.
+Four of these (**D-1**, **D-2**, **D-11**, **D-12**) are **already implemented**.
+They are listed anyway, and they are not questions — answering "no" now means
+requesting a reversal, which is a small change but a real one. They were
+previously written as open questions, which read as though the site were waiting
+on you; it is not.
+
+**D-13 is closed** and is kept below with its answer rather than deleted: it was
+settled by a fact you supplied, and the reasoning is worth reading once. The
+count above used to say "three" while listing five implemented rows, and **D-13
+sat above D-12** — both fixed here.
 
 | # | Decision | Recommendation | Status |
 |---|---|---|---|
@@ -80,8 +86,10 @@ open questions, which read as though the site were waiting on you; it is not.
 | **D-7** | May DirectHired display any MOM mark or crest? | **Assume no** until usage terms are produced in writing. A plain bordered licence plate ships today | Open — the safe option ships meanwhile |
 | **D-10** | Fund re-subsetting Fraunces to restore its SOFT/WONK axes? | **No for now.** 67KB in the LCP path against a 2.5s budget, for anxious customers on mid-range Android | Open — costs money, so it is yours to call |
 | **D-11** | Delete the unused `eyebrow` primitive? | **Delete** — zero call sites | **Already implemented** — removed from `src/components/SectionHeader.astro`; flagged so it can be reversed |
-| **D-13** | Your brief asks for two FAQ questions — *"Do you provide insurance?"* and *"Do you arrange medical examinations?"* — whose true answers are almost the same sentence: we arrange it, it is a priced line inside the package, and it is paid again for a replacement helper. Until now they were never on screen together; `/faq` shows all fourteen entries at once, so they are | **Keep both, rewritten.** Neither was deleted — you asked for both. Each now answers the question it was actually asked (insurance: what it costs and what we are *not* telling you; medical: who does the work), and they sit in different groups on the page, so a reader never meets them side by side. The sentence they used to share — paid again for a replacement — is now stated once, in the replacement entry that lists all five components | **Already implemented** (2026-08-16); flagged because merging them into one *"what's in the package and who arranges it"* entry is a legitimate alternative, and it is your brief that mandates the two questions |
 | **D-12** | Remove the hero's secondary WhatsApp CTA? | **Yes** — on a phone it sits directly above two identical buttons in the fixed bar | **Already implemented**; flagged so it can be reversed |
+| **D-13** | ~~Merge the insurance and medical FAQ entries into one?~~ Your brief asks for two questions — *"Do you provide insurance?"* and *"Do you arrange medical examinations?"* — and until 2026-08-16 their true answers were almost the same sentence: we arrange it, it is a priced line inside the package | **No — and this is now settled by fact rather than by preference.** They describe **two different obligations**. Your 2026-08-16 answers established it: *Medical* ($60.00) is the **pre-employment medical checkup**, and *Insurance* ($425.10) buys the **two policies MOM requires** — medical insurance and personal accident, each at the regulator's minimum. A checkup taken once before work starts and a year of hospitalisation cover are not one topic, and merging them would have **cemented the confusion instead of resolving it** — publishing, under a single heading, the very equivalence the facts disprove | **Closed 2026-08-16.** No longer a decision you can be asked to make: both entries are rewritten to the supplied facts (spec §2.6.10, §2.6.11) and the question no longer has two defensible answers |
+
+**Why D-13 was ever open, and what the earlier finding got right.** A review found these two entries were near-duplicates. **That was right about the symptom and wrong about the cause.** They read alike because they were **under-specified** — each said only "we arrange it and it is a priced line", which is the one thing that happens to be true of both — not because they were redundant. Specifying them was the fix, and it was unavailable at the time because nothing had been supplied about either line item. Merging would have been the wrong repair for a real observation: it treats two thin answers as one topic, when what they actually were is two topics described too thinly to tell apart. Worth keeping on the record, because the same shape recurs — **entries that look duplicated are sometimes just entries nobody has been able to fill in yet**, and the remedy is facts, not consolidation.
 
 ---
 
@@ -152,3 +160,33 @@ clean bill of health for the whole document, and it is not one.
 | Do you recommend the with-replacement package to first-time employers? | **Yes.** The recommendation is live on **both pages that show the packages** — `/pricing` and the homepage — and on **one card only**, the with-replacement one, marked **"Recommended for first-time employers"**. Deliberately worded with the audience rather than as a bare "Recommended": the other package is not marked as second best, because for an experienced employer it is the right one, and it carries no counterpart label of any kind | 2026-08-16 |
 | What do families ask after seeing the figures? | *"Normally they will ask similar question for re-assurance."* Recorded rather than acted on: it means an FAQ that restates what the page already says is doing its job, not repeating itself, and it is the basis for writing those answers as reassurance. No FAQ entries were added or re-tagged on the strength of it — the entries removed from `/pricing` earlier were ones repeating the price cards a screen above them, which is a different problem | 2026-08-16 |
 | Is the requirements form staying on your existing site? | *"Yes it's a different site. We can audit design on that later."* Recorded; a design audit of that form is deferred. What it costs is written up under *Housekeeping* | 2026-08-16 |
+| What is the *"Medical"* line in the package? | The **pre-employment medical checkup** — **not** medical insurance. Two separate obligations, and the FAQ entry that implied otherwise (*"Like the insurance, …"*) is rewritten. Recorded as spec §2.6.10 | 2026-08-16 |
+| What does the *"Insurance"* line cover? | **Both** policies MOM requires — **medical insurance** and **personal accident** — at MOM's minimum cover. Published as two policies with their own figures, because MOM regulates them separately. Recorded as spec §2.6.11. **Your first answer to this was corrected by checking MOM**, and that is written up in the note below | 2026-08-16 |
+
+**One note on the answer above, because it is the reason we ask twice.** Your
+first reply was *"death, personal accident and hospitalization to be at least
+60k"* — one figure spanning everything. Published as given, on the page where a
+family pays **$425.10** for it, that would have merged two separately regulated
+policies into a single number. Asking again produced the split.
+
+**The figures were then checked against MOM directly, and that caught a second
+error.** The medical-insurance minimum reached us as **$15,000 a year**. It is
+**$60,000 a year**. $15,000 is a real number on MOM's own page — it is the
+threshold above which the enhanced medical-insurance co-payment applies — which
+is precisely why it looked right. Publishing it would have understated your
+helper's hospitalisation cover **fourfold**, in the answer families read to find
+out what they are protected against.
+
+Nothing here reflects badly on your answers; regulated minimums are exactly the
+kind of detail that goes stale in everyone's notes. It is written down because
+these two are **the only published figures on your site that we verified against
+a source instead of taking from you**, and a reader deserves to know which is
+which. If MOM revises either minimum, that FAQ answer is wrong the day it
+changes — tell us, or we will re-check it at your next content review.
+
+**One rule that came with them, and is not currently at risk.** MOM: *"You
+cannot pass on the cost of purchasing the insurance to your helper."* Nothing on
+the site suggests otherwise. It is recorded because your `/pricing` page states,
+correctly, that the **loan and placement fee** are advanced by you and recovered
+from the helper — and the insurance sits a few centimetres away in the package
+you bear. The two must never be described in the same breath.
