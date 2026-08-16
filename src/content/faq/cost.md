@@ -1,6 +1,7 @@
 ---
 question: How much does it cost to hire a helper?
 surfaces: [home, faq, pricing]
+category: cost
 order: 1
 ---
 

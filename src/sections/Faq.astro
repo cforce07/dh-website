@@ -2,7 +2,16 @@
 /**
  * Faq — block 11. Filters the `faq` collection (already populated by an
  * earlier task, see src/content/faq) to entries whose `surfaces` array
- * contains 'home', sorts by `order`, and takes the first six.
+ * contains the given `surface`, sorts by `order`, and takes the first
+ * `limit`.
+ *
+ * Parameterised (Task 1, core-pages) so the same flat-list rendering
+ * serves the homepage (`surface="home"`, the default) and `/pricing`
+ * (`surface="pricing"`). `/faq` needs a grouped-by-category layout instead
+ * — a different layout, not a parameter — and reuses only the `<details>`
+ * item rendering, not this component. Every prop's default is this
+ * component's previous hardcoded value, so an unparameterised call
+ * (`<Faq />`, as the homepage still makes) renders byte-identical output.
  *
  * Rendered as native <details>/<summary> — not a hand-rolled accordion.
  * Native disclosure needs zero JavaScript, is keyboard-operable (Enter /
@@ -12,44 +21,59 @@
  * indicator that flips purely off the `[open]` attribute selector — no
  * script is involved in that either.
  *
- * Also emits a FAQPage JSON-LD block for the same six entries (Task 15
- * fix round 1, master brief §50). The script tag is placed in-section
- * rather than via BaseLayout's `slot="head"` — a `slot="head"` attribute
- * set inside this component's own template would not forward up through
- * <BaseLayout><Faq /></BaseLayout> since Faq isn't given any children to
- * slot in the first place. Google's structured-data guidance permits
- * JSON-LD anywhere in <head> or <body>, so this is valid as-is.
+ * Also emits a FAQPage JSON-LD block for the same entries (Task 15 fix
+ * round 1, master brief §50), unless `emitSchema` is false — for a page
+ * that renders FAQs twice, or a grouped layout emitting its own, so two
+ * FAQPage blocks never land on one page. The script tag is placed
+ * in-section rather than via BaseLayout's `slot="head"` — a `slot="head"`
+ * attribute set inside this component's own template would not forward up
+ * through <BaseLayout><Faq /></BaseLayout> since Faq isn't given any
+ * children to slot in the first place. Google's structured-data guidance
+ * permits JSON-LD anywhere in <head> or <body>, so this is valid as-is.
  */
 import { getCollection } from 'astro:content'
 import Container from '../components/Container.astro'
 import SectionHeader from '../components/SectionHeader.astro'
 import { faqPageSchema, markdownToPlainText } from '../lib/structured-data'
 
-const homeFaqs = (await getCollection('faq'))
-  .filter((entry) => entry.data.surfaces.includes('home'))
+interface Props {
+  surface?: 'home' | 'faq' | 'pricing'
+  limit?: number
+  emitSchema?: boolean
+  heading?: string
+  lede?: string
+}
+
+const { surface = 'home', limit = 6, emitSchema = true, heading, lede } = Astro.props
+
+const filteredFaqs = (await getCollection('faq'))
+  .filter((entry) => entry.data.surfaces.includes(surface))
   .sort((a, b) => a.data.order - b.data.order)
-  .slice(0, 6)
+  .slice(0, limit)
 
 const rendered = await Promise.all(
-  homeFaqs.map(async (entry) => ({
+  filteredFaqs.map(async (entry) => ({
     entry,
     Content: (await entry.render()).Content,
   })),
 )
 
-// Structured data reuses the same six entries as the visible list, converting
-// each entry's raw markdown body to plain text for acceptedAnswer.text. This
-// does not affect the <Content /> markdown rendering below.
-const faqSchema = faqPageSchema(
-  homeFaqs.map((entry) => ({
-    question: entry.data.question,
-    answer: markdownToPlainText(entry.body ?? ''),
-  })),
-)
+// Structured data reuses the same filtered entries as the visible list,
+// converting each entry's raw markdown body to plain text for
+// acceptedAnswer.text. This does not affect the <Content /> markdown
+// rendering below.
+const faqSchema = emitSchema
+  ? faqPageSchema(
+      filteredFaqs.map((entry) => ({
+        question: entry.data.question,
+        answer: markdownToPlainText(entry.body ?? ''),
+      })),
+    )
+  : null
 ---
 
 <section class="faq">
-  <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
+  {emitSchema && <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} />}
   {/*
     Container `default` (72rem), NOT `narrow` (48rem), with the reading
     measure applied to `.faq-column` inside it.
@@ -66,8 +90,8 @@ const faqSchema = faqPageSchema(
   <Container>
     <div class="faq-column">
     <SectionHeader
-      title="Questions families ask us"
-      lede="A few of the things we’re asked most often. See the full list for everything else."
+      title={heading ?? 'Questions families ask us'}
+      lede={lede ?? 'A few of the things we’re asked most often. See the full list for everything else.'}
     />
 
     <div class="faq-list">

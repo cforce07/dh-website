@@ -214,6 +214,47 @@ describe('services', () => {
   })
 })
 
+describe('faq categories', () => {
+  // Task 1 (core-pages): `category` groups /faq's grouped layout. Required,
+  // no default — a default would let a miscategorised entry silently land
+  // in the wrong bucket. This table is the source of truth for the six
+  // existing entries; it must fail loudly if an entry's category drifts.
+  const EXPECTED_CATEGORIES: Record<string, string> = {
+    'cost.md': 'cost',
+    'fly-in-package.md': 'cost',
+    'helper-sources.md': 'sources',
+    'how-matching-works.md': 'process',
+    'new-vs-transfer.md': 'sources',
+    'submit-requirements.md': 'process',
+  }
+
+  it('has the six current entries, each carrying the category from the table', () => {
+    const files = readdirSync('src/content/faq')
+    expect(files.sort()).toEqual(Object.keys(EXPECTED_CATEGORIES).sort())
+
+    for (const [file, expected] of Object.entries(EXPECTED_CATEGORIES)) {
+      const content = readFileSync(`src/content/faq/${file}`, 'utf8')
+      const match = content.match(/^category:\s*(.+)$/m)
+      expect(match, `${file} has no frontmatter "category:" field`).not.toBeNull()
+      expect(match![1].trim(), `${file} category`).toBe(expected)
+    }
+  })
+
+  it('declares category as a required enum on the faq schema, with no default', () => {
+    const schema = readFileSync('src/content/config.ts', 'utf8').replace(/\/\/[^\n]*/g, ' ')
+    // Scoped to the faq collection's own schema block, not the whole file,
+    // so a `.default(...)` on an unrelated field elsewhere in config.ts
+    // cannot satisfy this assertion vacuously.
+    const faqBlock = schema.slice(
+      schema.indexOf('const faq = defineCollection('),
+      schema.indexOf('const helperProfiles'),
+    )
+    expect(faqBlock).toMatch(/category: z\.enum\(\['cost', 'sources', 'process', 'replacement'\]\)/)
+    expect(faqBlock).not.toMatch(/category:[^\n]*\.default\(/)
+    expect(faqBlock).not.toMatch(/category:[^\n]*\.optional\(/)
+  })
+})
+
 describe('content never hardcodes a conversion CTA', () => {
   const contentDirs = ['src/content/faq', 'src/content/helpers', 'src/content/services']
 
