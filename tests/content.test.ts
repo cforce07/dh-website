@@ -696,6 +696,49 @@ describe('faq pricing figures stay in sync with pricing.ts', () => {
 
   const dollarPattern = /\$\d{1,3}(?:,\d{3})*(?:\.\d{2})?/g
 
+  /*
+   * ---------------------------------------------------------------------
+   * THE ONE CLASS OF PUBLISHED FIGURE THAT IS NOT FROM pricing.ts.
+   * ---------------------------------------------------------------------
+   *
+   * Spec §2.6.11. DirectHired confirmed on 2026-08-16 that the package's
+   * `Insurance` line buys BOTH policies MOM requires — medical insurance
+   * and personal accident — at the regulator's minimum cover. Those
+   * minimums are published in src/content/faq/insurance.md, and they are
+   * not prices: they are the statutory floor on what the policies must
+   * pay, set by MOM and not by DirectHired. pricing.ts holds what the
+   * package COSTS, so it can never be the source for them, and adding
+   * them to it would state that DirectHired charges $60,000.
+   *
+   * WHY THEY ARE DECLARED HERE RATHER THAN EXEMPTED BY PATTERN, which is
+   * the same ruling illustrativeAmounts() above records for the loan
+   * carry-forward example. A pattern that let any five-figure amount
+   * through would also let a stray one through. These are two named
+   * values with a named source; a third figure typed into the insurance
+   * answer still fails, and so does either of these typed onto any other
+   * page.
+   *
+   * VERIFIED AGAINST MOM, NOT AGAINST THE CLIENT, and §2.6.11 records why
+   * that mattered: the medical-insurance minimum was first given to this
+   * project as $15,000/year. It is $60,000/year — $15,000 is MOM's
+   * enhanced-MI co-payment threshold on the same page, a real number doing
+   * a different job. This constant is the reason that correction cannot be
+   * quietly undone: reverting the copy alone fails here.
+   *
+   * Keyed by policy, though both figures are $60,000 today. MOM sets them
+   * separately and can revise them separately, and a bare ['$60,000'] would
+   * keep passing after one of the two moved.
+   */
+  const MOM_INSURANCE_MINIMUMS = {
+    'personal accident — sum assured': '$60,000',
+    'medical insurance — annual claim limit': '$60,000',
+  } as const
+
+  const MOM_MINIMUM_AMOUNTS = new Set(Object.values(MOM_INSURANCE_MINIMUMS))
+
+  /** The FAQ file those minimums belong to, and the only one that may state them. */
+  const INSURANCE_ANSWER = 'insurance.md'
+
   it('has package totals and line items to check against (sanity check)', () => {
     // HARDCODED on purpose. This was briefly derived — `expected` was
     // recomputed from the same flatMap that built `amountsCents` — which
@@ -724,22 +767,79 @@ describe('faq pricing figures stay in sync with pricing.ts', () => {
     let matchCount = 0
     for (const file of files) {
       const content = readFileSync(`src/content/faq/${file}`, 'utf8')
+      // MOM's statutory minimums are allowed in the insurance answer and
+      // nowhere else. Every other FAQ file is held to pricing.ts alone, so
+      // "$60,000" typed into cost.md or fly-in-package.md still fails.
+      const allowed =
+        file === INSURANCE_ANSWER ? new Set([...validAmounts, ...MOM_MINIMUM_AMOUNTS]) : validAmounts
       const matches = content.match(dollarPattern) ?? []
       for (const amount of matches) {
         matchCount += 1
-        expect(validAmounts.has(amount), `${file}: ${amount} is not a figure in pricing.ts`).toBe(
-          true,
-        )
+        expect(
+          allowed.has(amount),
+          `${file}: ${amount} is not a figure in pricing.ts${
+            file === INSURANCE_ANSWER ? ' or a MOM statutory minimum' : ''
+          }`,
+        ).toBe(true)
       }
     }
     // Guards against the pattern silently matching nothing (a vacuous pass).
     // 2 totals in cost.md + 1 total + 6 line items + 1 total in
-    // fly-in-package.md = 10 figures currently published.
+    // fly-in-package.md = 10 figures, plus the 2 MOM minimums added to
+    // insurance.md on 2026-08-16 = 12 currently published.
     //
     // Task 5 (core-pages) left this at 10 deliberately: it authored no FAQ
-    // content and changed no figure, so the number it describes has not
-    // moved. Changing it would only have hidden that.
-    expect(matchCount).toBe(10)
+    // content and changed no figure, so the number it describes had not
+    // moved. Changing it would only have hidden that. THIS change did move
+    // it — spec §2.6.11 put two statutory figures into insurance.md, which
+    // previously carried none — so the number is raised deliberately and
+    // the arithmetic above says which two are new.
+    expect(matchCount).toBe(12)
+  })
+
+  it('the insurance answer really states both minimums, and says whose they are', () => {
+    /*
+     * The allowlist above is an exemption, and an unused exemption is how a
+     * guard rots: if the copy ever lost these figures, the widened corpus
+     * would sit there permitting a value nothing publishes, and the next
+     * reader would have no way to tell it was dead.
+     *
+     * The attribution is asserted with them because the figures are
+     * MEANINGLESS WITHOUT IT and actively misleading in its absence.
+     * $60,000 presented as DirectHired's cover is a claim about a product
+     * nobody in this repository has read; presented as MOM's minimum it is
+     * a fact about the law. Spec §2.6.11 turns on that distinction, so it
+     * is asserted rather than trusted to survive a copy edit.
+     */
+    const content = readFileSync(`src/content/faq/${INSURANCE_ANSWER}`, 'utf8')
+    for (const [policy, amount] of Object.entries(MOM_INSURANCE_MINIMUMS)) {
+      expect(content, `the insurance answer no longer states the ${policy} minimum`).toContain(
+        amount,
+      )
+    }
+    expect(content, 'the minimums are published without saying they are MOM’s').toMatch(
+      /Ministry of Manpower|\bMOM\b/,
+    )
+    expect(content, 'the minimums are not identified as minimums').toMatch(/minimum/i)
+  })
+
+  it('never writes "death" as a cover of its own', () => {
+    /*
+     * Spec §2.6.11. MOM folds death into personal accident — "permanent
+     * disability or death" — and never lists it as a separate policy or a
+     * separate figure. It reached this project only through DirectHired's
+     * first answer ("death, personal accident and hospitalization to be at
+     * least 60k"), which is the answer that checking against MOM corrected.
+     *
+     * So there is no source here for a standalone death benefit, and the
+     * copy that would state one is a single word away from the copy that is
+     * correct. That is precisely the kind of edit that gets made in good
+     * faith by someone adding detail to a list of two policies.
+     */
+    for (const file of readdirSync('src/content/faq')) {
+      const content = readFileSync(`src/content/faq/${file}`, 'utf8')
+      expect(content, `${file} publishes a death benefit no source states`).not.toMatch(/\bdeath\b/i)
+    }
   })
 
   // --- extended to EVERY built page (design spec §5.3) -----------------
@@ -841,18 +941,47 @@ describe('faq pricing figures stay in sync with pricing.ts', () => {
     expect(built.map((p) => p.file)).toContain('dist/pricing/index.html')
   })
 
-  it('every dollar figure on every built page is a real amount', () => {
-    const allowed = new Set([
-      ...validAmounts,
-      ...packageDifferences(),
-      ...illustrativeAmounts(),
-    ])
+  /**
+   * The insurance answer's own question, read from its frontmatter — the
+   * marker for "this page renders the entry that is allowed to state MOM's
+   * minimums". Derived, never typed here, so re-wording the question moves
+   * the marker with it rather than silently emptying the exemption.
+   */
+  function insuranceQuestion(): string {
+    const source = readFileSync(`src/content/faq/${INSURANCE_ANSWER}`, 'utf8')
+    const match = source.match(/^question:\s*(.+)$/m)
+    if (!match) throw new Error(`${INSURANCE_ANSWER} has no question in its frontmatter`)
+    return match[1].trim()
+  }
 
-    const strays = builtPages().flatMap(({ file, text }) =>
-      [...new Set(text.match(dollarPattern) ?? [])]
+  it('finds the page that may state the MOM minimums (guards the exemption below)', () => {
+    // If this question stopped appearing in the build, the exemption below
+    // would apply to no page — which is safe, but it would also mean the
+    // insurance answer had vanished from the site, and that is worth
+    // failing over rather than passing quietly.
+    const question = insuranceQuestion()
+    expect(question.length).toBeGreaterThan(10)
+    const hosts = builtPages().filter(({ text }) => text.includes(question))
+    expect(hosts.map((p) => p.file)).toContain('dist/faq/index.html')
+  })
+
+  it('every dollar figure on every built page is a real amount', () => {
+    const base = new Set([...validAmounts, ...packageDifferences(), ...illustrativeAmounts()])
+    // MOM's statutory minimums, permitted ONLY on a page that actually
+    // renders the answer stating them and attributing them. A "$60,000"
+    // that drifted onto /pricing — beside the package's own figures, where
+    // it would read as a price — is still a stray, and this is what keeps
+    // it one. Same shape as the per-file scoping in the FAQ markdown check
+    // above, applied to the built output.
+    const question = insuranceQuestion()
+    const withMinimums = new Set([...base, ...MOM_MINIMUM_AMOUNTS])
+
+    const strays = builtPages().flatMap(({ file, text }) => {
+      const allowed = text.includes(question) ? withMinimums : base
+      return [...new Set(text.match(dollarPattern) ?? [])]
         .filter((amount) => !allowed.has(amount))
-        .map((amount) => `${file}: ${amount}`),
-    )
+        .map((amount) => `${file}: ${amount}`)
+    })
     expect(strays).toEqual([])
   })
 
