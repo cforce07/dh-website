@@ -380,14 +380,33 @@ describe('the source rule is enforced as the allowlist it is written as', () => 
      * than flagging it as a source would be. If either of those bans is
      * ever deleted, this fails and the exemption has to be reconsidered in
      * the same commit.
+     *
+     * FIX ROUND, F-1. This searched both files for the bare `INDIA.source`
+     * — `\bIndian?\b`. Against tests/pages.test.ts that worked. Against
+     * tests/content.test.ts it searched THE FILE THAT HOLDS ITS OWN
+     * DEFINITION LINE, four lines below, so the literal was present whether
+     * or not the real ban still existed: replacing the pattern at the
+     * "never names India in copy a visitor reads" test with
+     * /\bZZZNOPEZZZ\b/ scored a full green file. Proven by mutation.
+     *
+     * Each half now names the expression at its OWN ban site — the filter
+     * call in this file, the FORBIDDEN_CLAIMS entry in the other — neither
+     * of which occurs at a definition. Both are still built from
+     * INDIA.source, so the pattern itself cannot drift out from under them.
+     * Strictly narrower than what it replaced: each expected string
+     * CONTAINS the old one, so nothing that used to fail can now pass.
      */
     expect(EXEMPT_PLACES.has('India')).toBe(true)
     const INDIA = /\bIndian?\b/
     expect(INDIA.test('Mizoram is a state in the north-east of India.')).toBe(true)
-    for (const file of ['tests/content.test.ts', 'tests/pages.test.ts']) {
-      expect(readFileSync(file, 'utf8'), `${file} no longer bans the word India`).toContain(
-        INDIA.source,
-      )
+    const BAN_SITES: Record<string, string> = {
+      // The sweep over renderedCopy() in the describe above.
+      'tests/content.test.ts': `copy.filter(({ text }) => /${INDIA.source}/.test(text))`,
+      // The FORBIDDEN_CLAIMS entry applied to every built page.
+      'tests/pages.test.ts': `pattern: /${INDIA.source}/,`,
+    }
+    for (const [file, banSite] of Object.entries(BAN_SITES)) {
+      expect(readFileSync(file, 'utf8'), `${file} no longer bans the word India`).toContain(banSite)
     }
   })
 
