@@ -352,6 +352,35 @@ const FAQ_BLOCKS = [
   { block: 'Q3', path: 'src/sections/FinalCta.astro', selector: '.final-cta' },
 ] as const
 
+/**
+ * Section files in the order src/pages/contact.astro renders them.
+ *
+ * Task 10. Three of its four blocks are defined in the page file — the
+ * opening, the channels and the office are this page's own content and
+ * belong to no other route — so they are addressed by `path: <the page>`
+ * exactly as every earlier Phase B page's inline blocks are.
+ *
+ * THE ONLY GROUND HERE THAT IS A CHOICE IS C3, and it is the same choice
+ * /about faced. FinalCta is fixed at --color-surface because the homepage
+ * renders the same component, which forces C3 off cream; opening on cream is
+ * what every other page does; and C2 then cannot be cream either. That
+ * leaves the office block, which could have been cream and is
+ * --color-surface-teal instead: this page has no --color-deep section to
+ * spend its register change on, and the block about where the company
+ * physically is is the one place on the page where the brand ground means
+ * something. The same reasoning, on the same subject, as ABOUT_BLOCKS' A3.
+ *
+ * TwoSidedMatch is deliberately NOT rendered here — spec §3.2 does not list
+ * it for this page — and the "adds no dark band" assertion in this page's
+ * own describe holds that by consequence rather than by convention.
+ */
+const CONTACT_BLOCKS = [
+  { block: 'C1', path: 'src/pages/contact.astro', selector: '.contact-start' },
+  { block: 'C2', path: 'src/pages/contact.astro', selector: '.contact-direct' },
+  { block: 'C3', path: 'src/pages/contact.astro', selector: '.contact-office' },
+  { block: 'C4', path: 'src/sections/FinalCta.astro', selector: '.final-cta' },
+] as const
+
 const PAGE_SEQUENCES: PageSequence[] = [
   {
     page: 'src/pages/index.astro',
@@ -370,6 +399,7 @@ const PAGE_SEQUENCES: PageSequence[] = [
   { page: 'src/pages/why-directhired.astro', blocks: WHY_DIRECTHIRED_BLOCKS },
   { page: 'src/pages/about.astro', blocks: ABOUT_BLOCKS },
   { page: 'src/pages/faq.astro', blocks: FAQ_BLOCKS },
+  { page: 'src/pages/contact.astro', blocks: CONTACT_BLOCKS },
 ]
 
 /**
@@ -1022,6 +1052,69 @@ describe('the /faq ground sequence alternates', () => {
     const source = stripComments(readFileSync('src/pages/faq.astro', 'utf8'))
     expect(source).toMatch(/<FaqGrouped[\s/>]/)
     expect(source).not.toMatch(/<Faq[\s/>]/)
+  })
+})
+
+describe('the /contact ground sequence alternates', () => {
+  /*
+   * The generic rules in the register above already hold for this page.
+   * What they cannot say is which sequence was CHOSEN — a page could satisfy
+   * every one of them with white / cream / teal / cream and still not be the
+   * arrangement anybody approved. So the sequence is stated here, the way the
+   * five pages before it state theirs. Changing one entry changes at least
+   * two adjacencies; re-derive the whole thing rather than editing a line.
+   */
+  const grounds = CONTACT_BLOCKS.map((b) => ({ ...b, ground: groundOfPath(b.path, b.selector) }))
+
+  it('is exactly the approved sequence', () => {
+    expect(grounds.map((g) => `${g.block} ${g.ground}`)).toEqual([
+      'C1 --color-surface',
+      'C2 --color-surface-raised',
+      'C3 --color-surface-teal',
+      'C4 --color-surface',
+    ])
+  })
+
+  it('adds no dark band', () => {
+    // TwoSidedMatch is not rendered on this page — spec §3.2 does not list
+    // it here — and this holds that by consequence rather than by
+    // convention. Block 07 of the homepage, reused by /why-directhired,
+    // remains the site's only --color-deep section.
+    expect(grounds.filter((g) => g.ground === '--color-deep')).toEqual([])
+  })
+
+  it('grounds exactly one section in the brand wash, and it is the office block', () => {
+    /*
+     * The register's rule is "at most one". This page has exactly one, and
+     * WHICH block it is was the only ground decision available here (see
+     * CONTACT_BLOCKS' docblock) — so it is named, not counted. Moving the
+     * wash to the channels block, or adding a second, is a decision somebody
+     * takes in this file rather than a background flipped in the page.
+     */
+    const teal = grounds.filter((g) => g.ground === '--color-surface-teal')
+    expect(teal.map((g) => g.block)).toEqual(['C3'])
+    expect(teal[0].selector).toBe('.contact-office')
+  })
+
+  it('shares FinalCta with the homepage rather than copying it', () => {
+    /*
+     * The coupling this page's last two grounds rest on: FinalCta is fixed
+     * at --color-surface because the homepage renders the same component,
+     * and that is what forces C3 off cream. A page-local copy of the CTA
+     * would keep every ground assertion above passing while quietly breaking
+     * the single-sourced CTA pair (spec §3.1: order, labels and both hrefs
+     * are not parameterised) — which on THIS page would be the second copy
+     * of a pair the hero already renders, i.e. two chances to drift instead
+     * of one.
+     *
+     * File paths, not grounds: comparing grounds here would be x === x, both
+     * sides calling the same reader on the same file — the mistake caught in
+     * /pricing's equivalent test.
+     */
+    const c4 = CONTACT_BLOCKS.find((b) => b.block === 'C4')!
+    const home12 = BLOCKS.find((b) => b.block === '12')!
+    expect(c4.path).toBe(`src/sections/${home12.file}.astro`)
+    expect(c4.selector).toBe(home12.selector)
   })
 })
 

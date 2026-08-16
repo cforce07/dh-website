@@ -839,6 +839,8 @@ const ROUTES_WITHOUT_BREADCRUMBS: readonly string[] = [
   '/find-your-helper/',
   '/pricing/',
   '/why-directhired/',
+  // Added by Task 10, same commit as the route, same reason.
+  '/contact/',
 ]
 
 /**
