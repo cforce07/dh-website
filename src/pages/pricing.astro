@@ -257,6 +257,37 @@ const description =
       </div>
 
       {/*
+        THE ONE EDGE OF SPEC §4'S TRIANGLE THAT WAS MISSING.
+
+        Pricing ↔ Find Your Helper ↔ FAQ, all three ↔ the requirement form.
+        Five of those six edges already existed and were built for readers
+        rather than for a test: /find-your-helper points at both the pricing
+        page and the FAQ (.match-links), /faq points at both (.faq-body),
+        /pricing reaches /faq through Faq.astro's "See all FAQs", and every
+        one of the three carries the primary CTA. Only pricing → find your
+        helper had nowhere in the copy it belonged.
+
+        It belongs HERE, immediately above this page's first CTA pair, which
+        is the same shape /find-your-helper uses (.match-links above
+        .match-cta): a reader who has just compared two totals either acts
+        or wants to know what the money buys, and this is the sentence for
+        the second one. Placed after the totals rather than before them, so
+        it cannot pull anybody off the page before it has answered its own
+        question.
+
+        NO NEW CLAIM. It states what another page contains, which is a fact
+        about this site rather than about DirectHired, and it deliberately
+        does not reuse /why-directhired's wording for the same edge ("what
+        happens after you send us your requirements") — two pages pointing
+        at a third in the same sentence is how the link starts reading as
+        furniture.
+      */}
+      <p class="packages-next">
+        How a helper is matched to your household is explained on the
+        <a href="/find-your-helper">find your helper</a> page.
+      </p>
+
+      {/*
         The page's first way to act.
 
         Before this, <main> held no CTA at all until the final block — on
@@ -460,11 +491,44 @@ const description =
     color: var(--color-accent);
   }
 
+  /* The sideways link, immediately above the CTA pair. Body size and muted
+     ink so it reads as a route out for the reader who is not ready to act,
+     without competing with the primary button below it.
+
+     THE SPACING IS A HANDOVER, NOT AN ADDITION. This paragraph takes the
+     --space-12 the CTA used to sit on, and the CTA drops to --space-6 —
+     near enough to read as belonging to the sentence above it rather than
+     as a third detached element. The block still grows by this
+     paragraph's height plus --space-6, which is the honest cost of adding
+     a sentence; the section's own padding, its ground, and every block
+     after it are untouched. */
+  .packages-next {
+    max-width: 60ch;
+    margin: var(--space-12) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+  }
+
+  /* --color-accent (6.03:1 on this section's cream ground), never
+     --color-brand-teal, which measures 2.89:1 and carries no text anywhere
+     on this site. Same treatment as PricingSection's qualifier link. */
+  .packages-next a {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .packages-next a:hover {
+    color: var(--color-accent-hover);
+  }
+
   .packages-cta {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-3);
-    margin-top: var(--space-12);
+    margin-top: var(--space-6);
   }
 
   .grid-heading {

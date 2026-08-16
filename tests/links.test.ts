@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs'
 import { join, extname } from 'node:path'
+import { company } from '../src/data/company'
 
 // dist/ is built once by tests/global-setup.ts, before any file here is
 // collected. This suite used to run `npm run build:dev` in its own
@@ -216,6 +217,88 @@ describe('internal link resolution', () => {
   })
 })
 
+// --- the internal linking triangle --------------------------------------
+//
+// Core-pages design spec §4: "Pricing ↔ Find Your Helper ↔ FAQ, all three ↔
+// the requirement form." Foundation spec §7 asked for it and sub-project 1
+// could not build it, because there was nowhere to link.
+//
+// IN <main>, NOT ANYWHERE ON THE PAGE, and that is the whole assertion. The
+// header, the footer and the mobile CTA bar already link every page to every
+// other page from every page — so a triangle check over the raw HTML would
+// pass on a site with no editorial links at all, which is the vacuous form
+// of this guard and the only form worth avoiding. What §4 is asking for is
+// a link a reader meets inside the argument, placed where the question it
+// answers arises. Only those count here.
+//
+// WHAT THIS GUARD MUST NOT BECOME. A link added to satisfy a test rather
+// than to serve a reader is worse than no link: it is furniture, it dilutes
+// the ones that mean something, and it is exactly what an assertion like
+// this one invites. Five of these six edges existed before the assertion did
+// — this was written to stop them being deleted, not to force them into
+// existence. If a page ever legitimately loses its reason to carry one, the
+// answer is to argue the change here, not to leave a bare anchor behind.
+
+/** The `<main>` of a built page: nav, footer and mobile CTA bar excluded. */
+function mainOf(html: string): string {
+  return html.match(/<main[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? ''
+}
+
+describe('the internal linking triangle (spec §4)', () => {
+  const requirementForm = company.requirementFormUrl
+
+  /** The three corners, by the route each page is served at. */
+  const CORNERS = ['/pricing', '/find-your-helper', '/faq'] as const
+
+  const mainByRoute = new Map(
+    builtHtmlFiles().map((file) => [
+      file.replace(/^dist/, '').replace(/\/index\.html$/, '').replace(/\.html$/, '') || '/',
+      mainOf(readFileSync(file, 'utf8')),
+    ]),
+  )
+
+  const linksTo = (from: string, target: string) => {
+    const main = mainByRoute.get(from)
+    if (main === undefined) throw new Error(`no built page at ${from}`)
+    // Trailing slash optional: the site writes href="/pricing" today, and
+    // href="/pricing/" would be the same link.
+    return new RegExp(`href="${target}/?"`).test(main)
+  }
+
+  it('reads the body of each corner, not the whole page (guards the assertions below)', () => {
+    for (const corner of CORNERS) {
+      const main = mainByRoute.get(corner)
+      expect(main, `no built page at ${corner}`).toBeDefined()
+      expect(main!.length, `${corner} has an empty <main>`).toBeGreaterThan(2_000)
+      // The header links every corner to every other one. If <main> ever
+      // started including it, every assertion below would pass for free.
+      expect(main!).not.toContain('site-header')
+    }
+  })
+
+  for (const from of CORNERS) {
+    for (const to of CORNERS) {
+      if (from === to) continue
+      it(`${from} links to ${to} from inside its own body`, () => {
+        expect(linksTo(from, to)).toBe(true)
+      })
+    }
+  }
+
+  for (const corner of CORNERS) {
+    it(`${corner} links to the requirement form from inside its own body`, () => {
+      expect(mainByRoute.get(corner)).toContain(requirementForm)
+    })
+  }
+
+  it('a corner that dropped an edge would be caught (the matcher is not always true)', () => {
+    // The matcher must be able to say no. /pricing does not link to
+    // /contact from its body — nothing on this site does except the footer,
+    // which is exactly what mainOf() excludes.
+    expect(linksTo('/pricing', '/contact')).toBe(false)
+  })
+})
+
 // --- conditional-block content-cache guard ------------------------------
 //
 // Task 17 audit found that `node_modules/.astro/data-store.json` — Astro's
@@ -259,14 +342,24 @@ describe('internal link resolution', () => {
 //
 // --- Task 5B, G-4 ------------------------------------------------------
 //
-// THE PAGE. Every check here read `dist/index.html` BY NAME. MeetHelpers
-// moves to /find-your-helper and Reviews to /why-directhired in Phase B,
-// and on the day they do this guard goes on inspecting a page that no
-// longer renders either of them — green, watching nothing, guarding a
-// defect that actually shipped once. So the two class-string checks now
-// run over EVERY built page, derived from dist/ the way every other
-// page-scoped guard in this suite is. Same assertions, wider corpus:
-// strictly stronger, and nothing was removed to make room.
+// THE PAGE. Every check here read `dist/index.html` BY NAME, so it covered
+// the homepage and nothing else — green on any other page, watching
+// nothing, guarding a defect that actually shipped once. So the two
+// class-string checks now run over EVERY built page, derived from dist/ the
+// way every other page-scoped guard in this suite is. Same assertions,
+// wider corpus: strictly stronger, and nothing was removed to make room.
+//
+// THIS PARAGRAPH USED TO JUSTIFY ITSELF WITH A PREDICTION, AND THE
+// PREDICTION WAS WRONG. It said "MeetHelpers moves to /find-your-helper and
+// Reviews to /why-directhired in Phase B, and on the day they do…". Phase B
+// shipped all six pages; both components stayed on the homepage, and
+// src/pages/index.astro is still the only file that renders either. Task 11
+// corrected the wording rather than the code, because nothing depends on
+// the prediction: the guard was generalised to every page in dist/, so it
+// covers both components wherever they are rendered and would cover them if
+// they moved tomorrow. A comment that says WHY a check is general is worth
+// keeping; one that dates it to a move that never happened teaches the next
+// reader that the file is describing a site that does not exist.
 //
 // THE NAMES. The coupling warning above turned out to be describing
 // something that had already happened. `class="review-card"` and
@@ -410,8 +503,10 @@ describe('conditional block content-cache guard', () => {
      * dist/index.html. This is the check that would have caught the
      * fabricated "Test Helper" profile a stale
      * node_modules/.astro/data-store.json rendered into the homepage with
-     * every test green — and it keeps catching it after Phase B moves
-     * MeetHelpers to /find-your-helper and Reviews to /why-directhired.
+     * every test green — and it keeps catching it wherever the two
+     * components are rendered. Both are on the homepage today and Phase B
+     * did not move either, which is exactly why the guard is derived from
+     * dist/ rather than pointed at a page: it does not need to know.
      *
      * Both halves matter. The <section> class catches the block shipping
      * whole; the distinctive child classes catch a fragment of it shipping
