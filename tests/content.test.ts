@@ -30,12 +30,41 @@ function walk(dir: string): string[] {
 }
 
 /**
+ * An .astro file with its scoped stylesheet removed, then its comments.
+ *
+ * FIX ROUND, F-2. renderedCopy() read each .astro whole, so a `<style>`
+ * block was swept as though it were visitor copy — and CSS is full of
+ * place names. `font-family: Georgia, serif` fired the source allowlist
+ * naming the file, and that exact font stack is what this repo's own
+ * foundation plan proposes (docs/superpowers/plans/
+ * 2026-08-15-directhired-foundation-homepage.md). `background: peru` does
+ * the same; `peru` is a CSS named colour. Nobody reads a stylesheet, so
+ * neither is a claim about where a helper comes from.
+ *
+ * That is the failure mode tests/support/helper-sources.ts's docblock
+ * names as the one that matters: a guard that fires on legitimate work
+ * gets loosened by whoever meets it rather than fixed.
+ *
+ * Only the stylesheet goes. The TEMPLATE is exactly what these sweeps must
+ * keep reading, and the frontmatter with it — copy typed into either is a
+ * violation whether or not the page is built today, which is the entire
+ * reason renderedCopy() exists. Same removal, for the same reason, as
+ * tests/pages.test.ts's renderedText() makes on the built HTML.
+ *
+ * Removed BEFORE comments, so a CSS block comment inside <style> cannot
+ * dissolve the closing tag this depends on.
+ */
+function template(source: string): string {
+  return code(source.replace(/<style[\s\S]*?<\/style>/gi, ' '))
+}
+
+/**
  * Everything a visitor can actually read: the content collections verbatim,
- * plus the comment-free source of every file that renders markup. Data and
- * lib files are deliberately NOT included — src/data/company.ts's
- * `address.country: 'SG'` and structured-data.ts's `areaServed: Country`
- * are the business's own Singapore address, which is a country, and
- * neither is prose about a helper source.
+ * plus the comment-free, stylesheet-free source of every file that renders
+ * markup. Data and lib files are deliberately NOT included —
+ * src/data/company.ts's `address.country: 'SG'` and structured-data.ts's
+ * `areaServed: Country` are the business's own Singapore address, which is
+ * a country, and neither is prose about a helper source.
  */
 function renderedCopy(): { file: string; text: string }[] {
   const markdown = walk('src/content')
@@ -45,7 +74,7 @@ function renderedCopy(): { file: string; text: string }[] {
   const markup = ['src/sections', 'src/components', 'src/layouts', 'src/pages']
     .flatMap(walk)
     .filter((f) => f.endsWith('.astro'))
-    .map((file) => ({ file, text: code(readFileSync(file, 'utf8')) }))
+    .map((file) => ({ file, text: template(readFileSync(file, 'utf8')) }))
 
   return [...markdown, ...markup]
 }
@@ -199,6 +228,37 @@ describe('the site never calls Mizoram a country', () => {
     expect(copy.map((c) => c.file)).toContain('src/sections/HelperSources.astro')
     expect(all).toContain('Mizoram')
     expect(all).toContain('The source is the only difference')
+  })
+
+  it('reads the template and the frontmatter, and not the scoped CSS (F-2)', () => {
+    /*
+     * The two directions of what these sweeps are allowed to see, asserted
+     * together so neither can be traded for the other.
+     *
+     * CSS OUT. `font-family: Georgia, serif` and `background: peru` are a
+     * font stack and a named colour, not statements about a helper source,
+     * and both fired the allowlist while <style> was swept. Checked over
+     * every markup file rather than one, and paired with a raw-source
+     * reading, so this cannot go green because the declaration was deleted
+     * from the site instead of stripped from the sweep.
+     *
+     * TEMPLATE AND FRONTMATTER IN. The narrowing must stop at </style>.
+     * HelperSources.astro is the file to prove it on: it has a scoped
+     * stylesheet AND the one sentence tests above depend on, and its
+     * frontmatter is where a source name would be typed as data.
+     */
+    const markup = copy.filter((c) => c.file.endsWith('.astro'))
+    expect(markup.length).toBeGreaterThanOrEqual(20)
+
+    const raw = markup.filter((c) => /font-family:/.test(readFileSync(c.file, 'utf8')))
+    expect(raw.length, 'no .astro file declares a font-family to strip').toBeGreaterThan(10)
+    expect(markup.filter((c) => /font-family:/.test(c.text)).map((c) => c.file)).toEqual([])
+
+    const block = markup.find((c) => c.file === 'src/sections/HelperSources.astro')!
+    expect(block).toBeDefined()
+    expect(block.text).toContain('The source is the only difference') // template
+    expect(block.text).toContain('helperSources') // frontmatter
+    expect(block.text).not.toContain('font-family')
   })
 
   it('says "source", never "country", of where a helper comes from', () => {
