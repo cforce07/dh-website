@@ -307,13 +307,88 @@ describe('the placement count is published that way on EVERY surface', () => {
     expect(offenders).toEqual([])
   })
 
+  /**
+   * A count of placements, helpers, families, clients or customers, typed as
+   * a literal.
+   *
+   * THE OLD PATTERN REQUIRED THE `+` ADJACENT TO THE NOUN — it was
+   * `/\b\d[\d,]*\+\s*(?:placement|helper|famil|client|customer)/i` — so it
+   * caught "500+ placements" and nothing else. Every one of these walked
+   * straight through it:
+   *
+   *   "over 500 placements"            no plus at all
+   *   "more than 500 families served"  no plus, and two words in between
+   *   "500 helpers placed"             no plus
+   *
+   * The `+` is not the fact. Master brief §68's rule is about publishing a
+   * COUNT without the period and scope it was measured over, and a count
+   * loses its plus before it loses anything else — "over 500" is what a
+   * writer reaches for when the plus reads as clumsy. Worse, dropping the
+   * plus changes the claim: "500+" is a floor, "500" is a figure, and the
+   * count came down from "1,000+" once already, so a literal typed into a
+   * page is exactly how a revision half-lands.
+   *
+   * SO THE PLUS IS OPTIONAL and up to two words may sit between the number
+   * and the noun. Two constraints keep it from crying wolf, and both were
+   * measured against the real corpus rather than guessed:
+   *
+   *   AT LEAST TWO DIGITS. "1 replacement within 6 months" is published copy
+   *   and "1 replacement" is not a count of placements. Requiring two digits
+   *   drops every single-digit quantity on the site.
+   *
+   *   THE NOUN IS PLURAL OR A COUNT NOUN. "The two packages differ by $500 —
+   *   the agent fee" is published on /pricing and must not fire; it does not,
+   *   because no count noun follows.
+   *
+   * Swept over the whole authored corpus when it was written: ZERO matches,
+   * which is the correct answer — every surface reads company.placementCount.
+   */
+  const COUNT_LITERAL =
+    /\b\d{2,}[\d,]*\s*\+?(?:\s+[a-z]+){0,2}\s+(?:placements?|helpers?|families|clients?|customers?)\b/i
+
+  it('the count pattern catches a figure typed without its plus', () => {
+    /*
+     * Fixtures first, because the sweep below is a negative over a corpus
+     * that contains none of these — a pattern that had quietly stopped
+     * matching would report nothing forever. The first three are the exact
+     * forms the old pattern let through.
+     */
+    for (const retype of [
+      'over 500 placements',
+      'more than 500 families served',
+      '500 helpers placed',
+      '500+ placements',
+      '1,000+ placements',
+      'We have completed 500 successful placements',
+    ]) {
+      expect(COUNT_LITERAL.test(retype), `not caught: ${retype}`).toBe(true)
+    }
+  })
+
+  it('the count pattern does not fire on the numbers the site legitimately publishes', () => {
+    // Every one of these is real published copy. A guard that failed them is
+    // a guard the next person loosens.
+    for (const published of [
+      '1 replacement within 6 months',
+      'The fly-in package with replacement ($1,640.10) covers',
+      'approximately 2 weeks after confirmation',
+      'an annual claim limit of at least $60,000 per year',
+      'We aim to respond within 1 business day',
+      'The two packages differ by $500 — the agent fee',
+      'Medical checkup — $60',
+      'placements across all services since 2022',
+    ]) {
+      expect(COUNT_LITERAL.test(published), `false positive: ${published}`).toBe(false)
+    }
+  })
+
   it('no authored surface retypes the figure', () => {
     // The two-file version of this rule, widened to every surface. The
     // number is revisable — it came down from "1,000+" once already — and a
     // literal typed into a page is how a revision half-lands.
     const offenders = authoredSurfaces()
-      .filter(({ text }) => /\b\d[\d,]*\+\s*(?:placement|helper|famil|client|customer)/i.test(text))
-      .map(({ file }) => file)
+      .filter(({ text }) => COUNT_LITERAL.test(text))
+      .map(({ file, text }) => `${file}: "${text.match(COUNT_LITERAL)![0]}"`)
     expect(offenders).toEqual([])
   })
 })
