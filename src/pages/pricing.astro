@@ -156,13 +156,20 @@ const description =
           these same two cards under "Transparent Pricing. No Guesswork."
           with a near-identical lede. A visitor arriving from there met the
           same sentence twice with a hero in between. What this page does
-          that the homepage block does not is the replacement terms in full
-          and the two amounts outside the totals, so the lede points at
-          those. No new fact: both are already on the page below.
+          that the homepage block does not is the replacement terms and the
+          two amounts outside the totals, so the lede points at those. No
+          new fact: both are already on the page below.
+
+          IT SAID "the replacement terms IN FULL" until the whole-branch
+          review. Nothing authorises a completeness claim about the
+          replacement terms — see the long note on the SectionHeader in
+          ReplacementTerms.astro, which carried the same assertion and lost
+          it for the same reason. Naming the subject is fine; promising it
+          is exhaustive is not, in either direction.
         */}
         <p class="page-lede">
           Both fly-in packages for a domestic helper in Singapore, itemised line by line — plus the
-          replacement terms in full, and the two amounts that sit outside either total.
+          replacement terms and the two amounts that sit outside either total.
         </p>
       </div>
 
@@ -201,10 +208,20 @@ const description =
           {comparisonSentence} The replacement is one replacement helper, requested within 6 months
           of the deployment date, and the {withoutReplacement.name} package does not include it.
         </p>
+        {/*
+          "explained IN FULL further down this page" until the whole-branch
+          review — the third completeness claim on this page, and the only
+          one found by sweeping for the pattern W-1 named rather than by
+          being told about it. It was the worst-placed of the three: the
+          section it points at deliberately withholds the repayment
+          mechanics pending DirectHired's compliance sign-off, so "in full"
+          was a promise the very next section is built not to keep.
+          PricingSection.astro's header already forbids the phrase by name.
+        */}
         <p>
           Two further amounts — the helper’s loan and the placement fee — sit outside both totals.
           They are not an extra charge you carry: you advance them and recover them, and they are
-          explained in full further down this page.
+          explained further down this page.
         </p>
       </div>
 
@@ -252,7 +269,16 @@ const description =
     surface="pricing"
     limit={6}
     heading="Questions about what it costs"
-    lede="The ones families ask us most often once they have seen the figures above."
+    {/*
+      The lede read "The ones families ask us most often once they have seen
+      the figures above." Nothing in the brief supports a claim about what
+      families ask most often — and the comment directly above this one
+      records the opposite, since "what do families ask you AFTER you send
+      them the price list?" is an open question to DirectHired. The page was
+      asserting the answer to a question it was simultaneously recording as
+      unanswered.
+    */}
+    lede="A few more questions about the figures above."
   />
 
   <FinalCta

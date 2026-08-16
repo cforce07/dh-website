@@ -50,9 +50,16 @@ import { company } from '../data/company'
 
 <section class="loan-placement">
   <Container>
+    {/*
+      "They are the ones most often misunderstood" is gone. It was a claim
+      about what DirectHired's customers misunderstand and no source
+      supplies it — the same unverifiable-behaviour class as the FAQ lede on
+      /pricing, and as the claim already cut from an FAQ entry. What is left
+      says only what the section does, which needs no authority.
+    */}
     <SectionHeader
       title="The loan and the placement fee"
-      lede="Two amounts sit outside the package totals above. They are the ones most often misunderstood, so here is what they are and who ends up paying them."
+      lede="Two amounts sit outside the package totals above. Here is what they are and who ends up paying them."
     />
 
     <div class="loan-grid">
@@ -80,11 +87,28 @@ import { company } from '../data/company'
               sentence on this page that offered no way to ask for it. It is
               now the link, pointed at the same single-sourced destination as
               every primary CTA on the site — company.requirementFormUrl,
-              never a literal (tests/links.test.ts). The wording is unchanged.
+              never a literal (tests/links.test.ts).
+
+              "…BEFORE YOU COMMIT TO ANYTHING" IS DELETED, and must not come
+              back. It is an unauthorised process promise — zero hits in the
+              master brief — and commit ff4d631 formally removed that exact
+              phrase from src/content/faq/helper-loan-placement-fee.md on
+              those grounds. Commit be9dfea had already copied it into this
+              file, so the ruling took it out of the FAQ while it survived
+              here, and the /pricing CTA work then attached it to the
+              requirement-form link: the promise ended up sitting on the
+              conversion path, which is the worst place for it. Its entry in
+              COPY_THAT_MUST_NOT_BE_CAUGHT (tests/compliance-gate.test.ts)
+              went with it — that list was asserting it as approved copy.
+
+              For anyone reading the live audit's C4, which proposes asking
+              DirectHired to approve a sentence containing "before you
+              commit": that request is still open and still correct. It is
+              not satisfied by this clause, which was never approved.
             */}
             <a href={company.requirementFormUrl}
               >Our team goes through the exact amount for the helper you choose</a
-            > before you commit to anything.
+            >.
           </p>
         </div>
       </Card>

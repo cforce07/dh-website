@@ -360,7 +360,24 @@ const COPY_THAT_MUST_NOT_BE_CAUGHT = [
   'Our agent fee is not charged again.',
   'The third-party components are paid a second time for the new helper: MOM, Insurance, SIP, Medical and Handling & transport.',
   'Both packages cover the same components at the same amounts.',
-  'Our team goes through the exact amount for the helper you choose before you commit to anything.',
+  /*
+   * REMOVED, and the removal is the point.
+   *
+   * This list previously ended with "Our team goes through the exact amount
+   * for the helper you choose BEFORE YOU COMMIT TO ANYTHING." That clause is
+   * an unauthorised process promise — zero hits in the master brief — and
+   * commit ff4d631 had already struck the identical phrase from
+   * src/content/faq/helper-loan-placement-fee.md on exactly those grounds.
+   * It survived in LoanAndPlacement.astro because it had been copied there
+   * first (be9dfea), and this fixture then recorded it as copy the plan
+   * "explicitly clears for publication", which nothing ever did.
+   *
+   * That is a worse failure than the clause itself: a compliance suite that
+   * lists unauthorised copy as approved will defend it against the next
+   * reviewer. What survives here is the trimmed sentence that actually
+   * ships, which is what this list is for.
+   */
+  'Our team goes through the exact amount for the helper you choose.',
 ]
 
 /** Every pattern label that fires on a string. */
