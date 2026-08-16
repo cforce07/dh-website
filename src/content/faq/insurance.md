@@ -5,6 +5,8 @@ category: cost
 order: 40
 ---
 
-Yes. Insurance is one of the components included in our fly-in package. DirectHired arranges this coverage as part of your placement and coordinates it on your behalf, alongside the rest of the process.
+Yes. DirectHired arranges the helper’s insurance as part of your placement, so it is not cover you have to go and source yourself.
 
-It is listed as its own line in the package breakdown, so you can see exactly what it costs — see our [Pricing](/pricing) page. If you request a replacement helper, insurance is one of the components paid again for the new helper.
+It sits inside the fly-in package rather than beside it — insurance is one of the package’s own line items, and you can see what it costs on our [Pricing](/pricing) page.
+
+What this answer does not tell you is what the policy covers: what is insured, to what limit, and on what conditions. Those are terms of the policy rather than of the package, and this site does not set them out.

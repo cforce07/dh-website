@@ -5,6 +5,6 @@ category: process
 order: 100
 ---
 
-Yes. The medical examination is one of the components included in our fly-in package. DirectHired arranges it for you, coordinated alongside the rest of your placement — one less step for you to organise.
+Yes. DirectHired arranges the medical examination and coordinates it with the rest of your placement — one less step for you to organise.
 
-It is listed as its own line in the package breakdown on our [Pricing](/pricing) page. If you request a replacement helper, the medical is one of the components paid again for the new helper.
+Like the insurance, it is one of the components inside the fly-in package rather than a separate bill, and it is listed on our [Pricing](/pricing) page.
