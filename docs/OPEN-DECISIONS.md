@@ -50,15 +50,18 @@ something you never said.
 
 ---
 
-## Facts to confirm in writing
+## Facts you confirmed on 2026-08-16 — nothing outstanding
 
-Neither blocks anything today; both are published on `/about` and both are
-values only you can vouch for.
+Both were open questions in this file until 2026-08-16. **You answered both, and
+both are now published on `/about`.** They are kept here, resolved, rather than
+deleted: they are the two values on the site that rest on your word alone, and a
+reader who wants to know how much checking sits behind a legal name should find
+the answer where the question was asked.
 
-| | What's published | What we need |
+| | What's published | Status |
 |---|---|---|
-| **Your registered entity name** | **DIRECT HIRED PTE. LTD.**, in the record block on `/about` — the one credential on the site that names the legal company behind the brand | **Confirmation of the exact registered form**, capitalisation and punctuation included. The name is corroborated by a public search against licence 23C1443, but nobody here has read it off MOM's own directory entry, and a misstated legal name on a licensed agency's website is the kind of error a regulator notices before a customer does. Your master brief never supplied it |
-| **Your UEN** | Nothing. It is not on the site | **The number, if you want it published.** A UEN is the usual companion to a registered name on a Singapore About page. We have never been given one and will not derive one from the licence number |
+| **Your registered entity name** | **DIRECT HIRED PTE. LTD.**, in the record block on `/about` — the one credential on the site that names the legal company behind the brand | **Answered 2026-08-16 — resolved.** You confirmed the exact form, full stops and capitalisation as written. Recorded as core-pages spec §2.6.8. It is your word, and that is the whole of its authority: we tried to check it and could not. A public search returns the *unpunctuated* "Direct Hired Pte Ltd" against licence 23C1443, which corroborates the words and not the punctuation, and MOM's own directory is a JavaScript application we cannot fetch. Your master brief never supplied the name — it came to us with the licence number, and it is now confirmed by you directly |
+| **Your UEN** | **202240964Z**, as a row in the same record block on `/about` | **Answered 2026-08-16 — resolved.** You supplied the number and it is published. Same standing as the name above: your word, unverified by us. The format is consistent with a company incorporated here in 2022, which is a sanity check and not a confirmation — a search for the number returned nothing, and the registry we would have read it from is the same one we cannot fetch. Nothing was derived from the licence number |
 
 ---
 

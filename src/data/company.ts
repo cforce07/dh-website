@@ -40,24 +40,39 @@ export const company = {
   // and verify it against the official MOM source before publication.
   momLicence: '23C1443',
 
-  // The registered entity the licence above is held in — supplied with that
-  // licence for /about, which master brief §45 requires to be about the
-  // COMPANY rather than a personal-founder brand. It is the one credential
-  // on that page that names the legal person a family is actually dealing
-  // with, and it appears nowhere else on the site.
+  // The registered entity the licence above is held in, and the company's
+  // UEN. Both belong to /about, which master brief §45 requires to be about
+  // the COMPANY rather than a personal-founder brand: together they name the
+  // legal person a family is actually dealing with, and they appear nowhere
+  // else on the site.
   //
-  // MASTER BRIEF §70'S RULE FOR THE LICENCE NUMBER APPLIES TO THIS WITH IT:
-  // never invent, modify, guess or substitute it, and verify it against the
-  // official MOM source before publication. Half-verified today — a public
-  // search returns "Direct Hired Pte Ltd" against licence 23C1443, which
-  // corroborates the NAME, but MOM's own directory entry was not reachable
-  // from this environment, so the exact registered FORM (capitalisation, and
-  // the two full stops) rests on the value as supplied. DirectHired is asked
-  // to confirm it in docs/OPEN-DECISIONS.md.
+  // MASTER BRIEF §70'S RULE FOR THE LICENCE NUMBER APPLIES TO BOTH OF THESE
+  // WITH IT: never invent, modify, guess or substitute either value.
   //
-  // No UEN. Nobody has supplied one, and a company registration number is
-  // not a thing to derive from a licence number.
+  // BOTH ARE CLIENT-SUPPLIED FACTS. NEITHER IS INDEPENDENTLY VERIFIED, and
+  // that distinction is the whole point of this paragraph. DirectHired
+  // confirmed on 2026-08-16 (core-pages spec §2.6.8 and §2.6.9) that the
+  // registered name is exactly `DIRECT HIRED PTE. LTD.` — full stops and
+  // capitalisation as written — and that the UEN is `202240964Z`. They carry
+  // the same authority as every other fact in spec §2: DirectHired's word,
+  // no more and no less.
+  //
+  // VERIFICATION WAS ATTEMPTED AND IT FAILED, on 2026-08-16 and again on
+  // 2026-08-15 for the name. A web search for the entity and for the UEN
+  // returned nothing usable, and MOM's employment-agency directory is a
+  // JavaScript application that cannot be fetched from this environment. An
+  // earlier public search returned the UNPUNCTUATED form "Direct Hired Pte
+  // Ltd" against licence 23C1443, which corroborates the words and says
+  // nothing about the punctuation. Nobody in this repository has read either
+  // value off a register.
+  //
+  // The UEN's FORMAT is consistent with the rest of this file — YYYY plus
+  // five digits plus a check letter is the shape a local company
+  // incorporated in 2022 gets, and foundedYear above is 2022. A format that
+  // parses is not a registry entry that was read, and this note is not a
+  // verification.
   registeredName: 'DIRECT HIRED PTE. LTD.',
+  uen: '202240964Z',
 
   // The form is built but not yet wired to the production domain.
   // This is the ONLY definition of the destination. Repoint here at launch.

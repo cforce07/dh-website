@@ -70,7 +70,7 @@ Current site copy says these fees "may apply", which reads as a cost the employe
 
 ### 2.6 Supplied 2026-08-16 (second round)
 
-Five questions put to DirectHired in `docs/OPEN-DECISIONS.md`, answered the same day, plus **2.6.6** and **2.6.7** — two further questions raised by the `/why-directhired` review and answered by DirectHired on 2026-08-16. Same rule as the rest of §2: nothing here may be extended, rounded or inferred beyond what is written.
+Five questions put to DirectHired in `docs/OPEN-DECISIONS.md`, answered the same day, plus **2.6.6** and **2.6.7** — two further questions raised by the `/why-directhired` review and answered by DirectHired on 2026-08-16 — plus **2.6.8** and **2.6.9**, the two `docs/OPEN-DECISIONS.md` "facts to confirm in writing" raised by `/about`, answered by DirectHired on 2026-08-16. Same rule as the rest of §2: nothing here may be extended, rounded or inferred beyond what is written.
 
 - **2.6.1 — The replacement terms are complete.** Asked "are those five facts the whole of your replacement terms?", DirectHired answered **yes**. §2.1's five facts are therefore the whole of the replacement terms, and that is now a supplied fact rather than an inference.
 
@@ -97,6 +97,14 @@ Five questions put to DirectHired in `docs/OPEN-DECISIONS.md`, answered the same
   **This is the record, so that it is not re-litigated by whoever reads §40 next.** It also cuts the other way and is written down for that reason: **if a browse or matching surface is ever built, these two pages argue against it on the record** and both must be rewritten in the same change — a gallery shipping under copy that calls a gallery the thing DirectHired was started to stop doing is worse than either alone. Whoever builds it inherits that as work, not as a surprise.
 
 - **2.6.7 — The "not asked to put your family into a category" clause is deleted.** *Answered 2026-08-16.* `/why-directhired`'s Personalised Service pillar claimed *"…you are not asked to put your family into a category before anyone has spoken to you."* That is a claim about the legacy employer-requirement form (§2.6.5) — outside this project, unseen by anyone in this repository, behind a URL that 404s today, and one click from this page's primary CTA. **DirectHired chose to delete it** rather than defend it. It is gone from the page; `src/pages/why-directhired.astro` records the exact wording and the one condition for restoring it — written confirmation of what fields that form asks for.
+
+- **2.6.8 — The registered entity name is exactly `DIRECT HIRED PTE. LTD.`** *Answered 2026-08-16.* Full stops and capitalisation as written. DirectHired confirmed the form directly, closing the `docs/OPEN-DECISIONS.md` item that asked for it. `/about` already published this string; what changes is its standing — it was an uncorroborated punctuation resting on a supplied value, and it is now a confirmed client fact.
+
+  **It is a CLIENT-SUPPLIED fact, not a verified one, and §2's rule is the whole of its authority.** Verification was attempted on 2026-08-16 and failed: a web search for the entity returned nothing usable, and MOM's employment-agency directory is a JavaScript application that cannot be fetched from this environment. An earlier public search returned the *unpunctuated* form "Direct Hired Pte Ltd" against licence 23C1443, which corroborates the words and says nothing about the punctuation. Nobody in this repository has read the name off a register. `src/data/company.ts` records that attempt and its failure at the value.
+
+- **2.6.9 — The UEN is `202240964Z`.** *Answered 2026-08-16.* DirectHired supplied it in answer to the `docs/OPEN-DECISIONS.md` question that asked for the number "if you want it published". It ships as a row in `/about`'s record block, single-sourced from `src/data/company.ts` like every other value there.
+
+  **Same standing as 2.6.8: client-supplied, not verified.** A web search for the number returned nothing, and the MOM directory is unreachable for the same reason. The *format* is consistent with the rest of §2 — YYYY plus five digits plus a check letter is the shape a local company incorporated in 2022 gets, and "since 2022" is §2's founding year — but a format that parses is not a registry entry that was read, and that consistency is recorded as a sanity check rather than as corroboration.
 
 ---
 

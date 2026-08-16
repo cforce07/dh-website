@@ -313,6 +313,22 @@ const description =
           <dd class="record-note">The company the DirectHired name belongs to.</dd>
         </div>
 
+        {/*
+          THE UEN, supplied by DirectHired on 2026-08-16 (spec §2.6.9) and
+          published because a UEN is the usual companion to a registered
+          name on a Singapore About page: it is the handle a family or a
+          regulator looks the company up BY, where the name is only what
+          they read back. Read from company.ts like every other value here —
+          see that file's docblock for what is and is not verified about it.
+        */}
+        <div class="record-row">
+          <dt>UEN</dt>
+          <dd class="record-value">{company.uen}</dd>
+          <dd class="record-note">
+            The company’s Unique Entity Number, as issued on incorporation in Singapore.
+          </dd>
+        </div>
+
         <div class="record-row">
           <dt>MOM licence</dt>
           <dd class="record-value">{company.momLicence}</dd>

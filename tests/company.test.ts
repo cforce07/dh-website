@@ -22,8 +22,31 @@ describe('company data', () => {
     // licence. Pinning it here means a stray edit to src/data/company.ts —
     // the one file the "never retyped" sweep below deliberately exempts —
     // still has to be a deliberate change to two files.
+    //
+    // The UEN joins them: DirectHired supplied it on 2026-08-16 (spec
+    // §2.6.9), it is published on /about, and nobody in this repository has
+    // read it off a register. A value that rests on the client's word alone
+    // is exactly the kind that must not drift by a keystroke.
     expect(company.momLicence).toBe('23C1443')
     expect(company.registeredName).toBe('DIRECT HIRED PTE. LTD.')
+    expect(company.uen).toBe('202240964Z')
+  })
+
+  it('states a UEN in the shape a Singapore registry issues', () => {
+    /*
+     * NOT A VERIFICATION, and the name of this test says so. Nobody here has
+     * read this number off ACRA or MOM — see src/data/company.ts's docblock
+     * for the attempt and its failure. What this asserts is the one property
+     * that CAN be checked from inside the repository: that the published
+     * value still parses as a UEN, and that its year half still agrees with
+     * the founding year published two rows above it on the same page.
+     *
+     * It exists because a typo in a nine-character identifier is invisible
+     * to every other assertion in this file, and because the year is the one
+     * part of a UEN that can be cross-checked against another supplied fact.
+     */
+    expect(company.uen).toMatch(/^\d{4}\d{5}[A-Z]$/)
+    expect(Number(company.uen.slice(0, 4))).toBe(company.foundedYear)
   })
 
   it('exposes exactly one requirement-form URL', () => {
@@ -229,7 +252,7 @@ describe('the placement count is published that way on EVERY surface', () => {
   })
 })
 
-describe('the licence number and the registered entity are never retyped', () => {
+describe('the licence number, the registered entity and the UEN are never retyped', () => {
   /*
    * Task 8. The placement count has had a "never retyped" sweep since G-2,
    * for a good reason: it was revised once and a literal on a page is how a
@@ -247,6 +270,10 @@ describe('the licence number and the registered entity are never retyped', () =>
    * The registered entity joins it because /about publishes it and because
    * it has the same property: one authoritative source, no reason for a
    * second copy, and a typo in it is a misstatement about a legal person.
+   * THE UEN JOINS THEM BOTH (2026-08-16, spec §2.6.9) for the same reason
+   * and one more: it is the handle a family or a regulator looks the company
+   * up BY, so a second copy that drifts by one character does not merely
+   * misstate the company, it points at a different one or at nothing.
    *
    * src/data/company.ts is the single definition, and it is excluded by not
    * being walked at all rather than by a filter: this sweep reads the four
@@ -298,19 +325,28 @@ describe('the licence number and the registered entity are never retyped', () =>
     expect(files).toContain('src/pages/why-directhired.astro')
   })
 
-  it('both values really are published (the checks below have a subject)', () => {
+  it('all three values really are published (the checks below have a subject)', () => {
     // A guard against retyping a value nothing prints would be green
     // forever and mean nothing. The trust bar carries the licence on every
-    // page; the registered entity is published by /about alone, which is
-    // also the assertion that catches that page silently dropping it.
+    // page; the registered entity and the UEN are published by /about alone,
+    // which is also the assertion that catches that page silently dropping
+    // either of them.
     const pages = builtPages()
     expect(pages.some((p) => p.text.includes(company.momLicence))).toBe(true)
     expect(pages.some((p) => p.text.includes(company.registeredName))).toBe(true)
+    expect(pages.some((p) => p.text.includes(company.uen))).toBe(true)
   })
 
   it('no authored surface types the licence number as a literal', () => {
     const offenders = authoredSurfaces()
       .filter(({ text }) => text.includes(company.momLicence))
+      .map(({ file }) => file)
+    expect(offenders).toEqual([])
+  })
+
+  it('no authored surface types the UEN as a literal', () => {
+    const offenders = authoredSurfaces()
+      .filter(({ text }) => text.includes(company.uen))
       .map(({ file }) => file)
     expect(offenders).toEqual([])
   })
