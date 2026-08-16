@@ -5,23 +5,23 @@ export default getViteConfig({
     include: ['tests/**/*.test.ts'],
     environment: 'node',
     /*
-     * Test FILES run one at a time, never in parallel.
+     * ONE build, before anything is collected. See tests/global-setup.ts for
+     * the full reasoning.
      *
-     * Two suites — tests/links.test.ts and tests/compliance-gate.test.ts —
-     * assert against the real build output, and each runs
-     * `npm run build:dev` in its own `beforeAll`. Both write to the same
-     * `dist/`. Run in parallel (vitest's default), the second build wipes
-     * and re-creates the directory the first one is mid-way through
-     * emitting, and the losing suite dies on an ENOENT inside Astro's own
-     * writer. That is a race, not a flake: it surfaced the moment a second
-     * build-driven suite existed, and it would come back for the third.
+     * This replaces `fileParallelism: false`, which was here because two
+     * suites each ran `npm run build:dev` in their own `beforeAll` and both
+     * wrote to the same `dist/` — run in parallel, the second build wiped
+     * the directory the first was mid-way through emitting and the losing
+     * suite died on an ENOENT inside Astro's own writer. That comment
+     * promised a shared globalSetup "when a third suite needs dist/".
+     * tests/pages.test.ts is the third, so the promise is kept rather than
+     * restated.
      *
-     * The alternative — a shared globalSetup that builds once — is the
-     * better long-term shape, and is worth doing when a third suite needs
-     * dist/. It is not done here because it would move the build out of
-     * two suites this task does not own. Serialising costs one extra
-     * ~2.5s build on a suite that runs in well under a minute.
+     * With the build hoisted here, no test process writes to dist/ at all —
+     * they only read it — so the race the flag suppressed no longer exists
+     * and file parallelism is back at vitest's default. Measured: 18.0s
+     * before, 9.6s after, on the same 15 files.
      */
-    fileParallelism: false,
+    globalSetup: ['./tests/global-setup.ts'],
   },
 })

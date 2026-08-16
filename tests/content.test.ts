@@ -363,6 +363,148 @@ describe('faq pricing figures stay in sync with pricing.ts', () => {
     // Guards against the pattern silently matching nothing (a vacuous pass).
     // 2 totals in cost.md + 1 total + 6 line items + 1 total in
     // fly-in-package.md = 10 figures currently published.
+    //
+    // Task 5 (core-pages) left this at 10 deliberately: it authored no FAQ
+    // content and changed no figure, so the number it describes has not
+    // moved. Changing it would only have hidden that.
     expect(matchCount).toBe(10)
+  })
+
+  // --- extended to /pricing (design spec §5.3) -------------------------
+  //
+  // "That page repeats figures in prose, which is exactly where a stale
+  // number hides." So the same rule now runs against the BUILT page, not
+  // just the FAQ markdown: every dollar figure a visitor can read on
+  // /pricing must be a real amount from pricing.ts.
+  //
+  // Two amounts on that page are not from pricing.ts and must not be: the
+  // loan carry-forward worked sum in ReplacementTerms.astro is illustrative
+  // by design (spec §2.3 forbids publishing any loan figure or range), so
+  // its three values are read from that file's own constants rather than
+  // exempted by pattern. If someone edits the example, this stays correct;
+  // if someone types a fourth figure into the prose beside it, this fails.
+
+  /** The illustrative carry-forward amounts, read from their definitions. */
+  function illustrativeAmounts(): string[] {
+    const source = readFileSync('src/sections/ReplacementTerms.astro', 'utf8')
+    const read = (name: string): number => {
+      const match = source.match(new RegExp(`${name}\\s*=\\s*([\\d_]+)`))
+      if (!match) throw new Error(`ReplacementTerms.astro no longer defines ${name}`)
+      return Number(match[1].replace(/_/g, ''))
+    }
+    const newLoan = read('EXAMPLE_NEW_LOAN_CENTS')
+    const outstanding = read('EXAMPLE_OUTSTANDING_CENTS')
+    return [newLoan, outstanding, newLoan - outstanding].map(formatSgd)
+  }
+
+  it('reads the illustrative example from its source constants (sanity check)', () => {
+    // A broken read would silently widen — or empty — the allowlist below.
+    const amounts = illustrativeAmounts()
+    expect(amounts).toHaveLength(3)
+    expect(amounts.every((a) => /^\$[\d,]+\.\d{2}$/.test(a))).toBe(true)
+    // The example is a subtraction; if it ever stops being one, the copy
+    // around it ("that balance is subtracted from what you advance") is
+    // wrong and somebody must look.
+    const [a, b, c] = amounts.map((s) => Number(s.replace(/[$,]/g, '')))
+    expect(a - b).toBeCloseTo(c, 2)
+  })
+
+  it('every dollar figure on the built /pricing page is a real amount', () => {
+    const html = readFileSync('dist/pricing/index.html', 'utf8')
+    const text = html
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+
+    /*
+     * The gap between the two package totals — "the one line that differs
+     * is our agent fee, a gap of $500.00". Derived from the same totals the
+     * cards print, exactly as src/pages/pricing.astro derives it, so a
+     * price change moves both together and neither can go stale against the
+     * other. Every ordered pair, because nothing here should depend on
+     * which package is listed first.
+     */
+    const totals = packages.map(packageTotalCents)
+    const differences = totals.flatMap((a) =>
+      totals.filter((b) => b < a).map((b) => formatSgd(a - b)),
+    )
+
+    const allowed = new Set([...validAmounts, ...differences, ...illustrativeAmounts()])
+    const found = text.match(dollarPattern) ?? []
+
+    const strays = [...new Set(found)].filter((amount) => !allowed.has(amount))
+    expect(strays).toEqual([])
+
+    // Non-vacuous: the page really does print figures. It is the pricing
+    // page — if this ever reads zero, the check above means nothing and the
+    // page has a much bigger problem.
+    expect(found.length).toBeGreaterThanOrEqual(10)
+  })
+})
+
+// --- the other half of §5.3: no dollar literal in the pricing sources ---
+//
+// Extending the drift guard to /pricing passes on day one and would never
+// have been shown to fail, because every figure on that page is already
+// derived through packageTotalCents() and formatSgd(). That is a property
+// worth ASSERTING rather than relying on: the guard above can only compare
+// what is printed against what pricing.ts holds, so a hand-typed "$1,988.10"
+// that happens to still be correct passes it — and stays passing on the day
+// pricing.ts changes and the literal does not.
+//
+// This assertion is the cheap one that can actually fail: no dollar literal
+// appears in these three files at all, outside comments. Comments are
+// stripped first because ReplacementTerms.astro's header explains the
+// illustrative $2,500 in prose, and a rule's own explanation must not read
+// as a violation of it — the same technique, for the same reason, as the
+// Mizoram sweep above.
+describe('the /pricing sources contain no hardcoded money', () => {
+  const PRICING_SOURCES = [
+    'src/pages/pricing.astro',
+    'src/sections/ReplacementTerms.astro',
+    'src/sections/LoanAndPlacement.astro',
+  ]
+
+  // `$` followed by a digit. `${...}` template interpolations — which are
+  // how every real figure on the page arrives — are `$` followed by `{`,
+  // so they are not matched and do not need exempting.
+  const DOLLAR_LITERAL = /\$\s*\d/
+
+  it('scans the files it claims to scan (sanity check)', () => {
+    for (const file of PRICING_SOURCES) {
+      const source = readFileSync(file, 'utf8')
+      expect(source.length, `${file} is empty or missing`).toBeGreaterThan(1_000)
+      // Each of these files renders money through the shared formatter.
+      // If one stops, the assertion below is guarding a file that no
+      // longer has anything to guard.
+      expect(source, `${file} no longer references a money value`).toMatch(
+        /formatSgd|packageTotalCents|amount/,
+      )
+    }
+  })
+
+  it('no dollar figure is typed into any of them outside a comment', () => {
+    const offenders = PRICING_SOURCES.flatMap((file) => {
+      const stripped = code(readFileSync(file, 'utf8'))
+      const matches = stripped.match(/\$\s*\d[\d,]*(?:\.\d{2})?/g) ?? []
+      return matches.map((m) => `${file}: ${m}`)
+    })
+    expect(offenders).toEqual([])
+    // DOLLAR_LITERAL is the rule this test states; referenced so the
+    // constant cannot drift away from the pattern actually applied.
+    expect(PRICING_SOURCES.every((f) => !DOLLAR_LITERAL.test(code(readFileSync(f, 'utf8'))))).toBe(
+      true,
+    )
+  })
+
+  it('the comment stripper is what makes this pass, not an absence of dollars', () => {
+    // ReplacementTerms.astro's header DOES contain "$2,500", in the
+    // paragraph explaining that the figure is illustrative. If code()
+    // stopped stripping block comments this test would go green for the
+    // wrong reason — an absent violation rather than a stripped comment —
+    // so the stripping is asserted directly.
+    const raw = readFileSync('src/sections/ReplacementTerms.astro', 'utf8')
+    expect(raw).toMatch(DOLLAR_LITERAL)
+    expect(code(raw)).not.toMatch(DOLLAR_LITERAL)
   })
 })

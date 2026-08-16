@@ -46,14 +46,20 @@ jobs:
       - name: Build (dev, gate skipped)
         run: npm run build:dev
 
-      # Design spec §9: "axe runs against the homepage in CI." @axe-core/cli
-      # was installed as a devDependency but nothing invoked it, so the
-      # requirement was declared and never met. `npm run axe` serves the
-      # built dist/ via Astro's preview server and audits the homepage with
-      # axe-core in headless Chrome (bundled chromedriver — no extra setup,
-      # Chrome is preinstalled on ubuntu-latest). It exits non-zero on ANY
-      # WCAG 2.1 A/AA violation, which fails this job. Runs after the build
-      # step above because it audits the built output, not the dev server.
+      # Core-pages design spec §6: "axe at zero violations" on EVERY page.
+      # @axe-core/cli was installed as a devDependency but nothing invoked
+      # it, so the requirement was declared and never met; then the script
+      # that invoked it audited only the homepage, so it was met for one
+      # page out of two and would have drifted further with each page
+      # added. scripts/run-axe.mjs now derives the page list from dist/, so
+      # a new page is audited the moment it is built and nobody has to
+      # remember to add it here. It serves the built dist/ via Astro's
+      # preview server and audits every route with axe-core in headless
+      # Chrome (bundled chromedriver — no extra setup, Chrome is
+      # preinstalled on ubuntu-latest). It exits non-zero on ANY WCAG 2.1
+      # A/AA violation on ANY page, which fails this job. Runs after the
+      # build step above because it audits the built output, not the dev
+      # server.
       - name: Run axe (accessibility)
         run: npm run axe
 

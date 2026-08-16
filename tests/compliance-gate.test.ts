@@ -45,18 +45,16 @@
  * declared input from scripts/generate-info-required.mjs. Deliberately not
  * a one-line switch: this should cost a moment's thought.
  */
-import { describe, it, expect, beforeAll } from 'vitest'
-import { execSync } from 'node:child_process'
+import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 
-// build:dev, not build — `npm run build` pipes through
-// scripts/check-tbd.mjs and would couple this suite to the client's
-// outstanding-<Tbd> state. Same reasoning, and the same command, as
-// tests/links.test.ts.
-beforeAll(() => {
-  execSync('npm run build:dev', { stdio: 'inherit' })
-}, 180_000)
+// dist/ is built once by tests/global-setup.ts, before any file here is
+// collected — see that file for why it is build:dev and not build. This
+// suite's own `beforeAll` build moved there when a third build-driven suite
+// arrived. The `builtPages()`-inside-`it` discipline below is UNCHANGED and
+// must stay: it is what makes this gate correct even without a globalSetup,
+// and the failure it prevents is documented in its own docblock.
 
 /**
  * Reads dist/ fresh on every call, and every caller below calls it from
@@ -104,11 +102,36 @@ function builtPages(): { file: string; html: string }[] {
  * NUMBER includes word forms because "seven monthly amounts" and "7
  * monthly amounts" are the same published fact.
  */
-const SETTLE = 'repay|repaid|repayment|repaying|settle|settled|settles|settling|clear|cleared|clears|clearing|spread|recover|recovered|recovers|work(?:ed|s|ing)?\\s+off'
+const SETTLE =
+  'repay|repaid|repayment|repaying|settle|settled|settles|settling|settlement|clear|cleared|clears|clearing|clearance|spread|recover|recovered|recovers|recovery|recoup|recoups|recouped|recouping|(?:pays?|paid|paying)\\s+(?:\\w+\\s+){0,2}back|work(?:ed|s|ing)?\\s+off'
 const PERIOD =
-  'months?|monthly|pay\\s*cycles?|salary\\s*cycles?|wage\\s*cycles?|pay\\s*runs?|pay\\s*periods?|payslips?|pay\\s*packets?|instal?ments?|portions?|tranches?'
+  'months?|monthly|pay\\s*cycles?|salary\\s*cycles?|wage\\s*cycles?|pay\\s*runs?|pay\\s*periods?|payslips?|pay\\s*packets?|wage\\s*packets?|pay\\s?days?|payroll|instal?ments?|portions?|tranches?'
 const FUNDS = 'salary|salaries|wages?|pay|payslip|earnings|income|remuneration|take[-\\s]home'
 const NUMBER = '\\d+|one|two|three|four|five|six|seven|eight|nine|ten|a few|several|first few'
+
+/*
+ * AXIS 3 vocabulary, added because that axis had none.
+ *
+ * Axes 1 and 2 were built out of shared alternations from the start. Axis 3
+ * was three literal tokens — "rest day", "day off", "in lieu" — and nothing
+ * semantic, so a reviewer's independent sentences walked straight through
+ * it: "Her weekly time away from the household is still paid", "the sum due
+ * for her weekly day of rest", "the allowance for working through her
+ * entitled break". None of those contains any of the three tokens, and each
+ * publishes §2.3's third gated fact in full.
+ *
+ * REST_ENTITLEMENT names the helper's non-working time however it is said;
+ * COMPENSATION names money attached to it. The gated fact is the two
+ * NEAR EACH OTHER — that her time off is paid during repayment — so the two
+ * patterns below look for the pair in either order rather than for any
+ * single word. COMPENSATION is deliberately wide (it includes bare "pay"),
+ * which is safe only because it must land within 70 characters of a
+ * REST_ENTITLEMENT phrase; neither list fires alone.
+ */
+const REST_ENTITLEMENT =
+  'rest\\s*days?|days?\\s*off|off[-\\s]days?|day\\s+of\\s+rest|weekly\\s+(?:rest|break|day|time\\s+away|time\\s+off)|entitled\\s+break|time\\s+away\\s+from\\s+the\\s+(?:household|home|family)|non[-\\s]working\\s+days?'
+const COMPENSATION =
+  'paid|pay|payment|allowance|compensat\\w*|sum\\s+due|amount\\s+due|remunerat\\w*|wages?'
 
 const GATED_PATTERNS: { label: string; pattern: RegExp }[] = [
   // --- AXIS 1: how long repayment runs ---
@@ -254,6 +277,17 @@ const GATED_PATTERNS: { label: string; pattern: RegExp }[] = [
     label: 'the arrangement described as continuing',
     pattern: /\bcompensation\b[^.!?]{0,40}\bcontinues?\b/i,
   },
+  {
+    // Money first, then the time off: "the sum due for her weekly day of
+    // rest", "the allowance for working through her entitled break".
+    label: 'money attached to the helper’s non-working time',
+    pattern: new RegExp(`\\b(?:${COMPENSATION})\\b[^.!?]{0,70}\\b(?:${REST_ENTITLEMENT})\\b`, 'i'),
+  },
+  {
+    // The mirror: "Her weekly time away from the household is still paid."
+    label: 'the helper’s non-working time described as compensated',
+    pattern: new RegExp(`\\b(?:${REST_ENTITLEMENT})\\b[^.!?]{0,70}\\b(?:${COMPENSATION})\\b`, 'i'),
+  },
 ]
 
 /*
@@ -290,6 +324,23 @@ const PARAPHRASES_THAT_MUST_BE_CAUGHT = [
   'Compensation in lieu of rest days continues',
   'She keeps her off-day pay throughout',
   'Her days off are still compensated while the balance is outstanding',
+  /*
+   * Task 5. These three are a REVIEWER'S sentences, not ours — written
+   * against the axis-3 patterns without sight of them, and all three got
+   * through, because axis 3 was keyed on three literal tokens and had no
+   * semantic pattern at all. None of them contains "rest day", "day off"
+   * or "in lieu". They are what REST_ENTITLEMENT / COMPENSATION were added
+   * for, and they stay here so that pairing cannot be quietly narrowed
+   * later to silence a false positive.
+   */
+  'Her weekly time away from the household is still paid',
+  'The sum due for her weekly day of rest is unaffected',
+  'The allowance for working through her entitled break is added on top',
+  // Task 5, the two thinner axes: noun and phrasal forms of settling
+  // (SETTLE had verbs and little else) and pay-period nouns PERIOD was
+  // missing. Written by us against known gaps, not an independent corpus.
+  'Full recovery of the advance takes seven wage packets',
+  'She pays it back over her first few paydays',
 ]
 
 /*
@@ -362,6 +413,81 @@ describe('the patterns produce no false positives on shipped copy', () => {
       expect(labelsFiring(sentence)).toEqual([])
     })
   }
+})
+
+/*
+ * THE INVERSE SWEEP — every sentence the site actually publishes.
+ *
+ * The 11-sentence COPY_THAT_MUST_NOT_BE_CAUGHT fixture above is a hand-
+ * picked sample. This is the whole corpus: every built page stripped to
+ * rendered text, split into sentences, each one run against all patterns.
+ * A Task 4 reviewer did exactly this by hand across 183 sentences and found
+ * zero firing — and an earlier round of it found a real false positive, a
+ * pattern catching the published "requested within 6 months of the
+ * deployment date", which is why "within" is absent from one alternation
+ * today. Doing it once and reporting the number is worth nothing next
+ * month; this makes it run forever.
+ *
+ * WHY IT IS NOT REDUNDANT with the whole-page scan further up. That scan
+ * runs the patterns over raw HTML. This runs them over what a READER sees:
+ * tags removed, so `<strong>helper's</strong> cost` becomes one phrase
+ * instead of two fragments, and entities decoded, so `&#8217;` becomes an
+ * apostrophe. A pattern can therefore fire here and not there. The two
+ * assert in the same direction — nothing fires — but over different text.
+ *
+ * WHY IT MATTERS MORE THAN CATCHING ANOTHER PARAPHRASE. A false positive
+ * on legitimate copy is what teaches the next person that this gate cries
+ * wolf, and a gate that cries wolf gets loosened. The patterns are a
+ * backstop under the real rule, which lives in
+ * src/sections/LoanAndPlacement.astro's header; the way this file fails the
+ * project is by becoming annoying, not by missing a synonym.
+ */
+function renderedText(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&[a-z]+;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/** Every published sentence, with the page it came from. */
+function publishedSentences(): { file: string; sentence: string }[] {
+  return builtPages().flatMap(({ file, html }) =>
+    renderedText(html)
+      .split(/(?<=[.!?])\s+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0)
+      .map((sentence) => ({ file, sentence })),
+  )
+}
+
+describe('no published sentence trips the gate', () => {
+  it('has a corpus worth sweeping (guards the sweep itself)', () => {
+    // A broken splitter or an empty dist/ would make the sweep below pass
+    // on nothing at all. The reviewer's manual pass over the same two
+    // pages produced 183 sentences; this asserts the same order of
+    // magnitude rather than the exact number, which would break on any
+    // copy edit for no benefit.
+    const corpus = publishedSentences()
+    expect(corpus.length).toBeGreaterThanOrEqual(100)
+    expect(corpus.some(({ sentence }) => sentence.includes('placement fee'))).toBe(true)
+    expect(new Set(corpus.map(({ file }) => file)).size).toBeGreaterThanOrEqual(2)
+  })
+
+  it('every sentence on every built page passes every pattern', () => {
+    const offenders = publishedSentences().flatMap(({ file, sentence }) =>
+      labelsFiring(sentence).map((label) => `${file}: [${label}] ${sentence}`),
+    )
+    expect(offenders).toEqual([])
+  })
 })
 
 describe('the framing that DOES ship is not caught by the gate', () => {

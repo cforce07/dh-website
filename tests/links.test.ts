@@ -1,27 +1,14 @@
-import { describe, it, expect, beforeAll } from 'vitest'
-import { execSync } from 'node:child_process'
+import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs'
 import { join, extname } from 'node:path'
-import { company } from '../src/data/company'
-import { navItems, legalItems } from '../src/lib/nav'
 
-// npm run build:dev (not `npm run build`) deliberately: `build` pipes through
-// scripts/check-tbd.mjs, which fails the build while any <Tbd> placeholder is
-// still in the rendered output.
-//
-// As of 2026-08-15 the gate PASSES: DirectHired supplied the MOM licence
-// number, that <Tbd> was removed, and there is no other call site in src/, so
-// `npm run build` currently succeeds. This comment used to say the gate fails
-// on the licence <Tbd> "by design"; that stopped being true when the value
-// landed, and the sentence survived the change.
-//
-// build:dev is still the right command here, and the reason is unchanged in
-// substance: this suite must be able to inspect dist/ whether or not a future
-// <Tbd> is outstanding. Pinning it to `build` would couple the whole test
-// suite to the client's outstanding-information state.
-beforeAll(() => {
-  execSync('npm run build:dev', { stdio: 'inherit' })
-}, 180_000)
+// dist/ is built once by tests/global-setup.ts, before any file here is
+// collected. This suite used to run `npm run build:dev` in its own
+// `beforeAll`; that build moved out when a third build-driven suite
+// (tests/pages.test.ts) arrived and vitest.config.ts's promised globalSetup
+// was finally written. The reasoning for build:dev over build — the suite
+// must be able to inspect dist/ whether or not a <Tbd> placeholder is
+// outstanding — is unchanged and now lives in tests/global-setup.ts.
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
@@ -75,51 +62,81 @@ describe('CTA integrity', () => {
     expect(offenders.map(normalize)).toEqual([])
   })
 
-  it('the built homepage links to the configured form URL', () => {
-    const html = readFileSync('dist/index.html', 'utf8')
-    expect(html).toContain(company.requirementFormUrl)
-  })
-
-  it('the built homepage links to the official WhatsApp number', () => {
-    expect(readFileSync('dist/index.html', 'utf8')).toContain('wa.me/6598556637')
-  })
-
-  it('never uses "Contact Us" as a primary CTA', () => {
-    const html = readFileSync('dist/index.html', 'utf8')
-    expect(html).not.toMatch(/class="btn primary"[^>]*>\s*Contact Us/)
-  })
-
-  it('never promises a perfect match', () => {
-    expect(readFileSync('dist/index.html', 'utf8')).not.toMatch(/perfect match/i)
-  })
-
-  it('has exactly one h1', () => {
-    const matches = readFileSync('dist/index.html', 'utf8').match(/<h1[\s>]/g) ?? []
-    expect(matches).toHaveLength(1)
-  })
+  // The five built-HTML assertions that used to sit here — form URL,
+  // WhatsApp number, no "Contact Us" primary CTA, no "perfect match",
+  // exactly one <h1> — were all scoped to dist/index.html, i.e. they
+  // covered the homepage and nothing else. Task 5 moved them to
+  // tests/pages.test.ts, which derives its page list from dist/ and runs
+  // every one of them against EVERY built page. They are not duplicated
+  // back here: two copies of the same assertion, one of which silently
+  // stops covering new pages, is how a suite starts lying about its
+  // coverage. What stays here is the one check that is about SOURCE
+  // files rather than built pages, which has no page list to derive.
 })
 
 // --- internal link resolution -----------------------------------------
 //
-// This sub-project ships exactly one page (src/pages/index.astro). Nav,
-// footer, and a couple of homepage sections (HelperSources, Services)
-// legitimately link to routes that don't exist as pages yet:
-//   - /pricing, /faq, /about, /helpers, /services, /find-your-helper,
-//     /why-directhired, and the four legal pages, from src/lib/nav.ts
-//   - /helpers/<slug> and /services/<slug> detail pages, generated per
-//     content-collection entry by HelperSources.astro / Services.astro
-// Those belong to later sub-projects (see src/lib/nav.ts's own comment).
+// Nav, footer, and a couple of homepage sections (HelperSources, Services)
+// legitimately link to routes that do not exist as pages yet. They belong
+// to Phase B of this sub-project and to sub-project 3 (see src/lib/nav.ts's
+// own comment, and core-pages design spec §1).
 //
-// Approach chosen: an EXPLICIT ALLOWLIST, not "scope the check to pages
-// that exist in this sub-project". Scoping would only ever verify "/"
-// resolves, which is checked elsewhere anyway and would leave this test
-// unable to catch anything (a vacuous pass by construction, no matter
-// what breaks). Building the allowlist from the same data the site uses
-// to generate its own links — navItems, legalItems, and the real
-// helpers/services collection slugs — means a genuine typo or a stray
-// link this task didn't account for still fails the test, while intended
-// future routes don't. The "sanity check" test below proves the allowlist
-// is doing real work rather than papering over a check that always passes.
+// WHY THIS LIST IS TYPED OUT BY HAND, WHEN IT USED TO BE DERIVED.
+//
+// The previous version built the allowlist from `navItems`, `legalItems`
+// and `slugsIn('src/content/services')` / `slugsIn('src/content/helpers')`
+// — i.e. from the same data the site generates its links from. That reads
+// as elegant and is in fact an allowlist-by-construction: it permitted
+// `/services/<slug>` for EVERY slug in the collection, forever, whether or
+// not a page would ever exist at that route, and it widened itself the
+// moment anyone added a markdown file. A real dead link —
+// `/services/direct-hire-processing`, shipped inside an FAQ answer — sat
+// inside that allowlist and this test could not fail on it. It was caught
+// by a human reading the copy, which is precisely the job the test was
+// supposed to be doing.
+//
+// So the list below is an enumeration, not a derivation. Adding content can
+// no longer widen what links are permitted; only editing this array can,
+// and that is a diff a reviewer sees. The three assertions underneath keep
+// the enumeration honest in both directions: nothing may link outside it,
+// nothing in it may already be built, and nothing in it may be unreferenced.
+
+/**
+ * Routes that are deliberately linked before they exist. Every entry is a
+ * page this project has committed to building, with the sub-project that
+ * owns it. Delete an entry in the same commit that ships its page — the
+ * "no entry already resolves" assertion below will insist on it.
+ */
+const DEFERRED_ROUTES: readonly string[] = [
+  // --- Phase B of THIS sub-project (core pages), spec §1 ---
+  '/find-your-helper',
+  '/why-directhired',
+  '/about',
+  '/faq',
+
+  // --- Sub-project 3: the two family index pages, spec §1 ---
+  '/services',
+  '/helpers',
+
+  // --- Sub-project 3: the 6 service detail pages ---
+  '/services/direct-hire-processing',
+  '/services/maid-insurance',
+  '/services/maid-replacement',
+  '/services/medical-examination',
+  '/services/new-helper-placement',
+  '/services/transfer-helper',
+
+  // --- Sub-project 3: the 3 helper-source detail pages ---
+  '/helpers/indonesia',
+  '/helpers/mizoram',
+  '/helpers/myanmar',
+
+  // --- Sub-project 3: the 4 legal pages ---
+  '/privacy-policy',
+  '/terms',
+  '/pdpa',
+  '/disclaimer',
+]
 
 function resolvesInDist(hrefPath: string): boolean {
   const target = join('dist', hrefPath)
@@ -129,15 +146,14 @@ function resolvesInDist(hrefPath: string): boolean {
   return false
 }
 
-function slugsIn(contentDir: string): string[] {
-  return readdirSync(contentDir)
-    .filter((f) => f !== '.gitkeep')
-    .map((f) => {
-      const content = readFileSync(join(contentDir, f), 'utf8')
-      const match = content.match(/^slug:\s*(.+)$/m)
-      if (!match) throw new Error(`${contentDir}/${f} has no frontmatter "slug:" field`)
-      return match[1].trim()
+/** Every built page, derived from dist/ — never a hardcoded page list. */
+function builtHtmlFiles(): string[] {
+  const walk = (dir: string): string[] =>
+    readdirSync(dir).flatMap((entry) => {
+      const full = join(dir, entry).split('\\').join('/')
+      return statSync(full).isDirectory() ? walk(full) : [full]
     })
+  return walk('dist').filter((f) => f.endsWith('.html'))
 }
 
 function internalHrefsIn(html: string): string[] {
@@ -145,39 +161,48 @@ function internalHrefsIn(html: string): string[] {
   return [...new Set(hrefs)]
 }
 
-function knownFutureRoutes(): Set<string> {
-  return new Set([
-    ...navItems.map((item) => item.href),
-    ...legalItems.map((item) => item.href),
-    ...slugsIn('src/content/helpers').map((slug) => `/helpers/${slug}`),
-    ...slugsIn('src/content/services').map((slug) => `/services/${slug}`),
-  ])
+/** Every internal href across every built page, with the page it came from. */
+function allInternalLinks(): { page: string; href: string }[] {
+  return builtHtmlFiles().flatMap((page) =>
+    internalHrefsIn(readFileSync(page, 'utf8')).map((href) => ({ page, href })),
+  )
 }
 
 describe('internal link resolution', () => {
-  it('every internal link on the built homepage resolves to a real file or a known future route', () => {
-    const html = readFileSync('dist/index.html', 'utf8')
-    const allowlist = knownFutureRoutes()
+  it('scans every built page, not just the homepage (guards the sweep itself)', () => {
+    // Without this the three assertions below could pass on an empty walk.
+    const files = builtHtmlFiles()
+    expect(files.length).toBeGreaterThanOrEqual(2)
+    expect(files).toContain('dist/index.html')
+    expect(allInternalLinks().length).toBeGreaterThan(20)
+  })
 
-    const unresolved = internalHrefsIn(html).filter(
-      (href) => !resolvesInDist(href) && !allowlist.has(href),
-    )
-
+  it('every internal link on every built page resolves, or is an enumerated deferred route', () => {
+    const allowlist = new Set(DEFERRED_ROUTES)
+    const unresolved = allInternalLinks()
+      .filter(({ href }) => !resolvesInDist(href) && !allowlist.has(href))
+      .map(({ page, href }) => `${page} → ${href}`)
     expect(unresolved).toEqual([])
   })
 
-  // Proves the allowlist is load-bearing, not decorative: if this fails,
-  // the test above would trivially pass with an empty allowlist too,
-  // meaning it isn't actually exercising the not-yet-built-pages case.
-  it('the homepage really does link to not-yet-built routes covered only by the allowlist (sanity check)', () => {
-    const html = readFileSync('dist/index.html', 'utf8')
-    const allowlist = knownFutureRoutes()
+  // The allowlist must shrink as pages ship. Without this, an entry for a
+  // route that now exists would sit here forever, quietly exempting that
+  // route from ever having to resolve again — so a later regression that
+  // deleted the page would not fail this suite.
+  it('no enumerated deferred route has already been built', () => {
+    const shipped = DEFERRED_ROUTES.filter((route) => resolvesInDist(route))
+    expect(shipped).toEqual([])
+  })
 
-    const coveredOnlyByAllowlist = internalHrefsIn(html).filter(
-      (href) => allowlist.has(href) && !resolvesInDist(href),
-    )
-
-    expect(coveredOnlyByAllowlist.length).toBeGreaterThan(0)
+  // ...and it must not grow speculatively. An entry nothing links to is an
+  // exemption granted in advance, which is how the derived version got its
+  // reach. It also proves the allowlist is load-bearing rather than
+  // decorative: if this passes, the resolution test above is genuinely
+  // exercising the not-yet-built-route case.
+  it('every enumerated deferred route is actually linked from a built page', () => {
+    const linked = new Set(allInternalLinks().map(({ href }) => href))
+    const unreferenced = DEFERRED_ROUTES.filter((route) => !linked.has(route))
+    expect(unreferenced).toEqual([])
   })
 })
 
