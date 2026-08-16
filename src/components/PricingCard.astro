@@ -154,8 +154,25 @@ const diverging = divergingLineItemLabels()
     font-weight: var(--font-weight-semibold);
     line-height: 1.4;
     color: var(--color-accent);
-    min-block-size: calc(1 * 1.4em);
-    min-block-size: 1lh;
+    /*
+     * ONE LINE PLUS ITS OWN PADDING, and the padding is not optional
+     * arithmetic. global.css sets `box-sizing: border-box`, so
+     * min-block-size floors the BORDER box, not the content box: a bare
+     * `1lh` here floored the empty card's flag at 18px, which its 24px of
+     * vertical padding already exceeded, so it rendered 24px against the
+     * filled card's 42px. Every row on the two cards then sat 18px apart —
+     * measured in Chrome at 768, 790, 810, 828, 1280 and 1920, the exact
+     * defect this element was added to avoid. Adding the padding back makes
+     * the floor describe the same box the filled flag draws.
+     *
+     * The calc() above is the fallback for engines without `lh` (Chrome
+     * <109, Safari <16.4): 1.4em is this element's own line-height, the
+     * same arithmetic done by hand. Declaring both in this order means a
+     * supporting browser takes the second and the rest take the first —
+     * the same pattern as .pkg-name below.
+     */
+    min-block-size: calc(1.4em + 2 * var(--space-3));
+    min-block-size: calc(1lh + 2 * var(--space-3));
   }
 
   /* The other card's copy of the same box: identical geometry, no fill and
