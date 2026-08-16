@@ -37,10 +37,21 @@
  *     unsupplied. What ships is the address, as a fact.
  *   - NO RESPONSE PROMISE BEYOND THE PUBLISHED ONE. "A consultant reviews
  *     every submission and aims to respond within 1 business day" is
- *     src/content/faq/submit-requirements.md verbatim — client-approved
- *     copy, already on /faq and the homepage. "We reply fast", "we are
- *     always available", "call any time" are not, and the 24-hour opening
- *     figure is not licence to invent one.
+ *     client-approved copy, already on /faq and the homepage. "We reply
+ *     fast", "we are always available", "call any time" are not, and the
+ *     24-hour opening figure is not licence to invent one.
+ *
+ *     IT IS READ OUT OF THE CONTENT COLLECTION, NOT TYPED HERE, and it used
+ *     not to be. This docblock claimed the sentence was
+ *     src/content/faq/submit-requirements.md verbatim while the hero
+ *     rendered a hand-retyped variant of it — "a consultant reviews every
+ *     submission, AIMING to respond within 1 business day" against the
+ *     approved "and AIMS to respond". The substance was not inflated, so
+ *     this was a sourcing failure rather than an invented claim, and the
+ *     consequence is the ordinary one: DirectHired revises that wording,
+ *     /faq and the homepage follow, and /contact silently does not. See
+ *     `responsePledge` below for how it resolves and what it does if the
+ *     sentence it is looking for is not there.
  *   - NO REGISTERED ENTITY AND NO UEN. src/data/company.ts's own docblock
  *     scopes both to /about — "they appear nowhere else on the site" — and
  *     that is a deliberate division: /about publishes the company's
@@ -71,15 +82,60 @@
  * than the /about one. A contact page whose primary action is three blocks
  * down is a contact page that hid the thing it exists for.
  */
+import { getEntry } from 'astro:content'
 import BaseLayout from '../layouts/BaseLayout.astro'
 import Container from '../components/Container.astro'
 import Button from '../components/Button.astro'
 import FinalCta from '../sections/FinalCta.astro'
 import { company } from '../data/company'
 import { defaultWhatsappUrl } from '../lib/whatsapp'
-import { employmentAgencySchema } from '../lib/structured-data'
+import { employmentAgencySchema, markdownToPlainText } from '../lib/structured-data'
 
 const whatsappHref = defaultWhatsappUrl()
+
+/*
+ * THE RESPONSE LINE, RESOLVED FROM THE APPROVED SOURCE.
+ *
+ * src/content/faq/submit-requirements.md is where this sentence was signed
+ * off, and it is what /faq and the homepage render. This page used to carry
+ * a hardcoded near-copy of it — see this file's header. One edit to that
+ * markdown file now moves all three surfaces together, which is the whole
+ * reason the collection exists.
+ *
+ * markdownToPlainText is the same normaliser Faq.astro runs the body through
+ * for its structured data, so a future bold or link in that sentence arrives
+ * here as text rather than as literal asterisks.
+ *
+ * IT THROWS AT BUILD TIME rather than degrading. The alternatives are both
+ * worse than a failed build: rendering nothing puts a dangling "Send us your
+ * requirements." in the hero, and falling back to a literal reintroduces
+ * exactly the retyped copy this replaced — a fallback that is a second copy
+ * of the fact is not a fallback. The same reasoning as breadcrumbSchema's
+ * two throws in src/lib/structured-data.ts.
+ *
+ * The match is deliberately on a distinctive FRAGMENT rather than on the
+ * whole sentence: matching the whole sentence would mean typing it here,
+ * and then a revision to the wording would fail the build instead of
+ * flowing through. "consultant reviews every submission" is the clause that
+ * identifies WHICH sentence; the response figure, the verb and the tense
+ * are all free to change without touching this page.
+ */
+const submitRequirements = await getEntry('faq', 'submit-requirements')
+const responseSentences = markdownToPlainText(submitRequirements?.body ?? '')
+  .split(/(?<=[.!?])\s+/)
+  .map((sentence) => sentence.trim())
+  .filter((sentence) => /consultant reviews every submission/i.test(sentence))
+
+if (responseSentences.length !== 1) {
+  throw new Error(
+    `/contact: expected exactly one sentence matching "consultant reviews every submission" in ` +
+      `src/content/faq/submit-requirements.md, found ${responseSentences.length}. This page renders ` +
+      `that sentence rather than retyping it; if the approved wording has changed, update the match ` +
+      `in src/pages/contact.astro — do not paste the new sentence in here.`,
+  )
+}
+
+const responsePledge = responseSentences[0]
 
 /*
  * Assembled from company.ts exactly as Footer.astro and /about assemble it.
@@ -125,17 +181,18 @@ const description =
       <h1>Talk to DirectHired.</h1>
 
       {/*
-        The published response line, verbatim from
-        src/content/faq/submit-requirements.md — client-approved copy that
-        already renders on /faq and the homepage. It is the only response
-        figure anybody has supplied, and it is a TARGET ("aims to"), which
-        is how it was given and how it must stay. Do not upgrade it to a
-        guarantee and do not add a second, faster one for WhatsApp.
+        The published response line, READ from
+        src/content/faq/submit-requirements.md rather than reproduced here —
+        client-approved copy that already renders on /faq and the homepage.
+        It is the only response figure anybody has supplied, and it is a
+        TARGET ("aims to"), which is how it was given and how it must stay.
+        Do not upgrade it to a guarantee, do not add a second faster one for
+        WhatsApp, and do not paste the sentence into this file: the whole
+        point of `responsePledge` is that there is one copy of it.
       */}
       <p class="contact-lede">
-        Send us your requirements and a consultant reviews every submission, aiming to respond
-        within 1 business day. If you would rather ask something first, the details below reach us
-        directly.
+        Send us your requirements. {responsePledge} If you would rather ask something first, the
+        details below reach us directly.
       </p>
 
       <div class="contact-cta">

@@ -1137,3 +1137,149 @@ describe('the /pricing sources contain no hardcoded money', () => {
     expect(code(raw)).not.toMatch(DOLLAR_LITERAL)
   })
 })
+
+/**
+ * THE RESPONSE PLEDGE HAS ONE SOURCE, AND EVERY SURFACE READS IT.
+ *
+ * "A consultant reviews every submission and aims to respond within 1
+ * business day" was approved once, in src/content/faq/submit-requirements.md.
+ * /faq and the homepage render that entry through the content collection.
+ * /contact did not: it carried a hand-retyped variant — "a consultant
+ * reviews every submission, AIMING to respond within 1 business day" —
+ * under a docblock claiming the page carried the sentence verbatim.
+ *
+ * The substance was not inflated, which is exactly what let it survive a
+ * review: nothing on the page was untrue. The damage is the ordinary
+ * single-source one — DirectHired revises the wording, two surfaces follow
+ * and the third quietly does not — and it is invisible until someone reads
+ * the two files side by side, which is what a test is for.
+ */
+describe('the response pledge is sourced, not retyped', () => {
+  const SOURCE = 'src/content/faq/submit-requirements.md'
+
+  /**
+   * A RETYPE IS THE TWO HALVES TOGETHER, and it has to be defined that way
+   * rather than as either half alone. Both halves have a legitimate solo
+   * appearance in this repo:
+   *
+   *   - contact.astro contains IDENTIFIES on its own. That is the matcher
+   *     the page selects the sentence WITH, and a rule that failed the
+   *     implementation of itself would be a bad rule.
+   *   - find-your-helper.astro contains RESPONSE_FIGURE on its own, in its
+   *     own sentence, sourced from a DIFFERENT approved answer
+   *     (src/content/faq/response-time.md) and allowlisted by name in
+   *     tests/pages.test.ts's duration guard. It is the same figure, not
+   *     this sentence, and it is not what this rule is about.
+   *
+   * A source file carrying BOTH is reproducing the approved sentence, which
+   * is the thing that drifts.
+   */
+  const IDENTIFIES = /consultant reviews every submission/i
+  const RESPONSE_FIGURE = /\b1\s+business\s+day\b/i
+
+  /** The approved sentence, read the way /contact reads it. */
+  function approvedSentence(): string {
+    const body = readFileSync(SOURCE, 'utf8').split(/^---\s*$/m).slice(2).join('---')
+    const sentences = body
+      .replace(/\s+/g, ' ')
+      .split(/(?<=[.!?])\s+/)
+      .map((sentence) => sentence.trim())
+      .filter((sentence) => IDENTIFIES.test(sentence))
+    expect(sentences, `${SOURCE} must contain exactly one response sentence`).toHaveLength(1)
+    return sentences[0]
+  }
+
+  /** Every built page as a reader sees it, whitespace collapsed. */
+  function builtPageText(): { file: string; text: string }[] {
+    const walkDist = (dir: string): string[] =>
+      readdirSync(dir).flatMap((entry) => {
+        const full = join(dir, entry).split('\\').join('/')
+        return statSync(full).isDirectory() ? walkDist(full) : [full]
+      })
+
+    return walkDist('dist')
+      .filter((f) => f.endsWith('.html'))
+      .map((file) => ({
+        file,
+        text: readFileSync(file, 'utf8')
+          .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+          .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
+          .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/&quot;/g, '"')
+          .replace(/&apos;/g, "'")
+          .replace(/\s+/g, ' '),
+      }))
+  }
+
+  it('reads the source it claims to read', () => {
+    // Every assertion below is satisfiable by a file that has lost the
+    // sentence entirely, so the sentence is named here first.
+    expect(approvedSentence()).toMatch(IDENTIFIES)
+    expect(approvedSentence()).toMatch(RESPONSE_FIGURE)
+  })
+
+  it('every page that states it states the approved sentence, character for character', () => {
+    const surfaces = builtPageText().filter(({ text }) => IDENTIFIES.test(text))
+    // Three today: /contact, /faq and the homepage. A floor rather than an
+    // equality, so a fourth surface joins the check instead of breaking it.
+    expect(surfaces.length).toBeGreaterThanOrEqual(3)
+    expect(surfaces.map(({ file }) => file)).toContain('dist/contact/index.html')
+
+    const sentence = approvedSentence()
+    const offenders = surfaces
+      .filter(({ text }) => !text.includes(sentence))
+      .map(({ file }) => `${file} states a variant of the approved response sentence`)
+    expect(offenders).toEqual([])
+  })
+
+  it('no source file under src/ reproduces the approved sentence', () => {
+    /*
+     * The anti-drift half, and the one that actually holds the line. The
+     * assertion above compares two rendered strings and would go green
+     * again the moment someone "fixed" a mismatch by pasting the new
+     * wording into contact.astro — which is exactly how the retyped copy
+     * got there in the first place.
+     *
+     * The markdown source is excluded because it IS the source. Comments
+     * are stripped, so contact.astro's docblock quoting the sentence in
+     * order to explain this rule is not a violation of it.
+     */
+    const offenders = walk('src')
+      .filter((file) => file.endsWith('.astro') || file.endsWith('.ts'))
+      .map((file) => ({ file, source: code(readFileSync(file, 'utf8')) }))
+      .filter(({ source }) => IDENTIFIES.test(source) && RESPONSE_FIGURE.test(source))
+      .map(({ file }) => `${file} reproduces the approved response sentence`)
+    expect(offenders).toEqual([])
+  })
+
+  it('the comment stripper is what makes that pass, not an absence of the sentence', () => {
+    /*
+     * contact.astro's header DOES quote both halves of the approved
+     * sentence, in the paragraphs explaining that the page must not retype
+     * it. If code() stopped stripping block comments the test above would
+     * go green for the wrong reason — a stripped comment rather than an
+     * absent violation — so the stripping is asserted directly.
+     */
+    const raw = readFileSync('src/pages/contact.astro', 'utf8')
+    expect(raw).toMatch(IDENTIFIES)
+    expect(raw).toMatch(RESPONSE_FIGURE)
+    expect(code(raw)).not.toMatch(RESPONSE_FIGURE)
+    // ...and the matcher survives the stripping, which is the one form of
+    // the clause this file is allowed to carry.
+    expect(code(raw)).toMatch(IDENTIFIES)
+  })
+
+  it('the page really does resolve it from the collection', () => {
+    // Belt and braces on the two negative assertions above: they are both
+    // satisfiable by a /contact that says nothing at all. This is the
+    // positive one — the page imports the entry and renders the value it
+    // read, and no literal stands in for either.
+    const raw = readFileSync('src/pages/contact.astro', 'utf8')
+    expect(code(raw)).toMatch(/getEntry\(\s*['"]faq['"]\s*,\s*['"]submit-requirements['"]\s*\)/)
+    expect(code(raw)).toContain('{responsePledge}')
+  })
+})
