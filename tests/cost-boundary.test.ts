@@ -97,7 +97,33 @@ function publishedBlocks(): { file: string; block: string }[] {
 }
 
 /* -------------------------------------------------------------------------
- * The three vocabularies. Each is one side of the boundary.
+ * The vocabularies. Each is one side of the boundary.
+ *
+ * WHY THERE ARE MORE OF THEM THAN THERE WERE, and the lesson that produced
+ * them. This file originally fired on §2.4's OWN verbs and nothing else:
+ * advance / recover / recoup / repay, plus three fixed "helper's cost"
+ * phrases. Both mutations that were used to prove it worked were written
+ * with words taken from that same list, so what they demonstrated was that
+ * the rule fires on its own vocabulary — which it could hardly fail to do.
+ *
+ * A reviewer then wrote the adversarial sentences FROM MOM'S LANGUAGE
+ * INSTEAD, which is where the actual prohibition is written, and appended
+ * two of them to src/content/faq/insurance.md:
+ *
+ *   "The insurance is billed to the helper."
+ *   "What you put in comes back: you front the whole amount at the start,
+ *    and every dollar of it is ultimately hers."
+ *
+ * That rebuilt, published to /faq, and scored a fully green suite. The first
+ * sentence states outright the thing MOM forbids.
+ *
+ * So the vocabularies below are written from the REGULATED MECHANISM rather
+ * than from §2.4's framing: MOM's prohibition is "you cannot PASS ON the
+ * cost of purchasing the insurance to your helper", and a cost can be passed
+ * on in a dozen registers that never once say "recover". The rule of thumb
+ * for anyone extending this: write the sentence you are afraid of first, in
+ * the words a regulator or a salesperson would use, and only then look at
+ * what is here.
  * ---------------------------------------------------------------------- */
 
 /**
@@ -110,12 +136,42 @@ function publishedBlocks(): { file: string; block: string }[] {
 const RECOVERY_VERB = /\b(?:advance|advances|advanced|advancing|recover|recovers|recovered|recovering|recoup\w*|repay|repays|repaid|repaying|repayment)\b/i
 
 /**
+ * THE REGULATED MECHANISM'S OWN VERBS — the ways a cost is moved onto the
+ * worker that have nothing to do with §2.4's advance-and-recover framing.
+ *
+ * `pass on` is MOM's verb, taken from the sentence spec §2.6.11 quotes
+ * verbatim, and it is here in two shapes because English splits the
+ * particle: "passed on to your helper" and "pass the premium on to her" are
+ * the same claim. `deduct` is the salary-deduction mechanism MOM regulates;
+ * it is ALSO caught by tests/compliance-gate.test.ts today, but only
+ * coincidentally — that gate exists to withhold §2.3's repayment mechanics
+ * and covers neither "billed to" nor "passed on", so nothing here may lean
+ * on it.
+ *
+ * Every one of these has ZERO occurrences in the current build (swept block
+ * by block when they were added), so none of them bans a word the site is
+ * already using. `charged to` is deliberately written with the preposition:
+ * /pricing publishes "Our agent fee is not charged again" and "not an extra
+ * charge you carry", and a bare `charge` would fire on both.
+ */
+const PASSED_TO_HELPER =
+  /\bdeduct\w*\b|\bpass(?:es|ed|ing)?\s+on\b|\bpass(?:es|ed|ing)?\b[^.!?]{0,40}?\bon\s+to\s+(?:the\s+helper|your\s+helper|her)\b|\bcharge[sd]?\s+to\b|\bchargeable\s+to\b|\bbill(?:s|ed|ing)?\s+to\b|\b(?:come|comes|coming|came)\s+out\s+of\b|\boffsets?\b|\boffsetting\b|\breimburs\w*\b/i
+
+/**
  * The conclusion the framing reaches: that the amount is ultimately borne by
  * the helper. Carried separately from the verbs because a sentence can reach
  * it without using one ("They are ultimately the helper's cost"), and
- * because the two are used differently below — see RULE B.
+ * because the three are used differently below — see RULES B and C.
+ *
+ * `hers` IS NOT HERE ON ITS OWN, and that is a judgement rather than an
+ * oversight. The insurance policy genuinely is the helper's — she is the
+ * insured — so "the policy is hers" is a true sentence somebody may one day
+ * write, and a bare `\bhers\b` would fail it. What is banned is `hers` used
+ * as a verdict about who PAYS: "ultimately hers", "hers in the end". That is
+ * the register the reviewer's mutation was written in.
  */
-const HELPERS_COST = /\bhelper[’'`]s\s+(?:own\s+)?cost\b|\bcost\s+(?:to|of)\s+the\s+helper\b|\bborne\s+by\s+the\s+helper\b/i
+const BORNE_BY_HELPER =
+  /\bhelper[’'`]s\s+(?:own\s+)?cost\b|\bcost\s+(?:to|of)\s+the\s+helper\b|\bborne\s+by\s+(?:the\s+helper|her)\b|\b(?:ultimately|in\s+the\s+end|effectively|really)\s+hers\b|\bhers\s+(?:in\s+the\s+end|ultimately)\b|\b(?:the\s+helper|she)\s+bears\b|\bat\s+(?:the\s+helper[’'`]s|her)\s+expense\b|\b(?:the\s+helper[’'`]s|hers)\s+to\s+bear\b/i
 
 /**
  * The two amounts, and the ONLY two, that §2.4's framing may be applied to.
@@ -140,12 +196,25 @@ const LOAN_OR_PLACEMENT_FEE = /\bloans?\b|\bplacement\s+fees?\b/i
  * word a writer will actually reach for when they mean the checkup, and the
  * label is two words. Nothing else is added: this is not a thesaurus, it is
  * the price list.
+ *
+ * THE SINGULAR IS DERIVED, AND IT WAS A REAL HOLE. The data label is
+ * `Agent fees`; the site's own prose says "Our agent fee is not charged
+ * again" and "the two packages differ by $500 — the agent fee". The
+ * whole-phrase matcher below tolerates a MISSING plural on a label that has
+ * none, not a missing one on a label that has it, so every sentence on the
+ * site that names that line item in the singular was invisible to rule A.
+ * Stripping a trailing `s` keeps the derivation honest — a hand-typed
+ * `'agent fee'` would go on guarding a label that a rename had moved, which
+ * is the failure the `Medical` -> `Medical checkup` note above records.
  */
 function employerBorneTerms(): string[] {
   const labels = packages.flatMap((pkg) =>
     pkg.kind === 'itemised' ? pkg.lineItems.map((item) => item.label) : [],
   )
-  return [...new Set([...labels, 'insurance', 'medical'])]
+  const singulars = labels
+    .filter((label) => /[^s]s$/i.test(label))
+    .map((label) => label.slice(0, -1))
+  return [...new Set([...labels, ...singulars, 'insurance', 'medical'])]
 }
 
 /** A case-insensitive whole-phrase matcher for one line-item label. */
@@ -162,15 +231,94 @@ function employerBorneTermsIn(text: string): string[] {
 /** "the package" / "these packages" — the whole thing rather than a line. */
 const THE_PACKAGE = /\bpackages?\b/i
 
+/**
+ * The package named as the SUBJECT of a borne-by-the-helper verdict.
+ *
+ * Rule B keys on the recovery verbs, and it has to: /pricing publishes
+ * "These sit alongside the fly-in package, and they are ultimately the
+ * helper's cost rather than yours", where "they" is the loan and the
+ * placement fee and the package is only the thing they sit BESIDE. Feeding
+ * the whole of BORNE_BY_HELPER into rule B would fail that sentence, which
+ * is compliant copy saying the correct thing.
+ *
+ * "The whole package is ultimately the helper's cost" is the same words in
+ * the other grammatical role and it is a flat violation — so the subject is
+ * pinned instead of the vocabulary widened. A regex cannot resolve a pronoun
+ * (the reviewer traced all twelve by hand); it can insist that the noun
+ * immediately before the verdict is the package itself.
+ *
+ * THE CLAUSE-OPENER ANCHOR IS NOT DECORATION. Written without it, this fired
+ * on a published /faq answer at the first sweep: "The medical in your
+ * package is the helper's pre-employment medical checkup" — where the
+ * subject is "the medical", "in your package" is a prepositional phrase, and
+ * the sentence says nothing whatever about who pays. So the package phrase
+ * must OPEN a clause: start of block, after terminal punctuation, or after a
+ * conjunction. A preposition in front of it means it is not the subject.
+ */
+const PACKAGE_AS_SUBJECT =
+  /(?:^|[.,;:!?—–]\s*|\b(?:and|but|so|because|since|meaning)\s+)(?:the|this|that|your|our|a)?\s*(?:whole\s+|entire\s+|full\s+|fly-?in\s+){0,2}packages?\s+(?:is|are)\s+(?:ultimately\s+|in\s+the\s+end\s+|effectively\s+|really\s+)?(?:the\s+helper[’'`]s|hers|borne\s+by)/i
+
+/**
+ * WHOLE-AMOUNT SUBJECTS — the blur that names no money at all.
+ *
+ * "The total is ultimately the helper's cost", "you front the whole amount
+ * and recover it", "what you put in comes back". None of these contains a
+ * line-item label, so rule A has nothing to key on, and none contains the
+ * word "package", so rule B does not see them either. They were the second
+ * half of the reviewer's mutation and they escaped both rules completely.
+ *
+ * `totals` IS DELIBERATELY EXCLUDED and the exclusion is load-bearing. Four
+ * blocks the site publishes today say "the loan and placement fee sit
+ * outside both totals — you advance them at the start and recover them",
+ * which is spec §2.4's required sentence. `\btotals?\b` fires on every one
+ * of them. So this matches "the total" and never a bare "total(s)", and the
+ * whole set has zero occurrences in the current build.
+ */
+const WHOLE_AMOUNT =
+  /\bthe\s+total\b|\bthe\s+(?:whole|entire|full)\s+amount\b|\beverything\s+you\s+pay\b|\bevery\s+(?:dollar|cent)\b|\bwhat\s+you\s+put\s+in\b/i
+
+/**
+ * The whole-amount subject SCOPED to the two amounts §2.4 covers: "the whole
+ * amount of the loan", "every dollar of the placement fee". Saying that is
+ * legitimate and rule C lets it through.
+ *
+ * The scoping has to be TIGHT — the loan or the fee named right after the
+ * subject phrase, not merely somewhere in the same block. Rule A's header
+ * explains why: on /pricing the word "loan" is never far away, so a
+ * block-wide exemption would launder "Beyond the loan, the total is
+ * ultimately the helper's cost", which is a violation with a true clause in
+ * front of it.
+ */
+const WHOLE_AMOUNT_SCOPED_TO_LOAN =
+  /(?:the\s+total|the\s+(?:whole|entire|full)\s+amount|everything\s+you\s+pay|every\s+(?:dollar|cent)|what\s+you\s+put\s+in)\b[^.!?]{0,30}?\b(?:loans?|placement\s+fees?)\b/i
+
+/**
+ * "…and it comes back." The money-returns-to-you half of the framing, said
+ * without any of §2.4's verbs.
+ *
+ * Loose on purpose, and safe only because rule C is a conjunction: /faq and
+ * /find-your-helper both publish "a consultant will come back to you", and
+ * neither of those blocks contains a whole-amount subject. This is never
+ * consulted on its own.
+ */
+const RETURNS_TO_YOU =
+  /\b(?:come|comes|coming|came)\s+back\b|\bgets?\s+(?:it|them)\s+back\b|\bis\s+returned\s+to\s+you\b|\bfind\s+(?:it|your\s+way)\s+back\b/i
+
 /* -------------------------------------------------------------------------
  * RULE A — a package line item is NEVER associated with the recovery
- * framing. Unconditional: no exemption, on any page, in any block.
+ * framing, nor with the mechanism MOM forbids. Unconditional: no exemption,
+ * on any page, in any block.
  * ---------------------------------------------------------------------- */
 
 /** Every violation of rule A on the built site. */
 function lineItemViolations(): string[] {
   return publishedBlocks()
-    .filter(({ block }) => RECOVERY_VERB.test(block) || HELPERS_COST.test(block))
+    .filter(
+      ({ block }) =>
+        RECOVERY_VERB.test(block) ||
+        PASSED_TO_HELPER.test(block) ||
+        BORNE_BY_HELPER.test(block),
+    )
     .flatMap(({ file, block }) =>
       employerBorneTermsIn(block).map((term) => `${file}: [${term}] ${block}`),
     )
@@ -185,9 +333,34 @@ function lineItemViolations(): string[] {
 /** Every violation of rule B on the built site. */
 function packageViolations(): string[] {
   return publishedBlocks()
-    .filter(({ block }) => THE_PACKAGE.test(block))
-    .filter(({ block }) => RECOVERY_VERB.test(block))
-    .filter(({ block }) => !LOAN_OR_PLACEMENT_FEE.test(block))
+    .filter(
+      ({ block }) =>
+        (THE_PACKAGE.test(block) &&
+          (RECOVERY_VERB.test(block) || PASSED_TO_HELPER.test(block)) &&
+          !LOAN_OR_PLACEMENT_FEE.test(block)) ||
+        PACKAGE_AS_SUBJECT.test(block),
+    )
+    .map(({ file, block }) => `${file}: ${block}`)
+}
+
+/* -------------------------------------------------------------------------
+ * RULE C — a WHOLE-AMOUNT subject is never advanced, recovered, passed on or
+ * called the helper's. The blur that names neither a line item nor the
+ * package, and so escapes both rules above.
+ * ---------------------------------------------------------------------- */
+
+/** Every violation of rule C on the built site. */
+function wholeAmountViolations(): string[] {
+  return publishedBlocks()
+    .filter(({ block }) => WHOLE_AMOUNT.test(block))
+    .filter(({ block }) => !WHOLE_AMOUNT_SCOPED_TO_LOAN.test(block))
+    .filter(
+      ({ block }) =>
+        RECOVERY_VERB.test(block) ||
+        PASSED_TO_HELPER.test(block) ||
+        BORNE_BY_HELPER.test(block) ||
+        RETURNS_TO_YOU.test(block),
+    )
     .map(({ file, block }) => `${file}: ${block}`)
 }
 
@@ -208,7 +381,7 @@ describe('the guard reads what it claims to read', () => {
     /*
      * `<strong>helper’s</strong> cost` is the exact markup
      * LoanAndPlacement.astro renders, and it is one phrase to a reader. If
-     * the splitter ever started cutting on inline elements, HELPERS_COST
+     * the splitter ever started cutting on inline elements, BORNE_BY_HELPER
      * would stop firing anywhere and rule A would go quietly green.
      */
     expect(blocksOf('<p>ultimately the <strong>helper&#8217;s</strong> cost</p>')).toEqual([
@@ -240,6 +413,10 @@ describe('the guard reads what it claims to read', () => {
     expect(terms).toContain('Medical checkup')
     expect(terms).toContain('Handling & transport')
     expect(terms).toContain('Agent fees')
+    // The singular, derived rather than typed. The site's prose says "our
+    // agent fee"; the data label is plural, and rule A saw straight through
+    // every singular use until this derivation existed.
+    expect(terms).toContain('Agent fee')
   })
 
   it('the recovery framing really is published, so both rules have a subject', () => {
@@ -250,7 +427,7 @@ describe('the guard reads what it claims to read', () => {
      * its own right and nothing else here would report it.
      */
     const framed = publishedBlocks().filter(
-      ({ block }) => RECOVERY_VERB.test(block) || HELPERS_COST.test(block),
+      ({ block }) => RECOVERY_VERB.test(block) || BORNE_BY_HELPER.test(block),
     )
     expect(framed.length).toBeGreaterThanOrEqual(10)
     expect(new Set(framed.map((f) => f.file)).size).toBeGreaterThanOrEqual(2)
@@ -294,6 +471,25 @@ describe('the package as a whole is never described as advanced or recovered', (
   })
 })
 
+describe('no whole-amount subject is ever recovered or called the helper’s', () => {
+  /*
+   * RULE C. The blur that names no money at all — "the total", "the whole
+   * amount", "everything you pay", "every dollar", "what you put in".
+   *
+   * It exists because the reviewer's mutation used exactly this shape and
+   * neither rule above could see it: no line-item label for rule A, no word
+   * "package" for rule B. A sentence does not have to name the insurance to
+   * tell a reader the insurance comes back.
+   *
+   * The exemption is narrow by construction — see WHOLE_AMOUNT_SCOPED_TO_LOAN
+   * — because a block-wide one would be laundered by /pricing's ever-present
+   * "loan".
+   */
+  it('publishes no such block, on any page', () => {
+    expect(wholeAmountViolations()).toEqual([])
+  })
+})
+
 /* -------------------------------------------------------------------------
  * THE FIXTURES — kept permanently, so the rules cannot be quietly narrowed.
  * These are strings in a test file. They are never built and never
@@ -301,7 +497,7 @@ describe('the package as a whole is never described as advanced or recovered', (
  * ---------------------------------------------------------------------- */
 
 /** Sentences that blur the boundary. Every one must be caught. */
-const BLURS_THAT_MUST_BE_CAUGHT: { why: string; text: string; rule: 'A' | 'B' }[] = [
+const BLURS_THAT_MUST_BE_CAUGHT: { why: string; text: string; rule: 'A' | 'B' | 'C' }[] = [
   {
     why: 'insurance named as something the employer advances and recovers',
     text: 'You advance the insurance at the start and recover it through the helper’s repayment.',
@@ -342,6 +538,128 @@ const BLURS_THAT_MUST_BE_CAUGHT: { why: string; text: string; rule: 'A' | 'B' }[
     text: 'The whole fly-in package is recovered through her repayment.',
     rule: 'B',
   },
+
+  /*
+   * ------------------------------------------------------------------
+   * WRITTEN FROM MOM'S LANGUAGE, NOT FROM THE RULE'S — and written before
+   * the vocabularies above were widened, which is the only order in which
+   * this exercise means anything.
+   *
+   * The eight fixtures above were all built out of `advance`, `recover`,
+   * `repay` and `borne by the helper`: the rule's own words. They proved
+   * that the rule fires on its own vocabulary. Not one of them tests the
+   * prohibition MOM actually writes, which is about PASSING A COST ON —
+   * "You cannot pass on the cost of purchasing the insurance to your
+   * helper" — a mechanism that has its own verbs and needs none of §2.4's.
+   *
+   * The two marked ‡ are the reviewer's live mutation, appended verbatim to
+   * src/content/faq/insurance.md, rebuilt and published to /faq. Before this
+   * round the whole suite went green on them.
+   * ------------------------------------------------------------------
+   */
+  {
+    // ‡ the reviewer's first mutation sentence, and the plainest statement
+    // of the thing MOM forbids that anyone could write.
+    why: 'insurance billed directly to the helper',
+    text: 'The insurance is billed to the helper.',
+    rule: 'A',
+  },
+  {
+    why: 'MOM’s own verb, applied to MOM’s own example',
+    text: 'The cost of purchasing the insurance is passed on to your helper.',
+    rule: 'A',
+  },
+  {
+    // The particle split off the verb, which is what English does as soon as
+    // the object is longer than a pronoun.
+    why: 'the same claim with the phrasal verb split around its object',
+    text: 'We pass the insurance premium on to the helper over her first year.',
+    rule: 'A',
+  },
+  {
+    why: 'a line item charged to the helper',
+    text: 'The medical checkup is charged to the helper rather than to you.',
+    rule: 'A',
+  },
+  {
+    // Caught here in its own right. tests/compliance-gate.test.ts also fires
+    // on this, but only because §2.3's salary-deduction gate happens to
+    // overlap; that gate covers neither "billed to" nor "passed on", so this
+    // file may not lean on it.
+    why: 'a line item deducted from the helper’s salary',
+    text: 'The SIP premium is deducted from her monthly salary.',
+    rule: 'A',
+  },
+  {
+    why: 'the helper reimbursing the employer for a line item',
+    text: 'The helper reimburses you for the MOM levy once she starts work.',
+    rule: 'A',
+  },
+  {
+    // The SINGULAR agent fee — the form the site's own prose uses, and the
+    // form the plural-only label list could not see.
+    why: 'the agent fee, in the singular, coming out of the helper’s pay',
+    text: 'The agent fee comes out of what the helper takes home.',
+    rule: 'A',
+  },
+  {
+    why: 'a line item offset against what the helper earns',
+    text: 'Handling & transport is offset against her wages.',
+    rule: 'A',
+  },
+  {
+    why: 'a line item called the helper’s without the word "cost"',
+    text: 'The insurance is ultimately hers.',
+    rule: 'A',
+  },
+  {
+    why: 'a line item stated as being at the helper’s expense',
+    text: 'Insurance is arranged at the helper’s expense.',
+    rule: 'A',
+  },
+  {
+    why: 'the package billed to the helper, with no recovery verb anywhere',
+    text: 'The fly-in package is billed to the helper.',
+    rule: 'B',
+  },
+  {
+    // The package as the SUBJECT of the verdict, which is the grammatical
+    // difference between this and the compliant published sentence "These
+    // sit alongside the fly-in package, and they are ultimately the helper's
+    // cost rather than yours."
+    why: 'the package itself named as the helper’s cost',
+    text: 'The whole package is ultimately the helper’s cost.',
+    rule: 'B',
+  },
+  {
+    why: 'a whole-amount subject called the helper’s cost, naming no line item',
+    text: 'The total is ultimately the helper’s cost.',
+    rule: 'C',
+  },
+  {
+    why: 'the whole amount fronted and recovered, naming no line item',
+    text: 'You front the whole amount at the start and recover every cent of it.',
+    rule: 'C',
+  },
+  {
+    // ‡ the reviewer's second mutation sentence.
+    why: 'the money described as coming back, in a sentence with no nouns in it at all',
+    text: 'What you put in comes back: you front the whole amount at the start, and every dollar of it is ultimately hers.',
+    rule: 'C',
+  },
+  {
+    why: 'everything the employer pays described as passed on',
+    text: 'Everything you pay is passed on to the helper in the end.',
+    rule: 'C',
+  },
+  {
+    // The exemption is scoped to the two amounts §2.4 covers, and it must
+    // not be reachable by putting the word "loan" somewhere else in the
+    // block. Rule A's header explains why: on /pricing it is never far away.
+    why: 'a true clause about the loan in front of a false one about the total',
+    text: 'Beyond the loan, the total is ultimately the helper’s cost.',
+    rule: 'C',
+  },
 ]
 
 /**
@@ -374,17 +692,31 @@ const PUBLISHED_COPY_THAT_MUST_NOT_BE_CAUGHT = [
 
 /** Rule A applied to one string, as `lineItemViolations` applies it. */
 const breaksRuleA = (text: string) =>
-  (RECOVERY_VERB.test(text) || HELPERS_COST.test(text)) && employerBorneTermsIn(text).length > 0
+  (RECOVERY_VERB.test(text) || PASSED_TO_HELPER.test(text) || BORNE_BY_HELPER.test(text)) &&
+  employerBorneTermsIn(text).length > 0
 
 /** Rule B applied to one string, as `packageViolations` applies it. */
 const breaksRuleB = (text: string) =>
-  THE_PACKAGE.test(text) && RECOVERY_VERB.test(text) && !LOAN_OR_PLACEMENT_FEE.test(text)
+  (THE_PACKAGE.test(text) &&
+    (RECOVERY_VERB.test(text) || PASSED_TO_HELPER.test(text)) &&
+    !LOAN_OR_PLACEMENT_FEE.test(text)) ||
+  PACKAGE_AS_SUBJECT.test(text)
+
+/** Rule C applied to one string, as `wholeAmountViolations` applies it. */
+const breaksRuleC = (text: string) =>
+  WHOLE_AMOUNT.test(text) &&
+  !WHOLE_AMOUNT_SCOPED_TO_LOAN.test(text) &&
+  (RECOVERY_VERB.test(text) ||
+    PASSED_TO_HELPER.test(text) ||
+    BORNE_BY_HELPER.test(text) ||
+    RETURNS_TO_YOU.test(text))
+
+const BREAKS = { A: breaksRuleA, B: breaksRuleB, C: breaksRuleC } as const
 
 describe('the rules catch the blurs they exist for', () => {
   for (const { why, text, rule } of BLURS_THAT_MUST_BE_CAUGHT) {
     it(`catches ${why}`, () => {
-      const caught = rule === 'A' ? breaksRuleA(text) : breaksRuleB(text)
-      expect(caught, `rule ${rule} did not fire on: ${text}`).toBe(true)
+      expect(BREAKS[rule](text), `rule ${rule} did not fire on: ${text}`).toBe(true)
     })
   }
 })
@@ -394,8 +726,46 @@ describe('the rules pass everything the site legitimately publishes', () => {
     it(`allows: "${text.slice(0, 60)}…"`, () => {
       expect(breaksRuleA(text), 'rule A fired on published copy').toBe(false)
       expect(breaksRuleB(text), 'rule B fired on published copy').toBe(false)
+      expect(breaksRuleC(text), 'rule C fired on published copy').toBe(false)
     })
   }
+})
+
+/*
+ * THE INVERSE SWEEP, and it is the half of this round that mattered most.
+ *
+ * The fixture above is a hand-picked sample. The three rule assertions
+ * further up already run over every block of every built page, so a false
+ * positive anywhere in dist/ fails them — but it fails them with a message
+ * about a VIOLATION, which is exactly the wrong thing to tell someone whose
+ * compliant sentence just tripped a widened regex. A guard that cries wolf
+ * is a guard the next person loosens, and this project has had that happen.
+ *
+ * So the same sweep runs once more here, per rule, saying what it is: a
+ * check that widening the vocabulary did not start failing the copy the site
+ * has always published. It also pins the corpus size, because a sweep over
+ * an empty dist/ is a sweep that proves nothing.
+ */
+describe('widening the rules did not start catching compliant copy', () => {
+  it('sweeps a corpus worth sweeping', () => {
+    const blocks = publishedBlocks()
+    expect(blocks.length).toBeGreaterThan(200)
+    expect(new Set(blocks.map((b) => b.file)).size).toBeGreaterThanOrEqual(6)
+    // The three vocabularies must each still have a subject somewhere on the
+    // site, or "no false positives" is a claim about nothing.
+    expect(blocks.some(({ block }) => RECOVERY_VERB.test(block))).toBe(true)
+    expect(blocks.some(({ block }) => BORNE_BY_HELPER.test(block))).toBe(true)
+    expect(blocks.some(({ block }) => THE_PACKAGE.test(block))).toBe(true)
+  })
+
+  it('every block of every built page passes all three rules', () => {
+    const offenders = publishedBlocks().flatMap(({ file, block }) =>
+      (['A', 'B', 'C'] as const)
+        .filter((rule) => BREAKS[rule](block))
+        .map((rule) => `${file}: [rule ${rule}] ${block}`),
+    )
+    expect(offenders).toEqual([])
+  })
 })
 
 describe('the insurance answer never reaches for the recovery framing', () => {
@@ -431,7 +801,17 @@ describe('the insurance answer never reaches for the recovery framing', () => {
       expect(content, `${file} applies §2.4's framing to an employer-borne cost`).not.toMatch(
         RECOVERY_VERB,
       )
-      expect(content, `${file} calls an employer-borne cost the helper's`).not.toMatch(HELPERS_COST)
+      // The mechanism MOM actually prohibits, and the file the reviewer's
+      // mutation was appended to. "The insurance is billed to the helper"
+      // contains not one word of §2.4's framing, so the assertion above
+      // passed on it — this is the one that fails.
+      expect(content, `${file} passes an employer-borne cost to the helper`).not.toMatch(
+        PASSED_TO_HELPER,
+      )
+      expect(content, `${file} calls an employer-borne cost the helper's`).not.toMatch(
+        BORNE_BY_HELPER,
+      )
+      expect(content, `${file} makes a whole-amount blur`).not.toMatch(WHOLE_AMOUNT)
     }
   })
 })
