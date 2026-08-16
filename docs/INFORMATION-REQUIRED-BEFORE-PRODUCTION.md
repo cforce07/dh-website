@@ -10,6 +10,8 @@ Four categories, which behave differently and are tracked separately (master bri
 
 Categories A, B and D are **derived** from the codebase and cannot fall out of sync with it. Category C is **declared** — see that section for why those items cannot be derived.
 
+A fifth section follows the four. It is not a category of missing information: it records two conditions of the build itself that DirectHired should know about and that no page shows.
+
 ## Category A — Inline gaps (block the production build)
 
 A missing value on a block that still renders. Each is marked with `<Tbd>` in the source and shows up as a `data-tbd` attribute in the built HTML. `npm run build` runs `scripts/check-tbd.mjs` against `dist/` and **fails** while any of these remain — publishing a rendered block with a hole in it is a broken claim.
@@ -111,3 +113,14 @@ This is the production decision list: for each entry, either supply your own pho
   - Usage sites: none yet — registered ahead of any consumer
   - Should become: Priority 2 of the shot brief: a real corner of the actual office at working temperature, and a real consultation in progress shot from behind or side-on. Not staged, not empty, not wide-angle.
   - AI generation **not permitted**: A generated office or generated staff photograph is a claim about a real, licensed business (MOM 23C1443) that is simply false. §55 and §78 both apply. This slot is registered with no consumer precisely so that the prohibition is on record before anyone adds an About block and reaches for a plausible-looking interior.
+
+## Known conditions of the current build (nothing is required from DirectHired)
+
+Neither of these is missing information — nobody is being asked for anything, and neither blocks the build. They are here because they are true of the site as it stands, they are not visible on any page, and a launch checklist that omits them leaves the reader to discover them by clicking.
+
+- **41 internal links point at routes this build does not produce** (13 routes) — derived from `dist/`
+  - Blocks: nothing at build time. `npm run build` succeeds, every page passes every check, and nothing looks broken; a visitor who clicks one is served the 404 page. The routes are pages this project has committed to and **sub-project 3** owns, not dead ends: `/disclaimer`, `/pdpa`, `/privacy-policy`, `/terms` — the legal links in the footer's bottom bar, one each on all 8 built pages (32 links) — plus 3 under `/helpers/` and 6 under `/services/`, the detail links inside two sections on the homepage (9 links).
+  - Handled meanwhile by: the navigation itself, which has **no broken links at all** — 'Services' and 'Helper Sources' were taken out of it on 2026-08-17 and stay out until their pages exist (`src/lib/nav.ts` records the decision). What is left is a footer bar a Singapore site is expected to carry and two homepage sections that would have to be redesigned to lose their links. Every route is enumerated in `DEFERRED_ROUTES` in `tests/links.test.ts`, which asserts the residual as an exact set: it fails if a new broken link appears, and it fails if an entry is still listed after its page ships.
+- **6 `astro check` hints, deliberately not silenced** — declared; reproduce with `npm run typecheck`
+  - Blocks: nothing. `npm run typecheck` exits 0 — **0 errors, 0 warnings, 6 hints**. 5 of them are Astro's `astro(4000)` note that a `<script type="application/ld+json">` carrying attributes is treated as `is:inline`, one for each JSON-LD block in the source (`src/layouts/BaseLayout.astro`, `src/pages/contact.astro`, `src/pages/index.astro`, `src/sections/Faq.astro`, `src/sections/FaqGrouped.astro`). The remaining one is `ts(6196)` on `src/layouts/BaseLayout.astro`, which declares an `interface Props` it never references by name.
+  - Handled meanwhile by: leaving both alone, on purpose. `is:inline` is exactly what those blocks want — they emit a JSON string that must not be processed as a module — so adding the directive would be a behaviour-neutral edit to shipping schema, made only to quiet a note that is telling the truth. `Props` is Astro's own convention: the compiler reads it to typecheck every `<BaseLayout>` usage, so deleting the "unused" interface would remove type checking from every page on the site. A hint is a hint; the gate is `0 errors`, and CI enforces that.
