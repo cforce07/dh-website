@@ -115,8 +115,8 @@ const DEFERRED_ROUTES: readonly string[] = [
   // already been built" assertion below insists on: an entry left behind
   // for a route that now exists would exempt that route from ever having
   // to resolve again, so a later regression deleting the page would not
-  // fail this suite. The remaining four go the same way as their tasks land.
-  '/why-directhired',
+  // fail this suite. '/why-directhired' went the same way when Task 7
+  // shipped it. The remaining two go the same way as their tasks land.
   '/about',
   '/faq',
 

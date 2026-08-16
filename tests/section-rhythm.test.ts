@@ -200,6 +200,37 @@ const FIND_YOUR_HELPER_BLOCKS = [
   { block: 'F4', path: 'src/sections/FinalCta.astro', selector: '.final-cta' },
 ] as const
 
+/**
+ * Section files in the order src/pages/why-directhired.astro renders them.
+ *
+ * Task 7. Two of its five blocks are defined in the page file — the origin
+ * and the credentials are this page's own content and belong to no other
+ * route — so they are addressed by `path: <the page>` exactly as /pricing's
+ * hero block and /find-your-helper's two inline blocks are.
+ *
+ * THIS IS THE FIRST PAGE OTHER THAN THE HOMEPAGE TO RENDER TwoSidedMatch,
+ * and therefore the first to carry --color-deep. Spec §3.2 lists that
+ * component in this page's composition by name, and spec §6's rule is that a
+ * page's ground rhythm contains at most ONE palette register shift — which
+ * this sequence does. See the page file's header for the full argument, and
+ * the "shifts palette register at most once" assertion in the register
+ * below, which is what holds the rule for every page rather than for the
+ * homepage alone.
+ *
+ * The grounds are not free: TwoSidedMatch is fixed at --color-deep and
+ * FinalCta at --color-surface, both because the homepage renders the same
+ * two components. Those two fix the other three — cream at the top so the
+ * page opens on the site's page ground, and white either side of the deep
+ * band so nothing meets a ground it shares.
+ */
+const WHY_DIRECTHIRED_BLOCKS = [
+  { block: 'W1', path: 'src/pages/why-directhired.astro', selector: '.why-origin' },
+  { block: 'W2', path: 'src/pages/why-directhired.astro', selector: '.why-pillars' },
+  { block: 'W3', path: 'src/sections/TwoSidedMatch.astro', selector: '.two-sided' },
+  { block: 'W4', path: 'src/pages/why-directhired.astro', selector: '.why-credentials' },
+  { block: 'W5', path: 'src/sections/FinalCta.astro', selector: '.final-cta' },
+] as const
+
 const PAGE_SEQUENCES: PageSequence[] = [
   {
     page: 'src/pages/index.astro',
@@ -215,6 +246,7 @@ const PAGE_SEQUENCES: PageSequence[] = [
   { page: 'src/pages/pricing.astro', blocks: PRICING_BLOCKS },
   // --- Phase B: one entry per page, in the shape above. ---
   { page: 'src/pages/find-your-helper.astro', blocks: FIND_YOUR_HELPER_BLOCKS },
+  { page: 'src/pages/why-directhired.astro', blocks: WHY_DIRECTHIRED_BLOCKS },
 ]
 
 /**
@@ -285,6 +317,36 @@ describe.each(PAGE_SEQUENCES)('$page keeps the ground rhythm', ({ page, blocks }
     // what makes that register change land. Two on one page is wallpaper.
     const teal = grounds.filter((g) => g.ground === '--color-surface-teal').map((g) => g.block)
     expect(teal.length).toBeLessThanOrEqual(1)
+  })
+
+  it('shifts palette register at most once', () => {
+    /*
+     * Task 7. The equivalent rule for --color-deep, and until now it
+     * existed ONLY inside the homepage's describe below — scoped to
+     * BLOCKS, which enumerates homepage sections by hand. That is the same
+     * shape of hole G-5 found in the brand-wash rule: a rule named after a
+     * site-wide property, asserted against one page's list, passing by
+     * omission on every other page.
+     *
+     * It went unnoticed because no page but the homepage rendered a
+     * --color-deep section. /why-directhired is the first that does (spec
+     * §3.2 lists TwoSidedMatch in its composition), so the rule has to be
+     * stated where it can be checked for every page, including ones nobody
+     * has written yet.
+     *
+     * AT MOST ONE, not exactly one, and not "only the homepage". Spec §6
+     * says block 07's --color-deep remains the only palette REGISTER SHIFT
+     * — a rule about how many times ONE SCROLL changes register, which is
+     * what makes the change land. A page reusing block 07 itself keeps
+     * that; a page painting a second dark band of its own does not, and
+     * fails here. Most pages have none at all, which is also fine.
+     *
+     * The footer is --color-deep on every page and is deliberately outside
+     * this: it is not a section in any page's rhythm, and the homepage
+     * describe's own comment has always read "block 07 and the footer".
+     */
+    const deep = grounds.filter((g) => g.ground === '--color-deep').map((g) => g.block)
+    expect(deep.length, `${page} shifts register more than once: ${deep.join(', ')}`).toBeLessThanOrEqual(1)
   })
 })
 
@@ -552,6 +614,82 @@ describe('the /find-your-helper ground sequence alternates', () => {
     ] as const
     for (const [pageBlock, homeBlock] of shared) {
       const p = FIND_YOUR_HELPER_BLOCKS.find((b) => b.block === pageBlock)!
+      const h = BLOCKS.find((b) => b.block === homeBlock)!
+      expect(p.path).toBe(`src/sections/${h.file}.astro`)
+      expect(p.selector).toBe(h.selector)
+    }
+  })
+})
+
+describe('the /why-directhired ground sequence alternates', () => {
+  /*
+   * The generic rules in the register above already hold for this page.
+   * What they cannot say is which sequence was CHOSEN — a page could
+   * satisfy every one of them with white / cream / deep / cream / white and
+   * still not be the arrangement anybody approved. So the sequence is
+   * stated here, the way the homepage's, /pricing's and
+   * /find-your-helper's are. Changing one entry changes at least two
+   * adjacencies; re-derive the whole thing rather than editing a line.
+   */
+  const grounds = WHY_DIRECTHIRED_BLOCKS.map((b) => ({
+    ...b,
+    ground: groundOfPath(b.path, b.selector),
+  }))
+
+  it('is exactly the approved sequence', () => {
+    expect(grounds.map((g) => `${g.block} ${g.ground}`)).toEqual([
+      'W1 --color-surface',
+      'W2 --color-surface-raised',
+      'W3 --color-deep',
+      'W4 --color-surface-raised',
+      'W5 --color-surface',
+    ])
+  })
+
+  it('shifts palette register exactly once, and it is TwoSidedMatch that does it', () => {
+    /*
+     * The counterpart to /pricing's and /find-your-helper's "adds no second
+     * dark band". Those two pages have none; this one has exactly one, and
+     * the thing worth asserting is WHICH block it is.
+     *
+     * A page-local section painting itself --color-deep would satisfy "at
+     * most one" in the register above while being precisely the second dark
+     * band spec §6 requires to be justified on its own terms. Naming the
+     * block means only the shared component can be it.
+     */
+    const deep = grounds.filter((g) => g.ground === '--color-deep')
+    expect(deep.map((g) => g.block)).toEqual(['W3'])
+    expect(deep[0].path).toBe('src/sections/TwoSidedMatch.astro')
+  })
+
+  it('grounds no section in the brand wash', () => {
+    // Not an oversight. The page already spends its one register change on
+    // the deep band; a teal wash as well would give one scroll two special
+    // grounds and neither would read as the exception. Stated so that
+    // adding one is a decision somebody takes here rather than a ground
+    // flipped in the page file.
+    expect(grounds.filter((g) => g.ground === '--color-surface-teal')).toEqual([])
+  })
+
+  it('shares TwoSidedMatch and FinalCta with the homepage rather than copying them', () => {
+    /*
+     * The coupling this page is built on, asserted the way /pricing and
+     * /find-your-helper assert theirs. TwoSidedMatch is reused UNCHANGED
+     * (spec §3.1) — it is not parameterised, and a page-local copy of it
+     * would be the second dark band the assertion above exists to refuse
+     * while still passing every ground check, because the copy would be
+     * a --color-deep block named W3.
+     *
+     * File paths, not grounds: comparing grounds here would be x === x,
+     * both sides calling the same reader on the same file — the mistake
+     * caught in /pricing's equivalent test.
+     */
+    const shared = [
+      ['W3', '07'],
+      ['W5', '12'],
+    ] as const
+    for (const [pageBlock, homeBlock] of shared) {
+      const p = WHY_DIRECTHIRED_BLOCKS.find((b) => b.block === pageBlock)!
       const h = BLOCKS.find((b) => b.block === homeBlock)!
       expect(p.path).toBe(`src/sections/${h.file}.astro`)
       expect(p.selector).toBe(h.selector)

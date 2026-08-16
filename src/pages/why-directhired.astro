@@ -1,0 +1,573 @@
+---
+/**
+ * /why-directhired — the brand and trust page (core-pages design spec §4).
+ *
+ * Spec §3.2 gives it five parts and no others: origin · the three pillars
+ * at length · `TwoSidedMatch` · credentials · CTA. It is the page a family
+ * lands on from a name search, so its job is to say what DirectHired is
+ * FOR and then hand over three facts that do not depend on our word.
+ *
+ * THE ORIGIN IS SOURCE BRIEF §35, VERBATIM, AND NOTHING EXPANDED.
+ * Spec §3.4 records that as a decision taken by default, because
+ * DirectHired did not supply their own words: the headline ("We don't just
+ * fill vacancies."), the origin sentence and the answer sentence below it
+ * are all §35 as written. There is no founder here, no year of insight and
+ * no anecdote, because nobody has given us one — spec §9 still lists
+ * "founding story in DirectHired's words" as an open input, and inventing
+ * one is exactly what master brief §78 forbids. The homepage's Difference
+ * block (04) carries a compressed retelling of the same story; this is the
+ * canonical wording, and when DirectHired supplies their own, BOTH change.
+ *
+ * THE PILLARS ARE STATED AT LENGTH — from sources, not from adjectives.
+ * Their names and their one-line forms live in src/sections/Difference.astro
+ * and come from master brief §1. What each one gains here traces to
+ * something already supplied:
+ *
+ *   Better Matching     — brief §1's list of what is understood before a
+ *                         recommendation (the family, the household, the
+ *                         requirements, the skills, the lifestyle), plus
+ *                         §40's ban on search/filter/browse, which is a
+ *                         CONSEQUENCE of that order and is stated here as
+ *                         one for the first time.
+ *   Transparent Pricing — what /pricing actually does: both packages
+ *                         itemised, the one line that differs named, and
+ *                         what sits outside a total stated in the same
+ *                         place. No figure is repeated here; a total typed
+ *                         into this page is where a stale number hides.
+ *   Personalised Service— brief §1 line 61 ("human guidance rather than
+ *                         treating customers as another vacancy/order")
+ *                         and line 689 ("personalised human consultation").
+ *
+ * PERSONALISED SERVICE IS THE SHORT ONE, DELIBERATELY. Two sentences, and
+ * that is the whole of what DirectHired has supplied about it. Who guides a
+ * placement, whether one person carries it end to end, and what the
+ * guidance consists of are all unconfirmed — Difference.astro records the
+ * same finding, and §78 forbids inventing staff detail. A third and fourth
+ * sentence here would have to be invented, so they are not written. That is
+ * a question for DirectHired, recorded in the task report; it is not an
+ * author's to answer.
+ *
+ * NO LOAN OR PLACEMENT FEE IS NAMED. Spec §2.4 requires copy that mentions
+ * either to carry BOTH halves — the employer advances it and recovers it,
+ * and it is ultimately the helper's cost — which a pillar body has no room
+ * for without becoming an essay. Difference.astro reached the same
+ * conclusion for the same reason. The pillar points at /pricing, which is
+ * where a reader can be given both halves properly, and §2.5's compliance
+ * gate is untouched.
+ *
+ * Section grounds run cream / white / deep / white / cream across the five
+ * blocks (.why-origin, .why-pillars, TwoSidedMatch, .why-credentials,
+ * FinalCta), registered and asserted in tests/section-rhythm.test.ts.
+ *
+ * WHY TwoSidedMatch IS RENDERED HERE. Spec §6 says block 07's
+ * --color-deep remains the only palette REGISTER SHIFT, and this page has
+ * exactly one: this section, the same component painting the same ground,
+ * not a second dark surface invented for a second page. The rule is about a
+ * page's ground rhythm containing at most one such shift, and spec §3.2
+ * lists TwoSidedMatch in this page's composition by name. /find-your-helper
+ * declined to render it, correctly — §3.2 does not list it there. That
+ * reasoning does not reach this page.
+ *
+ * It also earns its place editorially: the Better Matching pillar above it
+ * describes ONE side of a match, and this block is the site's only
+ * statement that there are two. "Happy Employer. Happy Helper." appears
+ * once per page, which is what brief §3's instruction against slogan
+ * repetition asks for.
+ *
+ * WHY THE CREDENTIALS BLOCK IS NOT TrustBar. Spec §3.1 reuses TrustBar
+ * unchanged, and the homepage's bar is the right shape for a sub-fold
+ * strip: three facts, no explanation. This page's whole subject is whether
+ * to believe the paragraphs above, so each credential needs the scope it
+ * was measured over said out loud — which the bar has no room for and
+ * should not grow. Every VALUE still comes from src/data/company.ts and
+ * none is retyped, so the two surfaces cannot disagree.
+ *
+ * Deliberately NO MOM crest, seal or other government mark, here or
+ * anywhere (open decision D-7). Whether DirectHired may display one is a
+ * permission nobody in this repository holds; a licence number set in type
+ * is safe, an official-looking mark is not.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro'
+import Container from '../components/Container.astro'
+import Button from '../components/Button.astro'
+import TwoSidedMatch from '../sections/TwoSidedMatch.astro'
+import FinalCta from '../sections/FinalCta.astro'
+import { company } from '../data/company'
+import { defaultWhatsappUrl } from '../lib/whatsapp'
+
+const whatsappHref = defaultWhatsappUrl()
+
+const title = 'Why DirectHired — Understand First, Recommend Second'
+const description =
+  'Why families choose DirectHired: a licensed Singapore maid agency (MOM licence 23C1443) ' +
+  'that understands your household before recommending a helper, with both packages itemised.'
+---
+
+<BaseLayout title={title} description={description}>
+  <section class="why-origin">
+    <Container>
+      {/*
+        Source brief §35, all three lines, as written. The headline is its
+        headline, the lede is its origin story and the sentence after it is
+        its answer. Do not embroider any of the three: spec §3.4 records
+        this as a default decision precisely because DirectHired has not
+        supplied their own account, and an invented detail here would be
+        the hardest kind to remove later — it would read as history.
+      */}
+      <h1>We don’t just fill vacancies.</h1>
+      <p class="origin-story">
+        DirectHired was created after seeing families struggle with agencies that focused on filling
+        vacancies instead of finding the right fit.
+      </p>
+      <p class="origin-answer">
+        We take time to understand your needs before recommending a helper.
+      </p>
+    </Container>
+  </section>
+
+  <section class="why-pillars">
+    <Container>
+      {/*
+        Structural as well as editorial: the three pillars below are <h3>s,
+        so without this <h2> the document would run <h1> straight to <h3>
+        and break its own outline. tests/pages.test.ts asserts it —
+        heading-order is an axe BEST-PRACTICE rule and sits outside the
+        wcag2a/wcag2aa tags scripts/run-axe.mjs filters to, so nothing else
+        would catch it.
+      */}
+      <h2 class="section-title">What that looks like in practice</h2>
+
+      <div class="pillars">
+        {/*
+          THE THREE PILLARS, AT LENGTH — master brief §1's names, and the
+          same three the homepage carries in one line each. A visitor who
+          has read the homepage must get something new here, so each body
+          adds what its one-liner had no room for. Nothing below is a new
+          CLAIM: every sentence restates something the brief supplied or
+          something another page on this site already does.
+        */}
+        <div class="pillar">
+          <h3>Better Matching</h3>
+          <p>
+            Understand first, recommend second — in that order, every time. We go through the
+            household before we suggest anyone: the family, the routines, the tasks a helper would
+            take on, the skills the job calls for, and what you expect day to day.
+          </p>
+          {/*
+            The consequence, stated as one. Brief §40 rules out search,
+            filtering and browse for the whole site, and a visitor who
+            notices there is no gallery here reads its absence as a page
+            that has not been built rather than as the product. Said
+            plainly it is the argument: a shortlist made before the
+            household is understood can only have been made from
+            availability, which is what §35's origin sentence describes.
+          */}
+          <p>
+            It is also why this site has no gallery of helpers to browse. A shortlist assembled
+            before anyone has heard about your household is a shortlist assembled from whoever
+            happens to be available — which is the thing DirectHired was started to stop doing.
+          </p>
+        </div>
+
+        <div class="pillar">
+          <h3>Transparent Pricing</h3>
+          {/*
+            NOT ONE FIGURE ON THIS PAGE, and that is not squeamishness: a
+            total typed here would be a second copy of a number that lives
+            in src/data/pricing.ts, which is exactly where a stale price
+            hides. The claim is about the SHAPE of the price list, and the
+            page that holds the figures is one link away.
+
+            No completeness promise either. "Itemised" is what /pricing's
+            own <h1> claims and all it may claim — the loan figure (§2.3)
+            and the repayment mechanics (§2.5) are deliberately withheld,
+            so "in full" is a promise this site is built not to keep.
+          */}
+          <p>
+            Both packages are published on this site, itemised line by line, with the one line that
+            differs between them named as well. You do not have to ask for a price list, and you are
+            not handed a single total with the working folded up inside it.
+          </p>
+          <p>
+            What sits outside a package total is set out in the same place as the totals themselves,
+            on the <a href="/pricing">pricing page</a> — not left to come up later.
+          </p>
+        </div>
+
+        <div class="pillar">
+          <h3>Personalised Service</h3>
+          {/*
+            TWO SENTENCES, AND THAT IS THE WHOLE OF IT. See the file
+            header: brief line 61 and line 689 are the entire supplied
+            basis for this pillar, and everything a third sentence would
+            naturally say — who guides a placement, whether the same person
+            sees it through, what the guidance actually consists of — is
+            unconfirmed staff detail that §78 forbids inventing. A short
+            honest pillar beats a long invented one.
+
+            "A system", never "AI", "an algorithm" or "automated": there is
+            no matching software, and the guard in tests/pages.test.ts
+            correctly fires on any of those words near a matching verb even
+            when they are being DENIED.
+          */}
+          <p>
+            Human guidance throughout the process, from your first questions through to the
+            placement itself. A person reads what you send and answers you; nothing here is sorted
+            by a system, and you are not asked to put your family into a category before anyone has
+            spoken to you.
+          </p>
+        </div>
+      </div>
+
+      {/*
+        The internal linking triangle (spec §4) from its third vertex.
+        /pricing is linked from the pillar above; this points at the page
+        that shows the order those first questions actually run in.
+      */}
+      <p class="pillars-link">
+        What happens after you send us your requirements is set out step by step on the
+        <a href="/find-your-helper">find your helper</a> page.
+      </p>
+
+      {/*
+        The page's first way to act, at the point the argument has just been
+        made. Desktop has no sticky CTA bar, so without this a reader
+        scrolls the whole page before meeting one. Primary before secondary,
+        both from the single-sourced URLs, exactly as every other CTA
+        surface on the site renders them.
+      */}
+      <div class="pillars-cta">
+        <Button variant="primary" href={company.requirementFormUrl}>Submit Your Requirements</Button>
+        <Button variant="secondary" href={whatsappHref} external>WhatsApp Us</Button>
+      </div>
+    </Container>
+  </section>
+
+  {/*
+    Block 07, unchanged and unparameterised (spec §3.1). It is this page's
+    ONE palette register shift, and the section directly above it has just
+    described one side of a match — see the file header for why rendering
+    it here is not the second dark band spec §6 warns about.
+  */}
+  <TwoSidedMatch />
+
+  <section class="why-credentials">
+    <Container>
+      <h2 class="section-title">What you can check</h2>
+      {/*
+        The turn the page needs. Everything above is a description of how
+        DirectHired works, which a visitor can only take on trust; these
+        three are matters of record, and saying so is the difference
+        between a credentials row and a badge decoration.
+      */}
+      <p class="credentials-lede">
+        Everything above is a description of how we work. These three are not.
+      </p>
+
+      {/*
+        EVERY VALUE COMES FROM src/data/company.ts. Not one is retyped —
+        master brief §70 for the licence (never invent, modify, guess or
+        substitute it) and §68 for the count, which was revised down from
+        "1,000+" once already and would half-land if a literal sat on a
+        page. tests/company.test.ts enforces both across every surface.
+      */}
+      <dl class="credentials">
+        <div class="credential">
+          <dt>MOM licence</dt>
+          <dd class="credential-value">{company.momLicence}</dd>
+          {/*
+            Verified against MOM's public directory before publication, as
+            master brief §70 requires. What is published is the number and
+            what it is — no crest, no seal, no claim of endorsement, and no
+            "MOM-approved" (D-7). A number set in type is safe; a
+            government mark is a permission nobody here holds.
+          */}
+          <dd class="credential-note">
+            The Employment Agency licence DirectHired operates under. It is issued by the Ministry of
+            Manpower and recorded in its register — the one fact on this page that does not rest on
+            our word.
+          </dd>
+        </div>
+
+        <div class="credential">
+          <dt>Established</dt>
+          <dd class="credential-value">Since {company.foundedYear}</dd>
+          <dd class="credential-note">
+            The year DirectHired began placing domestic helpers with families in Singapore.
+          </dd>
+        </div>
+
+        <div class="credential">
+          <dt>Track record</dt>
+          {/*
+            "Placements", never "helpers placed". The figure's basis, on
+            company.placementCount, is "500+ placements across all services
+            since 2022" — DirectHired's own sentence, and their note says
+            it explicitly includes transfers, replacements and direct-hire
+            processing. "Helpers placed" reads as new placements only,
+            which is a smaller and stronger claim than the number supports.
+            The note below carries the scope because §68 requires a figure
+            to be published with the period and scope it was measured over,
+            and this page has the room the homepage's trust bar does not.
+          */}
+          <dd class="credential-value">{company.placementCount} placements</dd>
+          <dd class="credential-note">
+            Across all services since {company.foundedYear}: new placements, transfers, replacements
+            and direct-hire processing. That is the scope the figure was counted over.
+          </dd>
+        </div>
+      </dl>
+    </Container>
+  </section>
+
+  <FinalCta
+    heading="Judge it by the first conversation."
+    lede="Send us what your family needs. What we ask you first is the whole of the difference this page describes."
+  />
+</BaseLayout>
+
+<style>
+  .why-origin {
+    /*
+     * --space-12 top, --space-section bottom — Hero's treatment, and
+     * /pricing's and /find-your-helper's, for the same reason all three
+     * use it: this block carries the page's hero, and a full
+     * --space-section (128px at ≥1280) above an image-less single-column
+     * headline spends the first screen on cream.
+     */
+    padding-block: var(--space-12) var(--space-section);
+    background: var(--color-surface);
+  }
+
+  .why-origin h1 {
+    margin: 0;
+    max-width: 16ch;
+    font-family: var(--font-display);
+    font-size: var(--size-h1);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.1;
+    color: var(--color-ink);
+  }
+
+  .origin-story {
+    max-width: 56ch;
+    margin: var(--space-6) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-lede);
+    line-height: 1.5;
+    color: var(--color-ink-muted);
+  }
+
+  /* The answer half of brief §35, in full ink rather than muted: the
+     paragraph above it is the complaint a visitor arrived with, and this
+     is the sentence the rest of the page is an expansion of. */
+  .origin-answer {
+    max-width: 44ch;
+    margin: var(--space-6) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-lede);
+    line-height: 1.5;
+    color: var(--color-ink);
+  }
+
+  .why-pillars {
+    padding-block: var(--space-section);
+    /* White, between the cream hero above and TwoSidedMatch's deep band
+       below. Registered in tests/section-rhythm.test.ts; the grounds have
+       to be judged as a sequence, so do not flip this one alone. */
+    background: var(--color-surface-raised);
+  }
+
+  /* Shared by both page-local blocks' <h2>, at --size-h3 rather than
+     --size-h2: these head a sub-part of a page the <h1> has already
+     opened, and setting them at section-header scale would put three
+     competing display sizes on one screen. Same size and role as
+     /pricing's `.grid-heading` and /find-your-helper's `.section-title`. */
+  .section-title {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--size-h3);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  /*
+   * Each pillar is a ROW — title on its own column, body beside it —
+   * rather than the homepage's three-abreast divided row.
+   *
+   * That is not variety for its own sake. Difference.astro's layout is
+   * built for one sentence per pillar and works because all three are the
+   * same short length; these bodies run to a paragraph or two, and three
+   * of those side by side at 1280 give each ~340px and a wall of eleven
+   * lines. A row per pillar gives the body a reading measure and lets the
+   * three titles stack on one axis, which is what makes the page scan as
+   * an argument in three parts rather than as three panels.
+   */
+  .pillars {
+    display: grid;
+    gap: var(--space-8);
+    margin-top: var(--space-8);
+  }
+
+  /*
+   * Opened by a hairline in --color-border (decorative, ~1.3:1 — see
+   * tokens.css; it carries no text and bounds no control), never
+   * --color-brand-teal. Teal as a drawn line is reserved for exactly two
+   * places on this site, block 07's crossbar and FinalCta's mark, and
+   * spending it on routine section furniture is what makes those two stop
+   * meaning anything.
+   */
+  .pillar {
+    display: grid;
+    gap: var(--space-4);
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .pillar h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  .pillar p {
+    max-width: 56ch;
+    margin: 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+  }
+
+  .pillars-link {
+    max-width: 56ch;
+    margin: var(--space-12) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+  }
+
+  /* --color-accent (6.03:1 on cream, 5.83:1 on white), never
+     --color-brand-teal, which measures 2.89:1 and carries no text
+     anywhere on this site. */
+  .pillar a,
+  .pillars-link a {
+    color: var(--color-accent);
+    text-decoration: none;
+    border-bottom: 1px solid var(--color-accent);
+  }
+
+  .pillar a:hover,
+  .pillars-link a:hover {
+    color: var(--color-accent-hover);
+    border-color: var(--color-accent-hover);
+  }
+
+  .pillars-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-8);
+  }
+
+  .why-credentials {
+    padding-block: var(--space-section);
+    /* White again, between TwoSidedMatch's deep band above and FinalCta's
+       cream below. FinalCta is fixed at --color-surface because the
+       homepage renders it too, which is what fixes this one. */
+    background: var(--color-surface-raised);
+  }
+
+  .credentials-lede {
+    max-width: 46ch;
+    margin: var(--space-4) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-lede);
+    line-height: 1.5;
+    color: var(--color-ink);
+  }
+
+  .credentials {
+    display: grid;
+    gap: var(--space-8);
+    margin: var(--space-12) 0 0;
+  }
+
+  .credential {
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* The site's established eyebrow treatment (TrustBadge's .trust-label):
+     small, semibold, uppercase, tracked. --tracking-wide's contract
+     requires text-transform: uppercase in the same rule — asserted in
+     tests/tokens.test.ts, which scans src/pages too. */
+  .credential dt {
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+  }
+
+  /* Figtree, not Fraunces, and tabular figures — the same treatment
+     TrustBadge gives these three values on the homepage, so a licence
+     number reads as a number rather than as display copy. */
+  .credential-value {
+    margin: var(--space-2) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-h3);
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.2;
+    color: var(--color-ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .credential-note {
+    max-width: 42ch;
+    margin: var(--space-3) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+  }
+
+  /* 48em = --bp-tablet (tokens.css); the literal is repeated by hand
+     because custom properties do not resolve inside a media condition. */
+  @media (min-width: 48em) {
+    /* The title column is fixed rather than fluid so the three bodies
+       start on one axis; `minmax(0, 1fr)` on the second track lets it
+       shrink below its content's min-content width instead of pushing the
+       row wider than the container. */
+    .pillar {
+      grid-template-columns: 16rem minmax(0, 1fr);
+      column-gap: var(--space-8);
+      align-items: baseline;
+    }
+
+    /*
+     * Explicit placement, not auto-flow. A pillar with two paragraphs
+     * auto-places them h3 / p in row 1 and the SECOND p back under the
+     * title in row 1 of column 1 — the title column filling up with body
+     * copy, which is the layout this row shape exists to avoid. Pinning
+     * the title to the first cell and every paragraph to column 2 stacks
+     * the bodies against each other whether a pillar has one or two.
+     */
+    .pillar h3 {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .pillar p {
+      grid-column: 2;
+    }
+
+    .credentials {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+</style>
