@@ -16,18 +16,35 @@ const pillars = [
   },
   {
     /*
-     * Wording is constrained by brief §19: additional helper
-     * placement-related fees may apply, so the package total is not
-     * necessarily the complete final employer cost. Any "no added fees" /
-     * "nothing gets added later" phrasing is therefore false on this site's
-     * own terms, and is contradicted by the qualifier PricingSection
-     * renders on the same page. The defensible claim — the one the brief
-     * actually supports at line 795, "clear package pricing without
-     * unnecessary uncertainty" — is that the package is itemised and the
-     * qualifier is stated upfront. Do not restore a completeness promise.
+     * Wording is constrained from two directions at once, and both have
+     * to hold.
+     *
+     * Brief §19: the package total is not necessarily the complete final
+     * employer cost, so any "no added fees" / "nothing gets added later"
+     * phrasing is false on this site's own terms and is contradicted by
+     * the qualifier PricingSection renders on the same page. The
+     * defensible claim — the one the brief actually supports at line 795,
+     * "clear package pricing without unnecessary uncertainty" — is that
+     * the package is itemised and what sits outside it is stated upfront.
+     * Do not restore a completeness promise.
+     *
+     * Core-pages spec §2.4, added 2026-08-16: this body used to end "Where
+     * additional placement-related fees can apply, we say so upfront."
+     * That is the same framing error as PricingSection's old qualifier,
+     * one modal weaker — it presents the helper's loan and placement fee
+     * as a conditional cost the EMPLOYER bears, when the employer advances
+     * them and recovers them through the helper's repayment, and they are
+     * ultimately the HELPER's cost. §2.4 requires copy that mentions those
+     * fees to carry BOTH halves, and a pillar body has no room for both
+     * without becoming a paragraph. So this one no longer names them at
+     * all: it makes the itemisation claim, points at the fact that
+     * something sits outside the package, and leaves the explanation to
+     * PricingSection's qualifier and to /pricing's LoanAndPlacement, which
+     * is where a reader can be given both halves properly. Do not
+     * reintroduce a bare "fees may/can apply" here.
      */
     title: 'Transparent Pricing',
-    body: 'Clear package pricing, itemised line by line. Where additional placement-related fees can apply, we say so upfront.',
+    body: 'Clear package pricing, itemised line by line, and a plain account of anything that sits outside the package.',
   },
   {
     /*

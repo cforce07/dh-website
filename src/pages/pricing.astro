@@ -74,6 +74,28 @@ function listSentence(items: readonly string[]): string {
 
 const sharedComponentSentence = listSentence(sharedComponents.map((item) => item.label))
 
+/*
+ * The explicit fallback for a package that is not itemised.
+ *
+ * `sharedComponents` is empty whenever either package is `total-only` —
+ * the shape src/data/pricing.ts keeps precisely so that an unpublished
+ * breakdown cannot be invented, and the shape the without-replacement
+ * package actually had until 2026-08-16. With no guard this sentence
+ * degraded to "Both packages cover the same components at the same
+ * amounts: ." — a published typo, and the claim before the colon would
+ * itself be unsupported, since nothing could be compared to establish it.
+ *
+ * So the comparison claim is made only when there is a comparison to make.
+ * The fallback keeps what survives without line items: the difference
+ * between the two totals, which `packageTotalCents` returns for either
+ * package kind, and the replacement itself, which comes from spec §2.1
+ * rather than from any breakdown.
+ */
+const comparisonSentence = sharedComponentSentence
+  ? `Both packages cover the same components at the same amounts: ${sharedComponentSentence}. ` +
+    `The one line that differs is our agent fee, a gap of ${difference}.`
+  : `The two packages differ by ${difference}.`
+
 const title = 'Maid Agency Pricing in Singapore — Itemised | DirectHired'
 const description =
   `How much does a maid cost in Singapore? DirectHired's maid agency pricing, itemised — ` +
@@ -107,10 +129,10 @@ const description =
       <div class="whats-included">
         <h2>What each total covers</h2>
         <p>
-          Both packages cover the same components at the same amounts: {sharedComponentSentence}.
-          The one line that differs is our agent fee. That gap is {difference}, and what it buys is
-          the replacement — one replacement helper, requested within 6 months of the deployment
-          date, which the {withoutReplacement.name} package does not include.
+          {comparisonSentence} What that difference buys is the replacement — one replacement
+          helper, requested within 6 months of the deployment date, which the {
+            withoutReplacement.name
+          } package does not include.
         </p>
         <p>
           Two further amounts — the helper’s loan and the placement fee — sit outside both totals.

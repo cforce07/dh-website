@@ -126,10 +126,22 @@ import Card from '../components/Card.astro'
   .amount-figure {
     margin: 0;
     font-family: var(--font-display);
-    /* Deliberately the same display treatment PricingCard gives a package
-       total. "One month's salary" and "assessed case by case" ARE the
-       answers to "how much?" — setting them as prose while every real
-       number on the page is set as a figure would read as evasion. */
+    /* 1.75rem, matching PricingCard's `.total-amount` exactly — the size
+       every package total on this page is set at. "One month's salary"
+       and "assessed case by case" ARE the answers to "how much?", and
+       setting them as prose while every real number on the page is set as
+       a figure would read as evasion.
+
+       Precisely: `.total-amount` is a flat 1.75rem at every viewport
+       (PricingCard declares no media queries at all). Its 2.25rem rule is
+       `.total-only .total-amount` — a VARIANT for a package with no line
+       items, which has had zero instances since 2026-08-16, not a
+       breakpoint step. So the two match as rendered today. If a
+       total-only package ever ships, these figures sit beside a 2.25rem
+       total and this comment is where to decide whether to follow it;
+       the answer is probably no, since the step exists to stop a card
+       with nothing else on it reading as sparse, which is not this
+       card's problem. */
     font-size: 1.75rem;
     font-weight: var(--font-weight-medium);
     line-height: 1.2;

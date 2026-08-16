@@ -35,8 +35,24 @@
  * retyped, so a change to the package breakdown reaches this section too.
  * They are the with-replacement package's line items minus the agent fee,
  * which is precisely what "the agent fee is not charged again" means.
- * No subtotal is shown: summing them would read as a complete quotation
- * for a replacement, which is a claim the spec does not support.
+ *
+ * NAMES ONLY — NO AMOUNTS. Spec §2.1 authorises WHICH components recur.
+ * It does not state what any of them costs on a replacement. This section
+ * first shipped with the five amounts printed beside the names and no
+ * subtotal, on the reasoning that summing them would read as a complete
+ * quotation the spec does not support. That reasoning was right and did
+ * not go far enough: printing all five addends while withholding only the
+ * addition is one step short of the line, not on the safe side of it, and
+ * a reader adds them up anyway. Insurance and medical are precisely the
+ * two most likely to differ for a different helper. Controller ruling,
+ * 2026-08-16; the same ruling corrected the FAQ entry rendered a screen
+ * below this one on /pricing (`replacement-what-covered.md`, which now
+ * says "the same components" rather than "the same amounts"), so leaving
+ * figures here would have made one page disagree with itself.
+ *
+ * The list stays derived from pricing.ts even without the amounts: the
+ * SET of components is the thing that must not drift, and reading it is
+ * what makes an added or renamed line item reach this copy automatically.
  */
 import Container from '../components/Container.astro'
 import SectionHeader from '../components/SectionHeader.astro'
@@ -49,6 +65,26 @@ const recurringComponents =
   withReplacement && withReplacement.kind === 'itemised'
     ? withReplacement.lineItems.filter((item) => item.label !== 'Agent fees')
     : []
+
+/**
+ * "A, B and C". Deliberately a local copy — src/pages/pricing.astro has
+ * the same four lines. It is English list punctuation, not a business
+ * fact: if the two ever diverged the worst outcome is an inconsistent
+ * comma, so neither file gains a dependency on the other and nothing
+ * false can be published by the difference. Promote it to src/lib/ if a
+ * third caller appears.
+ */
+function listSentence(items: readonly string[]): string {
+  if (items.length < 2) return items.join('')
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
+}
+
+/*
+ * Falls back to a component-free sentence rather than rendering "for the
+ * new helper: ." if the package ever becomes total-only. See the parallel
+ * guard in src/pages/pricing.astro.
+ */
+const recurringSentence = listSentence(recurringComponents.map((item) => item.label))
 
 /*
  * Illustrative only — see the file header. Held as integer cents and run
@@ -99,17 +135,11 @@ const exampleAdvanceCents = EXAMPLE_NEW_LOAN_CENTS - EXAMPLE_OUTSTANDING_CENTS
           <div class="term">
             <dt>What you pay again</dt>
             <dd>
-              The third-party components are paid a second time for the new helper:
-              <ul class="recurring">
-                {
-                  recurringComponents.map((item) => (
-                    <li>
-                      <span class="recurring-label">{item.label}</span>
-                      <span class="recurring-amount">{formatSgd(item.amountCents)}</span>
-                    </li>
-                  ))
-                }
-              </ul>
+              {
+                recurringSentence
+                  ? `The third-party components are paid a second time for the new helper: ${recurringSentence}.`
+                  : 'The third-party components are paid a second time for the new helper.'
+              }
               <strong class="fee-note">Our agent fee is not charged again.</strong>
             </dd>
           </div>
@@ -199,33 +229,6 @@ const exampleAdvanceCents = EXAMPLE_NEW_LOAN_CENTS - EXAMPLE_OUTSTANDING_CENTS
     font-size: var(--size-body);
     line-height: 1.6;
     color: var(--color-ink);
-  }
-
-  .recurring {
-    list-style: none;
-    margin: var(--space-4) 0 0;
-    padding: 0;
-    max-width: 24rem;
-  }
-
-  .recurring li {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--space-4);
-    padding-block: var(--space-2);
-    border-bottom: 1px solid var(--color-border);
-  }
-
-  .recurring li:last-child {
-    border-bottom: none;
-  }
-
-  .recurring-label {
-    color: var(--color-ink-muted);
-  }
-
-  .recurring-amount {
-    font-variant-numeric: tabular-nums;
   }
 
   .fee-note {

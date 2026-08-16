@@ -15,4 +15,4 @@ The fly-in package with replacement (**$1,640.10**) covers:
 - Handling & transport — $120
 - 1 replacement within 6 months
 
-The package without replacement is **$1,140.10**. Additional helper placement-related fees may apply depending on the selected helper and placement arrangement.
+The package without replacement is **$1,140.10**. The helper’s loan and placement fee sit outside both totals — you advance them at the start and recover them through the helper’s repayment, so they are ultimately the helper’s cost rather than an extra charge you carry.

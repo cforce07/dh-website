@@ -90,28 +90,74 @@ function builtPages(): { file: string; html: string }[] {
  * the fact, not the string, so a failure message says what was published
  * rather than which regex fired.
  */
+/*
+ * Vocabulary shared by several patterns below, kept in one place so the
+ * three axes stay coherent as they are extended.
+ *
+ * SETTLE covers the verbs a writer reaches for instead of "repay":
+ * clear, settle, spread, work off. PERIOD covers the nouns a writer
+ * reaches for instead of "month": a pay cycle IS a month, said in HR
+ * vocabulary, and "seven salary cycles" is the gated range with the word
+ * "month" removed. FUNDS covers the nouns a writer reaches for instead of
+ * "salary" — take-home, income, remuneration all name the same money.
+ *
+ * NUMBER includes word forms because "seven monthly amounts" and "7
+ * monthly amounts" are the same published fact.
+ */
+const SETTLE = 'repay|repaid|repayment|repaying|settle|settled|settles|settling|clear|cleared|clears|clearing|spread|recover|recovered|recovers|work(?:ed|s|ing)?\\s+off'
+const PERIOD =
+  'months?|monthly|pay\\s*cycles?|salary\\s*cycles?|wage\\s*cycles?|pay\\s*runs?|pay\\s*periods?|payslips?|pay\\s*packets?|instal?ments?|portions?|tranches?'
+const FUNDS = 'salary|salaries|wages?|pay|payslip|earnings|income|remuneration|take[-\\s]home'
+const NUMBER = '\\d+|one|two|three|four|five|six|seven|eight|nine|ten|a few|several|first few'
+
 const GATED_PATTERNS: { label: string; pattern: RegExp }[] = [
-  // --- the 1-7 month repayment range, in the client's own terms ---
+  // --- AXIS 1: how long repayment runs ---
   {
-    label: 'the 1-7 month repayment range',
-    pattern: /\b1\s*(?:-|–|—|to)\s*7\s*months?\b/i,
+    // Broadened from /\b1\s*(?:-|–|—|to)\s*7\s*months?\b/, which was fully
+    // subsumed by "the 7-month maximum" below and so could never fire on
+    // its own — a dead detector wearing a useful label. It now catches ANY
+    // published month range, which is independently meaningful: "3 to 5
+    // months" is a repayment range the spec forbids and contains no 7.
+    label: 'a repayment range expressed in months',
+    pattern: new RegExp(`\\b(?:${NUMBER})\\s*(?:-|–|—|to)\\s*(?:${NUMBER})\\s*months?\\b`, 'i'),
   },
   {
     label: 'the 7-month maximum',
     pattern: /\b(?:7|seven)\s*months?\b/i,
   },
-  // --- and the paraphrases of it: any duration attached to repaying ---
+  {
+    // The client's own maximum, said without the word "month": "no longer
+    // than seven salary cycles", "a maximum of seven monthly amounts".
+    label: 'the 7-period maximum expressed in pay cycles',
+    pattern: new RegExp(`\\b(?:7|seven)\\s*(?:${PERIOD})\\b`, 'i'),
+  },
   {
     label: 'a repayment duration',
-    pattern: /\brepay(?:ment|ing|s|ed)?\b[^.!?]{0,60}\b(?:months?|weeks?|years?)\b/i,
+    pattern: new RegExp(`\\b(?:${SETTLE})\\b[^.!?]{0,70}\\b(?:${PERIOD}|weeks?|years?)\\b`, 'i'),
+  },
+  {
+    // The mirror of the one above — the period noun first, the verb after:
+    // "across her first few pay cycles, she settles the advance".
+    label: 'a repayment cadence',
+    pattern: new RegExp(`\\b(?:${PERIOD})\\b[^.!?]{0,70}\\b(?:${SETTLE}|deduct|advance)`, 'i'),
+  },
+  {
+    // Standalone, because any of these nouns on this site is about this
+    // arrangement and nothing else. "The arrangement lasts no longer than
+    // seven salary cycles" has no repayment verb in it at all.
+    label: 'a repayment period expressed in pay cycles',
+    pattern: /\b(?:pay|salary|wage)\s*cycles?\b|\bpay\s*runs?\b|\bpayslips?\b|\bpay\s*packets?\b/i,
   },
   {
     label: 'a duration attached to the loan or placement fee',
-    pattern: /\b(?:loan|placement fee)\b[^.!?]{0,60}\b(?:over|within|across|takes?)\s+\w+\s+months?\b/i,
+    pattern: new RegExp(
+      `\\b(?:loan|placement fee|advance)\\b[^.!?]{0,70}\\b(?:over|within|across|takes?|lasts?|no longer than|up to)\\s+[^.!?]{0,20}?\\b(?:${PERIOD})\\b`,
+      'i',
+    ),
   },
   {
     label: 'a repayment schedule',
-    pattern: /\b(?:repayment|instal?ment)\s+(?:period|schedule|term|plan|window)\b/i,
+    pattern: /\b(?:repayment|instal?ment|deduction)\s+(?:period|schedule|term|plan|window|arrangement)\b/i,
   },
   {
     label: 'repayment described as instalments',
@@ -119,14 +165,23 @@ const GATED_PATTERNS: { label: string; pattern: RegExp }[] = [
   },
   {
     label: 'a monthly repayment cadence',
-    pattern: /\bmonthly\b[^.!?]{0,40}\b(?:repa|deduct|instal)/i,
+    pattern: /\bmonthly\b[^.!?]{0,40}\b(?:repa|deduct|instal|portion|amount)/i,
   },
   {
+    // "within" is deliberately NOT in this alternation. The replacement
+    // window — "requested within 6 months of the deployment date" — is
+    // published on purpose, and including "within" here fired on it on
+    // both pages. A repayment duration phrased with "within" is still
+    // caught by "a repayment duration" above, which requires a settling
+    // verb nearby; the replacement window has none.
     label: 'repayment described as running over a span of months',
-    pattern: /\bover\s+(?:several|a few|the first|\d+|one|two|three|four|five|six|seven)\s+months?\b/i,
+    pattern: new RegExp(
+      `\\b(?:over|across|during|throughout|spanning)\\s+(?:the\\s+)?(?:${NUMBER})\\s+(?:${PERIOD})\\b`,
+      'i',
+    ),
   },
 
-  // --- that repayment comes from the helper's basic salary ---
+  // --- AXIS 2: where the money comes from ---
   {
     label: "the helper's basic salary as the source of repayment",
     pattern: /\bbasic (?:salary|pay|wage)\b/i,
@@ -137,36 +192,130 @@ const GATED_PATTERNS: { label: string; pattern: RegExp }[] = [
   },
   {
     label: 'an amount deducted from pay',
-    pattern: /\bdeduct(?:ed|ion|ions|s|ing)?\b[^.!?]{0,40}\b(?:salary|wages?|pay|earnings)\b/i,
+    pattern: new RegExp(`\\bdeduct(?:ed|ion|ions|s|ing)?\\b[^.!?]{0,50}\\b(?:${FUNDS})\\b`, 'i'),
   },
   {
-    label: 'repayment taken out of the salary',
-    pattern:
-      /\b(?:from|out of|against)\s+(?:her|his|their|the helper[’']?s?)\s+(?:monthly\s+)?(?:salary|wages?|pay|earnings)\b/i,
+    // Loosened: the possessive and the funds noun no longer have to be
+    // adjacent. "from her regular monthly income" put two words between
+    // them and walked straight through the old version.
+    label: 'repayment taken out of the helper’s pay',
+    pattern: new RegExp(
+      `\\b(?:from|out of|against|towards?)\\s+(?:her|his|their|the helper[’']?s?)\\s+[^.!?]{0,30}?\\b(?:${FUNDS})\\b`,
+      'i',
+    ),
+  },
+  {
+    // Any of these on this site is about this arrangement. "Take-home" and
+    // "remuneration" have no other reason to appear on a page about what
+    // an employer pays an agency.
+    label: 'the helper’s take-home pay',
+    pattern: /\btake[-\s]home\b|\bremuneration\b/i,
+  },
+  {
+    label: 'pay withheld towards the balance',
+    pattern: /\bwith(?:hold|holds|holding|held)\b/i,
+  },
+  {
+    label: 'a portion of the helper’s pay',
+    pattern: new RegExp(
+      `\\b(?:portions?|parts?|shares?|slices?)\\s+of\\s+(?:her|his|their|the helper[’']?s?)\\b|\\b(?:${FUNDS})\\b\\s+is\\s+reduced`,
+      'i',
+    ),
   },
   {
     label: 'repayment described as coming from what the helper earns',
     pattern: /\bwhat\s+(?:she|he|they|the helper)\s+earns?\b/i,
   },
 
-  // --- that the helper receives off-day compensation during repayment ---
+  // --- AXIS 3: what the helper receives during repayment ---
   {
-    label: 'off-day compensation',
-    pattern: /\boff[- ]days?\s+(?:compensation|pay|allowance)\b/i,
+    // Deliberately the bare nouns, not "rest day" + a compensation word.
+    // "She still gets paid for her rest days during this time" states the
+    // gated fact and contains no word from the compensation list. The
+    // tradeoff is accepted knowingly: a future page that legitimately
+    // discusses rest days — an employer-obligations page, say — will fail
+    // here, and that failure is the correct prompt to decide deliberately
+    // whether the sentence beside it is the gated one. Verified against
+    // the current build: "rest day", "day off" and "in lieu" appear zero
+    // times anywhere in dist/, so this bans nothing already published.
+    label: 'rest days / off days',
+    pattern: /\b(?:off|rest)[-\s]days?\b|\bdays?[-\s]off\b/i,
   },
   {
-    label: 'rest-day compensation',
-    pattern: /\brest[- ]days?\s+(?:compensation|pay|allowance)\b/i,
+    label: 'compensation in lieu',
+    pattern: /\bin lieu\b/i,
   },
   {
-    label: 'day-off compensation',
-    pattern: /\bdays?[- ]off\s+(?:compensation|pay|allowance)\b/i,
+    label: 'what the helper keeps or still receives during repayment',
+    pattern:
+      /\b(?:she|he|they|the helper)\s+(?:still\s+)?(?:keeps?|retains?|receives?|gets?)\s+(?:only\s+|paid\s+)?(?:her|his|their)\b/i,
   },
   {
-    label: 'what the helper keeps during repayment',
-    pattern: /\b(?:she|he|they|the helper)\s+(?:still\s+)?keeps?\s+(?:only\s+)?(?:her|his|their)\b/i,
+    label: 'the arrangement described as continuing',
+    pattern: /\bcompensation\b[^.!?]{0,40}\bcontinues?\b/i,
   },
 ]
+
+/*
+ * The reviewer's paraphrase corpus, kept as a permanent fixture rather
+ * than run once and thrown away.
+ *
+ * Fix round 1 (F-3): 24 paraphrases were run against the original 17
+ * patterns — 9 caught, 15 missed, 0 false positives. Every sentence below
+ * is one that got through, or one built to probe the same axis. Holding
+ * them here means the coverage cannot silently regress the next time a
+ * pattern is narrowed to quiet a false positive, which is exactly how a
+ * gate like this decays.
+ *
+ * These are NOT scanned by the page assertions — they are strings in a
+ * test file, never built, never published.
+ */
+const PARAPHRASES_THAT_MUST_BE_CAUGHT = [
+  // Duration, without the client's numbers or the word "month"
+  'Repayment is spread across a maximum of seven monthly amounts',
+  'She clears it in monthly portions until it is done',
+  'The arrangement lasts no longer than seven salary cycles',
+  'The helper settles the advance across her first few pay cycles',
+  'The balance is cleared over three to five months',
+  'Deductions appear on each payslip until the advance is settled',
+  'The loan is repaid in equal instalments',
+  // Source of funds
+  'Her take-home pay is reduced until the advance is cleared',
+  'The repayment is drawn from her regular monthly income',
+  'Her employer withholds a portion of her monthly pay towards the balance',
+  'A share of her remuneration goes towards the outstanding amount',
+  'It comes out of her basic salary each month',
+  // What she receives meanwhile
+  'She still gets paid for her rest days during this time',
+  'Compensation in lieu of rest days continues',
+  'She keeps her off-day pay throughout',
+  'Her days off are still compensated while the balance is outstanding',
+]
+
+/*
+ * The other half of the same fixture: copy the plan explicitly clears for
+ * publication. A pattern broad enough to catch everything above must not
+ * catch anything here, or the gate would be "satisfiable" by deleting the
+ * section it protects. Taken verbatim from what the pages actually render.
+ */
+const COPY_THAT_MUST_NOT_BE_CAUGHT = [
+  'Fixed at one month’s salary, and the same amount whether you take on a new helper or a transfer helper.',
+  'The loan depends on the individual helper, so there is no standard figure to publish.',
+  'You advance both amounts at the start, and you recover them through the helper’s repayment.',
+  'They are ultimately the helper’s cost, not an additional charge you carry on top of the package.',
+  'One replacement, requested within 6 months of your helper’s deployment date.',
+  'The 6 months runs from deployment rather than from the day you sign.',
+  'The helper’s loan and placement fee sit outside these packages.',
+  'Our agent fee is not charged again.',
+  'The third-party components are paid a second time for the new helper: MOM, Insurance, SIP, Medical and Handling & transport.',
+  'Both packages cover the same components at the same amounts.',
+  'Our team goes through the exact amount for the helper you choose before you commit to anything.',
+]
+
+/** Every pattern label that fires on a string. */
+function labelsFiring(text: string): string[] {
+  return GATED_PATTERNS.filter(({ pattern }) => pattern.test(text)).map(({ label }) => label)
+}
 
 describe('the gate scans what it claims to scan', () => {
   // Without this every assertion below passes vacuously on an empty or
@@ -193,6 +342,24 @@ describe('the gated repayment mechanics are published nowhere', () => {
         .filter(({ html }) => pattern.test(html))
         .map(({ file }) => `${file} (matched ${pattern})`)
       expect(offenders).toEqual([])
+    })
+  }
+})
+
+describe('the patterns catch paraphrases, not just the client’s wording', () => {
+  // The corpus, asserted one sentence per test so a regression names the
+  // exact sentence that got through rather than a count.
+  for (const sentence of PARAPHRASES_THAT_MUST_BE_CAUGHT) {
+    it(`catches: "${sentence}"`, () => {
+      expect(labelsFiring(sentence), 'no pattern fired').not.toEqual([])
+    })
+  }
+})
+
+describe('the patterns produce no false positives on shipped copy', () => {
+  for (const sentence of COPY_THAT_MUST_NOT_BE_CAUGHT) {
+    it(`allows: "${sentence.slice(0, 60)}…"`, () => {
+      expect(labelsFiring(sentence)).toEqual([])
     })
   }
 })
