@@ -586,6 +586,143 @@ describe('the licence number, the registered entity and the UEN are never retype
       .map(({ file }) => file)
     expect(offenders).toEqual([])
   })
+
+  /* =====================================================================
+   * THE SWEEPS ABOVE ONLY CATCH AN EXACT COPY OF THE *CORRECT* VALUE.
+   *
+   * Every one of them filters with `text.includes(company.momLicence)` — a
+   * value equality. A page that types `23C1444` contains no such substring,
+   * so it passes; so does `202240965Z`, and so does `DIRECT HIRE PTE. LTD.`
+   * with the D missing.
+   *
+   * MASTER BRIEF §70 FORBIDS FOUR THINGS: "invent, modify, guess or
+   * SUBSTITUTE" these values. A value-equality sweep can see only the fourth
+   * failure mode's harmless twin — a correct duplicate. The three that
+   * matter, and the one the rule names last, are precisely the ones it is
+   * blind to, because a wrong value is not a copy of the right one.
+   *
+   * A licence number is the highest-stakes string on the site: it identifies
+   * a regulated entity to a family and to MOM. `23C1444` is somebody else's
+   * licence or nobody's, and it would ship green.
+   *
+   * SO THESE SWEEP BY SHAPE. Anything with the SHAPE of one of the three
+   * values must BE that value, or it is reported — whether it is right, wrong
+   * or invented.
+   *
+   * SVG GEOMETRY IS STRIPPED FIRST, and it has to be. The logo's path data
+   * contains `52S1176`, `91S1150`, `62H1199`, `94C1331`, `83S1278` and
+   * `73S1404` — coordinate pairs separated by path commands, which read as
+   * licence numbers to any pattern of that shape. They are inlined into every
+   * built page. Stripping `d`, `points`, `viewBox`, `transform` and
+   * `preserveAspectRatio` removes all six and leaves the real licence
+   * standing, verified by measurement. Same principle as this file's existing
+   * exclusion of binaries: "noise in a negative sweep is how a false positive
+   * arrives".
+   * ================================================================== */
+
+  /** SVG coordinate data — geometry, never copy, and it is full of noise. */
+  const withoutGeometry = (text: string) =>
+    text.replace(
+      /\s(?:d|points|viewBox|transform|preserveAspectRatio)\s*=\s*(?:"[^"]*"|'[^']*')/gi,
+      ' ',
+    )
+
+  /** A MOM employment-agency licence: two digits, a letter, four digits. */
+  const LICENCE_SHAPE = /\b\d{2}[A-Z]\d{4}\b/g
+  /** A Singapore UEN of the local-company form: nine digits, a check letter. */
+  const UEN_SHAPE = /\b\d{9}[A-Z]\b/g
+  /** Any "<name> PTE LTD", punctuated or not. */
+  const ENTITY_SHAPE = /\b[A-Za-z][A-Za-z&.'’-]*(?:\s+[A-Za-z&.'’-]+){0,4}\s+PTE\.?\s*,?\s*LTD\.?/gi
+
+  /** Collapsed and upper-cased, so punctuation and spacing cannot hide a swap. */
+  const normEntity = (s: string) => s.replace(/\s+/g, ' ').trim().toUpperCase()
+
+  const shapesIn = (text: string, shape: RegExp) => [
+    ...new Set(withoutGeometry(text).match(new RegExp(shape.source, shape.flags)) ?? []),
+  ]
+
+  it('the shape patterns match the real values (or every sweep below is vacuous)', () => {
+    expect(company.momLicence).toMatch(new RegExp(LICENCE_SHAPE.source))
+    expect(company.uen).toMatch(new RegExp(UEN_SHAPE.source))
+    expect(company.registeredName).toMatch(new RegExp(ENTITY_SHAPE.source, 'i'))
+  })
+
+  it('the shape patterns match a SUBSTITUTED value, which is the whole point', () => {
+    /*
+     * The failure mode the value-equality sweeps cannot see. Each of these is
+     * one character away from the truth and identifies a different company,
+     * or none.
+     */
+    expect('23C1444').toMatch(new RegExp(LICENCE_SHAPE.source))
+    expect('23C1443'.replace('C', 'S')).toMatch(new RegExp(LICENCE_SHAPE.source))
+    expect('202240965Z').toMatch(new RegExp(UEN_SHAPE.source))
+    expect('202240964A').toMatch(new RegExp(UEN_SHAPE.source))
+    expect('DIRECT HIRE PTE. LTD.').toMatch(new RegExp(ENTITY_SHAPE.source, 'i'))
+    expect('Direct Hired Pty Ltd'.replace('Pty', 'Pte')).toMatch(
+      new RegExp(ENTITY_SHAPE.source, 'i'),
+    )
+    // …and none of them is caught by the value-equality the sweeps above use.
+    expect('23C1444'.includes(company.momLicence)).toBe(false)
+    expect('202240965Z'.includes(company.uen)).toBe(false)
+    expect('DIRECT HIRE PTE. LTD.'.includes(company.registeredName)).toBe(false)
+  })
+
+  it('the geometry stripper removes the logo path data and nothing else', () => {
+    // Asserted directly, because if it ever over-reached it would silently
+    // delete the very strings the sweeps below exist to find.
+    const logo = readFileSync('src/assets/logo-lockup.svg', 'utf8')
+    expect(logo.match(LICENCE_SHAPE)?.length ?? 0).toBeGreaterThan(0)
+    expect(shapesIn(logo, LICENCE_SHAPE)).toEqual([])
+    expect(shapesIn(`<p>${company.momLicence}</p>`, LICENCE_SHAPE)).toEqual([company.momLicence])
+    expect(shapesIn(`<dd>${company.uen}</dd>`, UEN_SHAPE)).toEqual([company.uen])
+  })
+
+  it('no built page publishes a licence-shaped string that is not the licence', () => {
+    const offenders = builtPages().flatMap(({ file, text }) =>
+      shapesIn(text, LICENCE_SHAPE)
+        .filter((found) => found !== company.momLicence)
+        .map((found) => `${file}: ${found}`),
+    )
+    expect(offenders).toEqual([])
+  })
+
+  it('no built page publishes a UEN-shaped string that is not the UEN', () => {
+    const offenders = builtPages().flatMap(({ file, text }) =>
+      shapesIn(text, UEN_SHAPE)
+        .filter((found) => found !== company.uen)
+        .map((found) => `${file}: ${found}`),
+    )
+    expect(offenders).toEqual([])
+  })
+
+  it('no built page publishes a PTE LTD name that is not the registered entity', () => {
+    const offenders = builtPages().flatMap(({ file, text }) =>
+      shapesIn(text, ENTITY_SHAPE)
+        .filter((found) => normEntity(found) !== normEntity(company.registeredName))
+        .map((found) => `${file}: ${found}`),
+    )
+    expect(offenders).toEqual([])
+  })
+
+  it('no authored surface types ANY string of these three shapes', () => {
+    /*
+     * Stricter than the built-page sweeps on purpose, and it can be: every
+     * one of these values reaches a page from company.ts, so a source file
+     * has no business containing the shape AT ALL — not the right value, not
+     * a wrong one.
+     *
+     * This subsumes the three value-equality sweeps above, which are kept
+     * because they name the failure precisely when it is a duplicate, and
+     * because their fixtures document the entity spellings.
+     */
+    const offenders = authoredSurfaces().flatMap(({ file, text }) => [
+      ...shapesIn(text, LICENCE_SHAPE).map((f) => `${file}: licence-shaped "${f}"`),
+      ...shapesIn(text, UEN_SHAPE).map((f) => `${file}: UEN-shaped "${f}"`),
+      ...shapesIn(text, ENTITY_SHAPE).map((f) => `${file}: entity-shaped "${f}"`),
+    ])
+    expect(offenders).toEqual([])
+  })
+
 })
 
 /*
