@@ -95,6 +95,11 @@ export const EXEMPT_PLACES: ReadonlyMap<string, string> = new Map([
  * absent on purpose — "China" is caught by the derived list, while the
  * demonym collides with a language name that legitimate copy about a helper
  * could carry.
+ *
+ * MATCHED CASE-INSENSITIVELY. None of these is an English word in lower
+ * case, and a mangled spelling of the Philippines is the single likeliest
+ * way this rule gets broken, so the cost of `i` here is nil and the cover
+ * is real. The one entry that could not stay is below.
  */
 const IRREGULAR_SOURCE_WORDS = [
   // The Philippines, in the spellings that are not "Philippines".
@@ -102,14 +107,27 @@ const IRREGULAR_SOURCE_WORDS = [
   'Filipina',
   'Philippine',
   'Pinoy',
-  // ICU says "Türkiye"; a writer says "Turkey".
-  'Turkey',
   // Demonyms and short forms with no regular derivation from the ICU name.
   'Thai', // "Thailand" + no suffix rule yields this
   'Khmer', // Cambodia
   'Lao', // "Laos" is in the derived list; this is the demonym
   'Ivory Coast', // ICU says "Côte d'Ivoire"
   'East Timor', // ICU says "Timor-Leste"
+]
+
+/**
+ * Irregulars whose lower-case form is an ordinary English word, matched
+ * CASE-SENSITIVELY for the same reason the derived names are.
+ *
+ * ICU says "Türkiye", so "Turkey" reaches this sweep only by being written
+ * down here — and written down with the `i` flag it fired on the bird. A
+ * one-entry list looks like an oddity until you notice that the derived
+ * names needed exactly the same treatment for exactly the same reason
+ * (jersey, chad); this is that rule applied to the hand-kept half rather
+ * than a special case carved out of it.
+ */
+const CASE_SENSITIVE_IRREGULARS = [
+  'Turkey', // ICU says "Türkiye"; a writer says "Turkey" — and roasts one
 ]
 
 /**
@@ -147,40 +165,85 @@ function regionNames(): string[] {
   return [...names].filter(Boolean)
 }
 
-/**
- * Every place-name this sweep will flag: ICU's regions plus the irregulars,
- * minus the three permitted sources, their aliases, and the exemptions.
- */
-export function forbiddenPlaceNames(): string[] {
-  const permitted = new Set<string>([
+/** The permitted three, the alias ICU carries for one of them, and the exemptions. */
+function permittedNames(): Set<string> {
+  return new Set<string>([
     ...PERMITTED_SOURCES,
     'Burma', // the alias ICU carries for Myanmar
     ...EXEMPT_PLACES.keys(),
   ])
-  return [...new Set([...regionNames(), ...IRREGULAR_SOURCE_WORDS])]
+}
+
+function withoutPermitted(names: string[]): string[] {
+  const permitted = permittedNames()
+  return [...new Set(names)]
     .filter((name) => !permitted.has(name))
     .sort((a, b) => b.length - a.length) // longest first: "Sri Lanka" before "Sri"
 }
 
 /**
- * One alternation over every forbidden name, with the demonym suffixes
- * applied to the whole group.
+ * Every place-name this sweep will flag: ICU's regions plus the irregulars,
+ * minus the three permitted sources, their aliases, and the exemptions.
+ *
+ * Both case classes together — this is the list of NAMES, and which of them
+ * a lower-case spelling reaches is a property of the patterns below.
+ */
+export function forbiddenPlaceNames(): string[] {
+  return withoutPermitted([
+    ...regionNames(),
+    ...IRREGULAR_SOURCE_WORDS,
+    ...CASE_SENSITIVE_IRREGULARS,
+  ])
+}
+
+/**
+ * The two alternations this sweep applies, each over every forbidden name in
+ * its case class, with the demonym suffixes applied to the whole group.
  *
  * Literal spaces become `\s+` because a name can wrap across a line in
  * markdown — the reason the old pattern wrote `sri\s?lank\w*` rather than
  * "Sri Lanka".
+ *
+ * FIX ROUND, F-3. Both were one pattern carrying `i`. Case-folding 260-odd
+ * derived names over English prose is a false-positive machine: `turkey` the
+ * roast, `jersey` the laundry and `chad` all fired, none of which is a
+ * sentence about where a helper comes from. A guard that fires on ordinary
+ * nouns is the one this file's own docblock says gets loosened rather than
+ * fixed.
+ *
+ * The derived names are therefore matched as what they are — PROPER NOUNS,
+ * capitalised in any copy a visitor would read. That is a narrowing, and the
+ * thing it gives up is a lower-cased spelling of a country nobody has ever
+ * written here. What it does NOT give up is the case that actually happens:
+ * the four habitual names are independently banned, case-insensitively and
+ * stem-based, by FORBIDDEN_SOURCE in tests/content.test.ts and the matching
+ * FORBIDDEN_CLAIMS entry in tests/pages.test.ts, over these same two corpora
+ * — so lower-case "philippines" still fails, and so does "filipina". Braces,
+ * not a new belt, exactly as this file said when it arrived.
  */
-export function forbiddenPlacePattern(): RegExp {
-  const alternatives = forbiddenPlaceNames().map((name) =>
-    name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'),
-  )
-  return new RegExp(`\\b(?:${alternatives.join('|')})(?:${DEMONYM_SUFFIXES.join('|')})?\\b`, 'gi')
+export function forbiddenPlacePatterns(): RegExp[] {
+  const alternation = (names: string[], flags: string) => {
+    const alternatives = names.map((name) =>
+      name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'),
+    )
+    return new RegExp(`\\b(?:${alternatives.join('|')})(?:${DEMONYM_SUFFIXES.join('|')})?\\b`, flags)
+  }
+  return [
+    alternation(withoutPermitted([...regionNames(), ...CASE_SENSITIVE_IRREGULARS]), 'g'),
+    alternation(withoutPermitted([...IRREGULAR_SOURCE_WORDS]), 'gi'),
+  ]
 }
 
 /**
  * Every place named in `text` that is not one of the three permitted sources
- * and not an exempt place. Distinct, in the order found.
+ * and not an exempt place. Distinct, in the order found — merged by position
+ * rather than by pattern, so which case class caught a name is invisible to
+ * every caller.
  */
 export function namedSources(text: string): string[] {
-  return [...new Set(text.match(forbiddenPlacePattern()) ?? [])]
+  const hits: { at: number; word: string }[] = []
+  for (const pattern of forbiddenPlacePatterns()) {
+    for (const match of text.matchAll(pattern)) hits.push({ at: match.index ?? 0, word: match[0] })
+  }
+  return [...new Set(hits.sort((a, b) => a.at - b.at).map((hit) => hit.word))]
 }

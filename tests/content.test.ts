@@ -431,6 +431,28 @@ describe('the source rule is enforced as the allowlist it is written as', () => 
     expect(namedSources('Mizoram is a state in the north-east of India.')).toEqual([])
   })
 
+  it('reads a derived country name as the proper noun it is (F-3)', () => {
+    /*
+     * The sweep carried `i` over 260-odd derived names, so it fired on
+     * ordinary English nouns that happen to double as place names — the
+     * defect this whole file's docblock warns about, arriving from the
+     * inside.
+     *
+     * Derived names are now matched case-sensitively; the irregulars are
+     * not, because none of them is an English word in lower case. What the
+     * narrowing gives up is a lower-cased spelling of a country nobody has
+     * ever written here. What it does not give up is the case that
+     * happens: FORBIDDEN_SOURCE in the describe above is case-insensitive
+     * and stem-based, and runs over these same two corpora.
+     */
+    expect(namedSources('We also place helpers from Nepal.')).toEqual(['Nepal'])
+    expect(namedSources('we washed the jersey')).toEqual([])
+    expect(namedSources('roast turkey')).toEqual([])
+    // ...and the one lower-case spelling that matters is still caught here
+    // by the irregulars, on top of the four-name denylist above.
+    expect(namedSources('helpers from the philippines')).toEqual(['philippines'])
+  })
+
   it('exempts India only because a stricter rule already bans it outright', () => {
     /*
      * The one exemption that could hide something, so the thing that makes
