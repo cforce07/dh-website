@@ -19,7 +19,27 @@ export const company = {
     country: 'SG',
   },
 
+  // TWO FIELDS, ONE FACT. `openingHours` is the DISPLAY string — what the
+  // footer and /contact print, and DirectHired's own wording (master brief,
+  // Opening Hours, line 345). `openingHoursMachine` is the same fact in the
+  // form schema.org's `openingHours` property is defined to take, which is
+  // the only form a search engine parses.
+  //
+  // "Mo-Su 00:00-23:59" IS THE DOCUMENTED WAY TO SAY 24/7, not an inference
+  // and not a rounding. schema.org's openingHours grammar is a day range
+  // plus a time range in 24-hour clock; a business that never closes is
+  // written as every day, first minute to last. Nothing here is derived
+  // from anything DirectHired did not say: they said the business is open
+  // 24 hours, and this says the same thing in the other notation.
+  //
+  // THE DISPLAY STRING MUST NEVER BE EMITTED INTO THE SCHEMA. "24 hours"
+  // parses as nothing at all — at best it is ignored, at worst it makes the
+  // whole EmploymentAgency node suspect. tests/structured-data.test.ts
+  // asserts the emitted value against the grammar AND asserts that it is not
+  // this display string, which is the assertion `aggregateRating` has had
+  // from the start and this had none of.
   openingHours: '24 hours',
+  openingHoursMachine: 'Mo-Su 00:00-23:59',
   foundedYear: 2022,
   // BASIS, confirmed by DirectHired on 2026-08-15:
   //   "500+ placements across all services since 2022."

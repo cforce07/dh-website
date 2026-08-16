@@ -1,12 +1,30 @@
 import { company } from '../data/company'
 
 /**
- * schema.org EmploymentAgency structured data for the homepage.
+ * schema.org EmploymentAgency structured data for the homepage and
+ * /contact — spec §4's local-intent signal, and the same function on both
+ * pages so the two cannot describe the business differently.
  *
  * Every value here is sourced from `company` — nothing is retyped.
  * `aggregateRating` is deliberately omitted: DirectHired has not supplied
  * a verified Google rating or review count, and fabricating one would be
  * both a §78 violation and a Google structured-data spam penalty.
+ *
+ * `image` IS ALSO OMITTED, AND THAT IS A JUDGEMENT RATHER THAN AN OVERSIGHT.
+ * Google's LocalBusiness guidance does ask for one, and it asks for a
+ * reason: a local result is meant to SHOW the reader the place. The only
+ * image this site owns is src/assets/og-share.png — an illustration of two
+ * people at a kitchen counter, drawn for the share card. Those are not
+ * DirectHired's staff and that is not DirectHired's office, so declaring it
+ * as this business's image answers "what does this agency look like" with a
+ * picture of somewhere that does not exist. /about deleted a whole sentence
+ * for inferring less than that from an address string. The logo files would
+ * be the honest alternative and are SVG, which Google's logo guidance does
+ * not accept.
+ *
+ * What unblocks it is one photograph of the office or the team, which is
+ * DirectHired's to supply. Until then the node is smaller and true, which is
+ * the trade this whole file makes.
  */
 export function employmentAgencySchema() {
   return {
@@ -24,9 +42,26 @@ export function employmentAgencySchema() {
       postalCode: company.address.postalCode,
       addressCountry: company.address.country,
     },
-    areaServed: { '@type': 'Country', name: 'Singapore' },
+    /*
+     * The locality, not a literal. Singapore is both this business's city
+     * and the country it serves, which is why `Country` is the right type
+     * over the same string — but the string itself is a business fact, and a
+     * business fact typed into a file whose docblock says nothing here is
+     * retyped is exactly the kind of second copy tests/company.test.ts's
+     * never-retyped sweep exists to find. It already lives one field up.
+     */
+    areaServed: { '@type': 'Country', name: company.address.locality },
+    /*
+     * The MACHINE form, and it must never be the display string — see
+     * company.ts for the grammar and for why "24 hours" would be worse than
+     * emitting nothing. This used to be omitted altogether out of caution,
+     * which was the wrong call: "Mo-Su 00:00-23:59" is the documented way to
+     * write a business that never closes, and it infers nothing DirectHired
+     * did not state.
+     */
+    openingHours: company.openingHoursMachine,
     sameAs: [company.socials.facebook, company.socials.instagram],
-    // aggregateRating deliberately omitted until verified.
+    // aggregateRating and image deliberately omitted — see above.
   }
 }
 
