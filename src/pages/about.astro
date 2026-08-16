@@ -249,17 +249,33 @@ const description =
         the office or counts the staff — none of which anybody has
         supplied, and all of which are the natural next sentence.
       */}
-      <p class="about-body">
-        DirectHired is a Singapore business. The families it works with are here, the helpers it
-        places work in households here, and so is the office those placements are handled from:
-      </p>
+      {/*
+        Two columns from --bp-tablet up, prose left and the address right.
+        Single-column, the wash ran 546px tall at 1280 with its content in
+        the left 60% and nothing beside it — measured in Chrome — which
+        makes the one section on this page that spends the brand ground
+        look like the one section that had nothing to put in it. The
+        address is a fact rather than a sentence, so it earns the second
+        column and gets the site's eyebrow treatment above it.
+      */}
+      <div class="presence">
+        <div class="presence-copy">
+          <p class="about-body">
+            DirectHired is a Singapore business. The families it works with are here, the helpers it
+            places work in households here, and so is the office those placements are handled from.
+          </p>
 
-      <p class="about-address">{addressLine}</p>
+          <p class="about-body">
+            What the company is licensed to do here is a matter of public record rather than of
+            description. That record is below.
+          </p>
+        </div>
 
-      <p class="about-body">
-        What the company is licensed to do here is a matter of public record rather than of
-        description. That record is below.
-      </p>
+        <div class="presence-office">
+          <p class="presence-label">Office</p>
+          <p class="about-address">{addressLine}</p>
+        </div>
+      </div>
     </Container>
   </section>
 
@@ -364,7 +380,16 @@ const description =
 
   .about-company h1 {
     margin: 0;
-    max-width: 18ch;
+    /*
+     * 20ch, not the 16–18ch the other page heroes use, and it was measured
+     * rather than guessed. This headline is one 45-character sentence; at
+     * 18ch it set as three lines in real Chrome at 1280 with "DirectHired"
+     * alone on the first, which reads as a label above a heading rather
+     * than as the sentence it is. 20ch (819px at --size-h1's 64px) breaks
+     * it once, after "Singapore", and holds at 1920 because the display
+     * size does not grow past 1280. Re-measure if --size-h1 changes.
+     */
+    max-width: 20ch;
     font-family: var(--font-display);
     font-size: var(--size-h1);
     font-weight: var(--font-weight-medium);
@@ -491,15 +516,45 @@ const description =
     color: var(--color-ink);
   }
 
+  .presence {
+    display: grid;
+    gap: var(--space-8);
+    margin-top: var(--space-6);
+  }
+
+  .presence-copy {
+    display: grid;
+    gap: var(--space-6);
+  }
+
+  /* The copy paragraphs are inside a grid that spaces them, so the
+     stacking margin they carry elsewhere on this page would double it. */
+  .presence-copy .about-body {
+    margin-top: 0;
+  }
+
+  /* The site's established eyebrow treatment, same as .record dt and
+     TrustBadge's .trust-label. --tracking-wide's contract requires
+     text-transform: uppercase in the same rule (tests/tokens.test.ts). */
+  .presence-label {
+    margin: 0;
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+  }
+
   /*
-   * The address as its own line at display size — it is a fact rather
-   * than prose, and it is the one thing in this block a visitor might
-   * copy. Tabular figures for the same reason TrustBadge uses them:
-   * a postal code should read as a number.
+   * The address at display size — it is a fact rather than prose, and it
+   * is the one thing in this block a visitor might copy. Tabular figures
+   * for the same reason TrustBadge uses them: a postal code should read
+   * as a number.
    */
   .about-address {
     max-width: 30ch;
-    margin: var(--space-6) 0 0;
+    margin: var(--space-3) 0 0;
     font-family: var(--font-text);
     font-size: var(--size-h3);
     font-weight: var(--font-weight-semibold);
@@ -588,6 +643,15 @@ const description =
   @media (min-width: 48em) {
     .tenets {
       grid-template-columns: 1fr 1fr;
+    }
+
+    /* Prose left, the address right. `minmax(0, 1fr)` on the first track
+       lets it shrink below its content's min-content width instead of
+       pushing the row wider than the container. */
+    .presence {
+      grid-template-columns: minmax(0, 1fr) 20rem;
+      column-gap: var(--space-12);
+      align-items: start;
     }
 
     /*
