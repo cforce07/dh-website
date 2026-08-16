@@ -32,63 +32,56 @@
  * permits JSON-LD anywhere in <head> or <body>, so this is valid as-is.
  *
  * ---------------------------------------------------------------------
- * FIXED 2026-08-16: MULTI-PARAGRAPH ANSWERS USED TO RUN TOGETHER WITH NO
- * GAP, ON THE LIVE HOMEPAGE AND ON /pricing.
+ * FIXED 2026-08-16: MULTI-PARAGRAPH ANSWERS RAN TOGETHER, AND ANSWER LINKS
+ * RENDERED A DIFFERENT COLOUR HERE THAN ON /faq.
  * ---------------------------------------------------------------------
  *
  * global.css resets `* { margin: 0 }`, and the only paragraph rules this
  * file carried were `p:first-child { margin-top: 0 }` and `p:last-child
  * { margin-bottom: 0 }` — which zero margins that were already zero.
- * Nothing ever restored spacing BETWEEN paragraphs, so an answer with more
- * than one rendered as an unbroken block. Measured in Chrome at 320px on the
- * live homepage: both paragraphs of faq/cost.md computed marginTop and
- * marginBottom of 0px, and the second sentence started on the line under the
- * first with no separation. It has apparently been shipping since
- * sub-project 1.
+ * Nothing restored spacing BETWEEN blocks, so an answer with more than one
+ * rendered as an unbroken block. Measured in Chrome at 320px on the live
+ * homepage: both paragraphs of faq/cost.md computed 0px. Separately, a link
+ * inside an answer rendered rgb(4,106,108) with a bordered underline on
+ * /faq and rgb(77,77,77) with a plain underline here — the same answer, two
+ * link treatments, decided by which page quoted it.
  *
- * Task 9 found it while building /faq and deliberately did not fix it,
- * because the standing ruling for that task was that / and /pricing must
- * come out byte-identical from a full-file diff of dist/, and a spacing fix
- * here changes both. It added the rules to src/sections/FaqGrouped.astro
- * instead, for /faq alone. THAT RULING HAS SINCE BEEN NARROWED BY THE
- * PERSON WHO MADE IT: the byte-identical bar existed to stop an EXTRACTION
+ * Task 9 found the spacing half while building /faq and deliberately did
+ * not fix it, because the standing ruling for that task was that / and
+ * /pricing come out byte-identical from a full-file diff of dist/. It added
+ * rules to FaqGrouped.astro instead, for /faq alone — which is what created
+ * the link divergence. THAT RULING HAS SINCE BEEN NARROWED BY THE PERSON
+ * WHO MADE IT: the byte-identical bar existed to stop an EXTRACTION
  * REFACTOR silently altering live pages, not to freeze this component
- * against a deliberate correction. Two paragraphs running together is a
- * readability defect, so it is fixed.
+ * against a deliberate correction.
+ *
+ * A NOTE THAT USED TO SIT HERE SAID THE TWO SURFACES DIFFERED "IN ONE
+ * RESPECT". That was wrong — there were three (block margins, `li + li`,
+ * and the link rules) — and being wrong is why it is worth recording: a
+ * hand-written claim about how far a divergence extends is exactly the kind
+ * that goes stale the next time somebody adds to one side of it.
+ *
+ * THE FIX IS NOT IN THIS FILE. All four surfaces that render a content
+ * collection's markdown through <Content /> — this one, FaqGrouped.astro,
+ * MeetHelpers.astro's helper bio and Reviews.astro's review quote — carried
+ * the same two useless `:global` rules and the same missing block spacing.
+ * The treatment now lives once, as `.rich-text` in src/styles/global.css,
+ * and each surface opts in by putting the class on the element it hands to
+ * <Content />. See that file for the whole argument; the short version is
+ * that four copies of a rule is why there were four copies of a bug.
  *
  * WHAT CHANGES ON THE TWO LIVE PAGES, stated because this is an intended
- * change and the diff must be visible rather than discovered: multi-
- * paragraph and list-bearing answers gain --space-4 above every block after
- * the first, and list items gain --space-2 between them. The homepage's
- * `cost` and `how-long` answers and /pricing's `cost` answer are the ones a
- * reader will notice. Nothing else on either page moves — the rules are
- * scoped inside `.faq-answer`, which only ever contains rendered markdown,
- * and the two `:first-child` / `:last-child` rules above them are unchanged,
- * so no answer gains leading or trailing space.
- *
- * THE dist/ DIFF, MEASURED. Exactly one insertion per page, 218 characters
- * each, and no markup change at all:
- *
- *     dist/index.html          61,524 → 61,742 chars, one hunk at 11,503
- *     dist/pricing/index.html  46,592 → 46,810 chars, one hunk at  7,350
- *
- *     +.faq-answer[…] p,.faq-answer[…] ul,.faq-answer[…] ol
- *        {margin-block:var(--space-4) 0}
- *     +.faq-answer[…] li+li{margin-top:var(--space-2)}
- *
- * The scope attribute is unchanged (`data-astro-cid-oaufy27u`), which is
- * what says this is a spacing fix and not the extraction refactor
- * FaqGrouped.astro's header rejected on exactly that measurement.
+ * change and the diff must be visible rather than discovered: every block
+ * after an answer's first gains --space-4 above it, list items gain
+ * --space-2 between them, and a link inside an answer becomes accent-
+ * coloured with a bordered underline instead of inheriting the muted body
+ * colour. Nothing outside `.faq-answer` moves.
  *
  * The list RESET is deliberately untouched. `ul, ol { list-style: none;
  * padding: 0 }` in global.css means a bulleted answer still renders as
- * unmarked stacked lines rather than as a bulleted list. That is a separate
- * decision about the site's list treatment, it affects markup far beyond
- * this component, and this fix does not smuggle it in.
- *
- * The two new rules are declared identically in FaqGrouped.astro and
- * asserted so by tests/faq-grouped.test.ts, which is what keeps the two
- * copies of this widget from drifting.
+ * unmarked stacked lines rather than as a bulleted list, here and on /faq
+ * alike. That is a decision about the site's list treatment, it affects
+ * markup far beyond this component, and this fix does not smuggle it in.
  */
 import { getCollection } from 'astro:content'
 import Container from '../components/Container.astro'
@@ -170,7 +163,7 @@ const faqSchema = emitSchema
               <span>{entry.data.question}</span>
               <span class="faq-icon" aria-hidden="true" />
             </summary>
-            <div class="faq-answer">
+            <div class="faq-answer rich-text">
               <Content />
             </div>
           </details>
@@ -283,38 +276,14 @@ const faqSchema = emitSchema
     color: var(--color-ink-muted);
   }
 
-  .faq-answer :global(p:first-child) {
-    margin-top: 0;
-  }
-
-  .faq-answer :global(p:last-child) {
-    margin-bottom: 0;
-  }
-
   /*
-   * THE BLOCK SPACING. Answers are markdown, so they can carry more than
-   * one paragraph and they can carry lists. global.css resets `* { margin:
-   * 0 }`, so without this an answer's second paragraph starts on the line
-   * under its first — measured at 0px in Chrome on the live homepage before
-   * this landed. Top margin only, so the two rules above still hold the
-   * first and last blocks flush and the answer's own padding-bottom is the
-   * only space under it.
-   *
-   * Declared identically in FaqGrouped.astro — same selectors, same values,
-   * same order — and asserted so by tests/faq-grouped.test.ts, because two
-   * copies of this widget exist for the reason that file's header measures
-   * out and drift between them is the price of that.
+   * NO :global() PROSE RULES HERE, AND THAT IS THE FIX. The block rhythm
+   * and the link treatment for everything <Content /> renders come from
+   * `.rich-text` in src/styles/global.css, which the answer div carries.
+   * This file styles the CONTAINER — measure, colour, face, padding — and
+   * nothing inside it. See global.css for why four copies of a `:global`
+   * rule turned into four copies of a bug.
    */
-  .faq-answer :global(p),
-  .faq-answer :global(ul),
-  .faq-answer :global(ol) {
-    margin-block: var(--space-4) 0;
-  }
-
-  .faq-answer :global(li + li) {
-    margin-top: var(--space-2);
-  }
-
   .faq-more {
     margin-top: var(--space-8);
   }

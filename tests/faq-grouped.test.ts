@@ -121,16 +121,32 @@ const SHARED_ITEM_RULES = [
   '.faq-icon::after',
   '.faq-item[open] .faq-icon::after',
   '.faq-answer',
-  '.faq-answer :global(p:first-child)',
-  '.faq-answer :global(p:last-child)',
-  // Added 2026-08-16 with the block-spacing fix. These two lived in
-  // FaqGrouped.astro alone while Task 9's byte-identical ruling kept
-  // Faq.astro frozen, which is why the homepage ran its multi-paragraph
-  // answers together. Both files declare them now, so they are part of the
-  // contract and a future edit to one has to be an edit to both.
-  '.faq-answer :global(p), .faq-answer :global(ul), .faq-answer :global(ol)',
-  '.faq-answer :global(li + li)',
 ]
+
+/**
+ * The answer's INSIDES are not on the list above, and as of 2026-08-16 they
+ * are not in either file.
+ *
+ * They used to be, in a fashion. Both files declared `p:first-child
+ * { margin-top: 0 }` and `p:last-child { margin-bottom: 0 }` — which zero
+ * margins that global.css's `* { margin: 0 }` has already zeroed — and
+ * FaqGrouped.astro alone added the three that did real work: the block
+ * margins, `li + li`, and the link treatment. Only the two useless ones were
+ * on the shared list, so the guard reported perfect agreement while the same
+ * FAQ answer rendered its link in rgb(4,106,108) with a bordered underline
+ * on /faq and rgb(77,77,77) with a plain underline on / and /pricing.
+ *
+ * The treatment now lives once, as `.rich-text` in src/styles/global.css,
+ * and both files opt in on the answer element. That is strictly stronger
+ * than adding the missing selectors to the list above would have been: a
+ * contract asserting two copies agree can only be as complete as the list
+ * somebody typed, and there is now nothing to agree about.
+ *
+ * So the list loses two entries and gains this: neither file may declare a
+ * `:global` rule reaching inside the answer at all. Any future divergence
+ * has to reintroduce one, and this fails when it does.
+ */
+const FORBIDDEN_LOCAL_PROSE = /\.faq-answer\s+:global\(/
 
 describe('the duplicated FAQ item stays identical in both files', () => {
   const flat = topLevelRules(FAQ_FLAT)
@@ -175,7 +191,29 @@ describe('the duplicated FAQ item stays identical in both files', () => {
         '<summary class="faq-question">',
       )
       expect(source, `${file}: the icon span`).toContain('<span class="faq-icon" aria-hidden="true"')
-      expect(source, `${file}: <div class="faq-answer">`).toContain('<div class="faq-answer">')
+      // `rich-text` is load-bearing, not decoration: it is the whole of the
+      // answer's block rhythm and link treatment (src/styles/global.css).
+      // Dropping it from one file is exactly the divergence that shipped
+      // two link colours for one answer.
+      expect(source, `${file}: <div class="faq-answer rich-text">`).toContain(
+        '<div class="faq-answer rich-text">',
+      )
+    }
+  })
+
+  it('leaves the answer’s insides to the shared class, in both files', () => {
+    /*
+     * See FORBIDDEN_LOCAL_PROSE above for the full argument. In short: the
+     * shared-rule list can only be as complete as the selectors somebody
+     * typed into it, and the three rules that actually diverged were never
+     * on it. A file that declares NO rule reaching inside the answer cannot
+     * diverge from one that also declares none.
+     */
+    for (const file of [FAQ_FLAT, FAQ_GROUPED]) {
+      expect(
+        FORBIDDEN_LOCAL_PROSE.test(stripCssComments(read(file))),
+        `${file} styles the inside of a FAQ answer locally; use .rich-text`,
+      ).toBe(false)
     }
   })
 

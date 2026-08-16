@@ -80,7 +80,7 @@ const rendered = await Promise.all(
                   ))}
                 </ul>
 
-                <div class="helper-bio">
+                <div class="helper-bio rich-text">
                   <Content />
                 </div>
               </div>
@@ -188,13 +188,20 @@ const rendered = await Promise.all(
     color: var(--color-ink-muted);
   }
 
-  .helper-bio :global(p:first-child) {
-    margin-top: 0;
-  }
-
-  .helper-bio :global(p:last-child) {
-    margin-bottom: 0;
-  }
+  /*
+   * The bio is markdown, so its block rhythm and link treatment come from
+   * `.rich-text` in src/styles/global.css, which the element carries.
+   *
+   * WHAT USED TO BE HERE, 2026-08-16: `p:first-child { margin-top: 0 }` and
+   * `p:last-child { margin-bottom: 0 }` — two rules zeroing margins that
+   * global.css's `* { margin: 0 }` had already zeroed, and nothing at all
+   * restoring space BETWEEN paragraphs. A two-paragraph bio would have
+   * rendered as one unbroken block. It never shipped only because
+   * src/content/helper-profiles/ is deliberately empty, which is the worst
+   * way for a defect to wait: it would have arrived as a rendering fault in
+   * content nobody changed, on the day DirectHired supplies profiles, with
+   * no diff to connect it to.
+   */
 
   /* 48em is --bp-tablet, 64em is --bp-wide (tokens.css). */
   @media (min-width: 48em) {

@@ -20,7 +20,7 @@
  * when it does not hold.
  */
 import { describe, it, expect } from 'vitest'
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { company } from '../src/data/company'
 import { forbiddenPlaceNames, namedSources } from './support/helper-sources'
@@ -610,80 +610,109 @@ describe('the empty-FAQ check has sections to check (sanity check)', () => {
 })
 
 // ---------------------------------------------------------------------
-// FAQ answers with more than one block must show more than one block
+// Rendered markdown must LOOK like more than one block when it is more
+// than one block
 // ---------------------------------------------------------------------
 //
 // A live readability defect, found by the /faq task on 2026-08-16 and fixed
-// in the same round. global.css resets `* { margin: 0 }`; Faq.astro's only
-// paragraph rules were `p:first-child { margin-top: 0 }` and
-// `p:last-child { margin-bottom: 0 }`, which zero margins that are already
-// zero. Nothing restored spacing BETWEEN blocks, so a two-paragraph answer
-// rendered as one unbroken block on the homepage and on /pricing — measured
-// in Chrome at 320px, both paragraphs of faq/cost.md computing 0px.
+// in the same round. global.css resets `* { margin: 0 }`. All four surfaces
+// that render a content collection's markdown through <Content /> —
+// Faq.astro, FaqGrouped.astro, MeetHelpers.astro's helper bio and
+// Reviews.astro's review quote — carried `p:first-child { margin-top: 0 }`
+// and `p:last-child { margin-bottom: 0 }`, which zero margins that are
+// already zero, and not one restored spacing BETWEEN blocks. A
+// two-paragraph answer rendered as one unbroken block on the homepage and
+// on /pricing; measured in Chrome at 320px, both paragraphs of faq/cost.md
+// computing 0px. The other two surfaces render nothing today only because
+// their collections are deliberately empty.
 //
-// It was invisible to the suite because every FAQ assertion in this file
-// counted <details> elements or read the schema. Asserted here, over dist/
-// rather than over a component, because the question is what a visitor's
-// browser is handed: the answer markup and the CSS that spaces it have to
-// arrive on the SAME page, and a component-level check cannot say that.
+// A second divergence rode along with it: FaqGrouped.astro alone styled
+// answer links, so the same answer's link was rgb(4,106,108) with a
+// bordered underline on /faq and rgb(77,77,77) with a plain underline on /
+// and /pricing.
+//
+// Both are fixed at one level — `.rich-text` in src/styles/global.css — and
+// asserted here, over dist/ rather than over a component, because the
+// question is what a visitor's browser is handed: the markdown and the CSS
+// that styles it have to arrive on the SAME page, and a component-level
+// check cannot say that.
 
-/** Every rule in a built page's inlined CSS, as [selector, body] pairs. */
+/** Every rule in a built page's CSS, inlined or linked, as selector/body. */
 function styleRules(html: string): { selector: string; body: string }[] {
-  const css = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n')
-  return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((m) => ({
-    selector: m[1].trim(),
-    body: m[2].trim(),
-  }))
+  const inline = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1])
+  const linked = [...html.matchAll(/<link[^>]+href="(\/[^"]+\.css)"/g)]
+    .map((m) => `dist${m[1]}`)
+    .filter((file) => existsSync(file))
+    .map((file) => readFileSync(file, 'utf8'))
+  return [...inline, ...linked]
+    .join('\n')
+    .split(/@media[^{]*\{/)
+    .flatMap((chunk) => [...chunk.matchAll(/([^{}]+)\{([^{}]*)\}/g)])
+    .map((m) => ({ selector: m[1].trim(), body: m[2].trim() }))
 }
 
-/** The rendered text of each FAQ answer on a page, still as markup. */
-function faqAnswers(html: string): string[] {
-  return [...html.matchAll(/<div class="faq-answer"[^>]*>([\s\S]*?)<\/div>\s*<\/details>/g)].map(
-    (m) => m[1],
+/** Each rendered-markdown container on a page, with its inner markup. */
+function markdownContainers(html: string): string[] {
+  return [...html.matchAll(/<(\w+) class="[^"]*\brich-text\b[^"]*"[^>]*>([\s\S]*?)<\/\1>/g)].map(
+    (m) => m[2],
   )
 }
 
-describe('every built page spaces its FAQ answer blocks', () => {
-  const withFaq = pages.filter((p) => /<div class="faq-answer"/.test(p.html))
+describe('every built page spaces the markdown it renders', () => {
+  const withMarkdown = pages.filter((p) => markdownContainers(p.html).length > 0)
 
-  it('has pages to check, and a multi-paragraph answer among them', () => {
+  it('has pages to check, and a multi-paragraph block among them', () => {
     /*
      * Both halves matter. Without the first, a page sweep that stopped
-     * finding FAQs would make the rule below pass on an empty list. Without
-     * the second, the rule would be about a defect no visitor could meet —
-     * and the whole point is that this one HAS been shipping, on the two
-     * pages named here, apparently since sub-project 1.
+     * finding markdown containers would make the rules below pass on an
+     * empty list. Without the second, they would be about a defect no
+     * visitor could meet — and the whole point is that this one HAS been
+     * shipping, on the two pages named here, apparently since sub-project 1.
      */
-    expect(withFaq.map((p) => p.route)).toEqual(
+    expect(withMarkdown.map((p) => p.route)).toEqual(
       expect.arrayContaining(['/', '/pricing/', '/faq/']),
     )
-    const multiParagraph = withFaq.flatMap((p) =>
-      faqAnswers(p.html)
-        .filter((answer) => (answer.match(/<p[\s>]/g) ?? []).length > 1)
+    const multiParagraph = withMarkdown.flatMap((p) =>
+      markdownContainers(p.html)
+        .filter((inner) => (inner.match(/<p[\s>]/g) ?? []).length > 1)
         .map(() => p.route),
     )
     expect(multiParagraph).toEqual(expect.arrayContaining(['/', '/pricing/']))
   })
 
-  it.each(withFaq)('$route gives every answer block after the first a top margin', (page) => {
+  it.each(withMarkdown)('$route separates one markdown block from the next', (page) => {
     /*
      * Derived from the page's own CSS rather than from a selector typed
-     * here, so it holds for the flat list (Faq.astro) and the grouped one
-     * (FaqGrouped.astro) alike, and for whatever scope attribute Astro
-     * stamps on them. `:first-child` and `:last-child` rules are excluded
-     * because zeroing the first block's top margin is the OTHER half of the
-     * fix — a rule that only ever set those two is exactly the state this
-     * defect was in.
+     * here: any rule whose selector names the shared class AND uses a
+     * sibling combinator, setting a non-zero top margin. That is the shape
+     * of the fix, not its exact text, so a later rewrite that keeps the
+     * behaviour keeps this passing and one that drops the behaviour does
+     * not.
      */
-    const spacing = styleRules(page.html).filter(
-      (rule) =>
-        /\.faq-answer\b[^,{]*\sp\s*(?:,|$)/.test(rule.selector) &&
-        !/:(?:first|last)-child/.test(rule.selector),
+    const between = styleRules(page.html).filter(
+      (rule) => /\.rich-text\b/.test(rule.selector) && rule.selector.includes('+'),
     )
-    expect(spacing.length, `${page.route} has no rule spacing FAQ answer blocks`).toBeGreaterThan(0)
+    expect(between.length, `${page.route} has no rule between markdown blocks`).toBeGreaterThan(0)
     expect(
-      spacing.some((rule) => /(?:margin-block|margin-top):\s*var\(--space-\d+\)/.test(rule.body)),
-      `${page.route} declares a block rule for FAQ answers but no non-zero top margin`,
+      between.some((rule) => /margin-top:\s*var\(--space-[1-9]\d*\)/.test(rule.body)),
+      `${page.route} declares a between-blocks rule with no non-zero top margin`,
+    ).toBe(true)
+  })
+
+  it.each(withMarkdown)('$route styles links inside markdown the same way', (page) => {
+    /*
+     * The other half of the divergence, and it is asserted per page for the
+     * reason it went unnoticed: the defect was not that a link was
+     * unstyled, it was that the SAME answer's link was styled on one page
+     * and not on another. A rule that exists on every page carrying
+     * markdown is the only form of that guarantee.
+     */
+    const links = styleRules(page.html).filter((rule) =>
+      /\.rich-text\b[^,{]*\sa\b/.test(rule.selector),
+    )
+    expect(
+      links.some((rule) => /color:\s*var\(--color-accent\)/.test(rule.body)),
+      `${page.route} does not give markdown links the accent colour`,
     ).toBe(true)
   })
 })
