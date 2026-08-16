@@ -308,13 +308,11 @@ describe('the placement count is published that way on EVERY surface', () => {
   })
 
   /**
-   * A count of placements, helpers, families, clients or customers, typed as
-   * a literal.
-   *
-   * THE OLD PATTERN REQUIRED THE `+` ADJACENT TO THE NOUN — it was
-   * `/\b\d[\d,]*\+\s*(?:placement|helper|famil|client|customer)/i` — so it
-   * caught "500+ placements" and nothing else. Every one of these walked
-   * straight through it:
+   * THE PATTERN THIS REPLACED, kept as a value rather than only as prose,
+   * because the assertion below compares the two rather than describing
+   * them. It required the `+` ADJACENT to the noun, so it caught
+   * "500+ placements" and nothing else. Every one of these walked straight
+   * through it:
    *
    *   "over 500 placements"            no plus at all
    *   "more than 500 families served"  no plus, and two words in between
@@ -327,24 +325,147 @@ describe('the placement count is published that way on EVERY surface', () => {
    * plus changes the claim: "500+" is a floor, "500" is a figure, and the
    * count came down from "1,000+" once already, so a literal typed into a
    * page is exactly how a revision half-lands.
+   */
+  const OLD_PATTERN = /\b\d[\d,]*\+\s*(?:placement|helper|famil|client|customer)/i
+
+  /*
+   * ---------------------------------------------------------------------
+   * CORRECTION TO COMMIT e8219f7's MESSAGE, WHICH CANNOT BE EDITED.
+   * ---------------------------------------------------------------------
    *
-   * SO THE PLUS IS OPTIONAL and up to two words may sit between the number
-   * and the noun. Two constraints keep it from crying wolf, and both were
-   * measured against the real corpus rather than guessed:
+   * That commit widened this pattern and said two things about the widening
+   * that were not true. This comment is where the next reviewer will look,
+   * so the correction lives here rather than only in a report.
+   *
+   * IT CLAIMED the superset was "asserted explicitly in the fixtures". No
+   * such assertion existed — the fixtures were a flat list of strings the
+   * new pattern must catch, and OLD_PATTERN appeared nowhere in this file
+   * except inside a comment. The assertion now exists, below, and it is the
+   * only thing that could have caught what follows.
+   *
+   * IT CLAIMED "strictly more strings match; the old pattern's language is a
+   * subset". FALSE. The widened pattern required two or more digits and a
+   * following noun, and the old one required neither. These were caught
+   * before it and walked through it after:
+   *
+   *   "5+ placements"          single digit
+   *   "9+ helpers placed"      single digit
+   *   "8+ clients"             single digit
+   *   "500+placements"         no space between the plus and the noun
+   *   "1,000+family stories"   no space, and "family" is not "families"
+   *
+   * Two were verified live: publishing "We have completed 5+ placements."
+   * and "We have completed 500+placements." on /about scored a fully green
+   * suite, and both failed it before the branch. The practical exposure was
+   * small — company.placementCount is "500+", so a single-digit retype would
+   * have been a different fabrication rather than a stale copy — but the
+   * pattern lost reach while its commit message said it could not, and that
+   * is the defect being fixed here.
+   *
+   * ---------------------------------------------------------------------
+   * SO THE PATTERN IS TWO BRANCHES, and the split is the fix: the floor is
+   * only ever applied where it is actually needed.
+   * ---------------------------------------------------------------------
+   */
+
+  /**
+   * Branch 1 — a floor typed WITH its plus. This is OLD_PATTERN's own shape,
+   * noun stems included, with one extra optional space allowed before the
+   * plus, so every string the old pattern caught is caught here BY
+   * CONSTRUCTION rather than by fixture: same digits (one is enough), same
+   * `\s*` before the noun (so a glued "500+placements" still fires), same
+   * five stems (so "family" and "clientele" still fire).
+   *
+   * No digit floor on this branch, and none is wanted: the plus IS the
+   * anchor. A bare "$500 —" cannot reach it, and "1+ placements" is a retype
+   * whatever its magnitude.
+   */
+  const WITH_PLUS = /\d[\d,]*\s*\+\s*(?:placement|helper|famil|client|customer)/
+
+  /**
+   * Branch 2 — a figure typed WITHOUT its plus, which is the reach commit
+   * e8219f7 was right to add: "over 500 placements", "more than 500 families
+   * served", "500 helpers placed". With no plus to anchor on, two constraints
+   * keep it from crying wolf, and both were measured against the real corpus
+   * rather than guessed:
    *
    *   AT LEAST TWO DIGITS. "1 replacement within 6 months" is published copy
    *   and "1 replacement" is not a count of placements. Requiring two digits
-   *   drops every single-digit quantity on the site.
+   *   drops every single-digit quantity on the site. The floor costs nothing
+   *   now that branch 1 carries every plus-bearing string past it.
    *
-   *   THE NOUN IS PLURAL OR A COUNT NOUN. "The two packages differ by $500 —
-   *   the agent fee" is published on /pricing and must not fire; it does not,
-   *   because no count noun follows.
-   *
-   * Swept over the whole authored corpus when it was written: ZERO matches,
-   * which is the correct answer — every surface reads company.placementCount.
+   *   A PLURAL OR COUNT NOUN FOLLOWS, within two words. "The two packages
+   *   differ by $500 — the agent fee" is published on /pricing and must not
+   *   fire; it does not, because no count noun follows the number.
    */
-  const COUNT_LITERAL =
-    /\b\d{2,}[\d,]*\s*\+?(?:\s+[a-z]+){0,2}\s+(?:placements?|helpers?|families|clients?|customers?)\b/i
+  const WITHOUT_PLUS =
+    /\d{2,}[\d,]*\s*\+?(?:\s+[a-z]+){0,2}\s+(?:placements?|helpers?|famil(?:y|ies)|clients?|customers?)\b/
+
+  /**
+   * A count of placements, helpers, families, clients or customers, typed as
+   * a literal, by either route.
+   *
+   * Swept over the whole authored corpus: ZERO matches, which is the correct
+   * answer — every surface reads company.placementCount.
+   */
+  const COUNT_LITERAL = new RegExp(`\\b(?:${WITH_PLUS.source}|${WITHOUT_PLUS.source})`, 'i')
+
+  it('nothing the pattern it replaced caught walks through the one that replaced it', () => {
+    /*
+     * THE ASSERTION COMMIT e8219f7 SAID IT HAD MADE. Measured against the
+     * pattern that commit actually shipped, it fails on seven of the nine
+     * named strings below and on 96 of the 150 generated ones. That is the
+     * size of the reach the "strictly more strings match" claim covered.
+     *
+     * The generated corpus is what makes this a superset claim rather than a
+     * sample: it is the cross product of the shapes OLD_PATTERN accepts —
+     * one to five digits with and without a comma group, nought to two
+     * spaces after the plus, and all ten singular and plural forms of the
+     * five nouns it knew. Every one is asserted to be a string the old
+     * pattern really caught, so the check cannot pass by generating strings
+     * that were never in its language in the first place.
+     */
+    const named = [
+      '500+ placements',
+      '1,000+ placements',
+      '5+ placements',
+      '9+ helpers placed',
+      '8+ clients',
+      '500+placements',
+      '1,000+family stories',
+      'We have completed 5+ placements.',
+      'We have completed 500+placements.',
+    ]
+
+    const generated: string[] = []
+    for (const number of ['5', '9', '12', '500', '1,000']) {
+      for (const gap of ['', ' ', '  ']) {
+        for (const noun of [
+          'placement',
+          'placements',
+          'helper',
+          'helpers',
+          'family',
+          'families',
+          'client',
+          'clients',
+          'customer',
+          'customers',
+        ]) {
+          generated.push(`We have completed ${number}+${gap}${noun}.`)
+        }
+      }
+    }
+    expect(generated).toHaveLength(150)
+
+    const corpus = [...named, ...generated]
+
+    // Not vacuous: every string here is one the old pattern genuinely caught.
+    expect(corpus.filter((s) => !OLD_PATTERN.test(s))).toEqual([])
+
+    // ...and not one of them has been let go.
+    expect(corpus.filter((s) => !COUNT_LITERAL.test(s))).toEqual([])
+  })
 
   it('the count pattern catches a figure typed without its plus', () => {
     /*
