@@ -36,16 +36,28 @@ exactly this reason.
 
 ## Copy that is short because you have not said more
 
-Nothing here blocks anything. `/why-directhired` is live and every sentence on
-it traces back to something you or your brief already supplied — which is
-exactly why two parts of it are shorter than they want to be. Neither gap was
-filled in, because filling it in would have meant writing something you never
-said.
+Nothing here blocks anything. `/why-directhired` and `/about` are both live and
+every sentence on them traces back to something you or your brief already
+supplied — which is exactly why two parts of them are shorter than they want to
+be. Neither gap was filled in, because filling it in would have meant writing
+something you never said.
 
 | | What's there now | What we would use instead |
 |---|---|---|
-| **Your founding story** | The one line from your brief, word for word: *"DirectHired was created after seeing families struggle with agencies that focused on filling vacancies instead of finding the right fit."* It opens `/why-directhired` and it will open `/about` | **The story in your own words** — who saw it, when, and what specifically went wrong. This is the single most persuasive paragraph a family reads on a trust page, and right now it is one sentence long. We will not invent a founder, a year or an anecdote to lengthen it |
+| **Your founding story** | The one line from your brief, word for word: *"DirectHired was created after seeing families struggle with agencies that focused on filling vacancies instead of finding the right fit."* It opens `/why-directhired`, and as of 2026-08-16 it opens `/about` too — one sentence carrying a whole About page's origin | **The story in your own words** — who saw it, when, and what specifically went wrong. This is the single most persuasive paragraph a family reads on a trust page, and right now it is one sentence long. We will not invent a founder, a year or an anecdote to lengthen it |
 | **Whether one consultant carries a placement end to end** | Your brief already answers who picks a submission up: *"Employer requirements are received and reviewed by the sales consultant, with a target response within 1 business day"* (line 353), repeated at §74/line 1856. That is published — the FAQ says a consultant reviews every submission and aims to respond within 1 business day. The `/why-directhired` pillar adds that the guidance is human throughout | **One thing only: does the same person stay with a family from that first review through to the placement?** Everything else here you have already told us. If it is one consultant end to end, that is a sentence the trust pillar can carry and cannot write without you; if a placement passes between people, we will not imply otherwise. *(This question used to ask what "personalised service" consists of, on the basis that the brief supplied two lines. That was inaccurate — lines 353 and 1856 supply the intake role, and the pages use them. Narrowed on 2026-08-16 to the part that is genuinely unconfirmed.)* |
+
+---
+
+## Facts to confirm in writing
+
+Neither blocks anything today; both are published on `/about` and both are
+values only you can vouch for.
+
+| | What's published | What we need |
+|---|---|---|
+| **Your registered entity name** | **DIRECT HIRED PTE. LTD.**, in the record block on `/about` — the one credential on the site that names the legal company behind the brand | **Confirmation of the exact registered form**, capitalisation and punctuation included. The name is corroborated by a public search against licence 23C1443, but nobody here has read it off MOM's own directory entry, and a misstated legal name on a licensed agency's website is the kind of error a regulator notices before a customer does. Your master brief never supplied it |
+| **Your UEN** | Nothing. It is not on the site | **The number, if you want it published.** A UEN is the usual companion to a registered name on a Singapore About page. We have never been given one and will not derive one from the licence number |
 
 ---
 
