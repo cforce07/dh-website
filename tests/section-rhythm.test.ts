@@ -74,9 +74,6 @@ const PRICING_BLOCKS = [
   { block: 'P5', path: 'src/sections/FinalCta.astro', selector: '.final-cta' },
 ] as const
 
-/** Blocks 10a and 10b render nothing while their collections are empty. */
-const CONDITIONAL = new Set(['10a', '10b'])
-
 const read = (file: string) => readFileSync(`src/sections/${file}.astro`, 'utf8')
 
 /** Strip comments so a comment naming a token is not read as a declaration. */
@@ -98,6 +95,70 @@ function groundOfPath(path: string, selector: string): string {
 /** The same reader, for the homepage list's `file` shorthand. */
 function groundOf(file: string, selector: string): string {
   return groundOfPath(`src/sections/${file}.astro`, selector)
+}
+
+/*
+ * CONDITIONAL SECTIONS — DERIVED, NEVER LISTED.
+ *
+ * A section whose whole <section> sits behind a collection-length guard
+ * renders NOTHING while that collection is empty, so the ground sequence a
+ * visitor actually loads is the list with those blocks removed. That sequence
+ * has to alternate too, or the page shows two same-ground sections back to
+ * back to every visitor today while the full list — the one every assertion
+ * above reads — alternates perfectly.
+ *
+ * This used to be `const CONDITIONAL = new Set(['10a', '10b'])`: two
+ * hand-typed HOMEPAGE block IDs, used by one test inside the homepage's own
+ * describe. The register loop had no conditional-aware rule at all, so a
+ * registered page could render MeetHelpers or Reviews (both of which render
+ * nothing today) between two cream sections and the whole suite stayed green
+ * — proved by inserting exactly that on /why-directhired: 50 tests passed,
+ * the build exited 0, and `meet-helpers` appeared zero times in the built
+ * HTML while the page ran cream → cream.
+ *
+ * So the rule moved into the register loop, and the SET IS DERIVED. Hand-typing
+ * it again would reproduce the defect for the third conditional section anybody
+ * writes: a new guarded block would be absent from the set, absent from the
+ * page, and invisible to every assertion here. Reading the guard out of the
+ * source is what makes a new conditional block carry the rule automatically.
+ *
+ * Read from source rather than from dist/ for this file's standing reason (see
+ * the header): a ground and a guard are both decided at author time, and a page
+ * that fails to build must fail here rather than quietly leave the register.
+ * tests/links.test.ts carries the dist/-side half — that no built page ships a
+ * conditional block whose collection is empty.
+ */
+const GUARD_BEFORE_SECTION = /\.length\s*(?:>\s*0\s*|!==?\s*0\s*)?&&\s*\(?\s*$/
+
+/**
+ * The selectors in one file whose <section> renders only when a collection has
+ * entries. Works for a section component and for a <section> written inline in
+ * a page file, because both are just "the file that renders it".
+ */
+function conditionalSelectorsIn(path: string): Set<string> {
+  const source = stripComments(readFileSync(path, 'utf8'))
+  const found = new Set<string>()
+  for (const m of source.matchAll(/<section[^>]*class="([a-z0-9 -]+)"/g)) {
+    if (GUARD_BEFORE_SECTION.test(source.slice(0, m.index))) {
+      found.add(`.${m[1].trim().split(/\s+/)[0]}`)
+    }
+  }
+  return found
+}
+
+/** The blocks of one page's list that render nothing while a collection is empty. */
+function conditionalBlocksOf(
+  blocks: readonly { block: string; path: string; selector: string }[],
+): Set<string> {
+  const byPath = new Map<string, Set<string>>()
+  return new Set(
+    blocks
+      .filter((b) => {
+        if (!byPath.has(b.path)) byPath.set(b.path, conditionalSelectorsIn(b.path))
+        return byPath.get(b.path)!.has(b.selector)
+      })
+      .map((b) => b.block),
+  )
 }
 
 /*
@@ -311,6 +372,40 @@ describe.each(PAGE_SEQUENCES)('$page keeps the ground rhythm', ({ page, blocks }
     }
   })
 
+  it('still alternates with its conditional blocks absent', () => {
+    /*
+     * Task 7 fix round, W-1. THE SEQUENCE A VISITOR LOADS TODAY.
+     *
+     * MeetHelpers and Reviews render nothing while their collections are
+     * empty, so any page rendering one shows the list MINUS those blocks. The
+     * rule above judges the full list; this judges the page as it is served.
+     *
+     * It existed only inside the homepage's describe, against a hand-typed
+     * set of two homepage block IDs. Here it is derived (see
+     * conditionalSelectorsIn) and it runs for every registered page, which is
+     * what closes the hole: a page putting a conditional block between two
+     * cream sections shipped cream → cream to every visitor with the suite
+     * green.
+     *
+     * ALL the conditional blocks at once, not every subset of them. Both
+     * homepage blocks are absent together today and populate together
+     * (neither collection has an entry), and the intermediate states are a
+     * genuinely different design question — 09/10b are both cream, so
+     * "10a alone absent" is a collision the approved homepage sequence has
+     * always carried and this rule has never claimed to forbid. Asserting the
+     * two states that actually exist is what it did before and what it does
+     * now, for every page instead of one.
+     */
+    const conditional = conditionalBlocksOf(blocks)
+    const rendered = grounds.filter((g) => !conditional.has(g.block))
+    for (let i = 1; i < rendered.length; i += 1) {
+      expect(
+        rendered[i].ground,
+        `with ${[...conditional].join('/') || 'nothing'} absent, blocks ${rendered[i - 1].block} and ${rendered[i].block} collide`,
+      ).not.toBe(rendered[i - 1].ground)
+    }
+  })
+
   it('grounds at most one section in the brand wash', () => {
     // Per page, never site-wide: --color-surface-teal gives #00a4a6 real
     // area without putting it behind text, and rarity WITHIN ONE SCROLL is
@@ -382,6 +477,40 @@ describe('the page register covers the pages that exist', () => {
   })
 })
 
+describe('the conditional-block derivation', () => {
+  /*
+   * The register rule "still alternates with its conditional blocks absent"
+   * is only as strong as this derivation. A regex that matched nothing would
+   * make it pass on every page by omission — the exact failure mode this file
+   * keeps finding — so what it finds is asserted by name, in both directions.
+   */
+  it('finds the two guarded sections that exist, by name', () => {
+    expect([...conditionalSelectorsIn('src/sections/MeetHelpers.astro')]).toContain('.meet-helpers')
+    expect([...conditionalSelectorsIn('src/sections/Reviews.astro')]).toContain('.reviews')
+  })
+
+  it('does not mistake an always-on section for a conditional one', () => {
+    // Without this, a derivation that returned every section would also
+    // "pass" the rule — by deleting the whole sequence rather than by
+    // alternating. Services renders unconditionally; FinalCta takes props and
+    // renders on four pages.
+    expect([...conditionalSelectorsIn('src/sections/Services.astro')]).toEqual([])
+    expect([...conditionalSelectorsIn('src/sections/FinalCta.astro')]).toEqual([])
+  })
+
+  it('derives exactly 10a and 10b for the homepage — the set that used to be typed by hand', () => {
+    const homepage = PAGE_SEQUENCES.find((s) => s.page === 'src/pages/index.astro')!
+    expect([...conditionalBlocksOf(homepage.blocks)].sort()).toEqual(['10a', '10b'])
+  })
+
+  it('is exercised by at least one registered page (the rule has a subject)', () => {
+    const withConditionals = PAGE_SEQUENCES.filter(
+      (s) => conditionalBlocksOf(s.blocks).size > 0,
+    ).map((s) => s.page)
+    expect(withConditionals.length).toBeGreaterThan(0)
+  })
+})
+
 describe('the homepage ground sequence alternates', () => {
   const grounds = BLOCKS.map((b) => ({ ...b, ground: groundOf(b.file, b.selector) }))
 
@@ -427,20 +556,17 @@ describe('the homepage ground sequence alternates', () => {
     }
   })
 
-  it('still alternates with the two conditional blocks absent', () => {
-    // 10a and 10b render nothing until their collections are populated, so
-    // the sequence a visitor sees TODAY skips them. Both the full sequence
-    // and the current one have to hold, or the page reads as one flat field
-    // right up until the day real profiles land.
-    const rendered = grounds.filter((g) => !CONDITIONAL.has(g.block))
-    for (let i = 1; i < rendered.length; i += 1) {
-      expect(
-        rendered[i].ground,
-        `with 10a/10b absent, blocks ${rendered[i - 1].block} and ${rendered[i].block} collide`,
-      ).not.toBe(rendered[i - 1].ground)
-    }
-  })
-
+  /*
+   * "still alternates with the two conditional blocks absent" USED TO BE HERE,
+   * scoped to a hand-typed `CONDITIONAL = new Set(['10a', '10b'])`. It is now
+   * in the register loop above, derived from the guard in each section's
+   * source, and therefore runs for this page and every other one — see W-1 in
+   * conditionalSelectorsIn's docblock for the /why-directhired scenario that
+   * passed the whole suite while shipping cream → cream. Nothing was dropped:
+   * the same assertion still runs over this page's list, and the derivation
+   * still producing exactly 10a and 10b for it is asserted below, so the
+   * generalisation cannot quietly become an empty set.
+   */
   it('shifts palette register exactly once', () => {
     // --color-deep is block 07 and the footer, and nowhere else. The
     // register shift works BECAUSE it is rare; a third dark surface makes
