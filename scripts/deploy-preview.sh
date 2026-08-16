@@ -30,13 +30,21 @@ echo
 echo "==> Syncing dist/ to s3://$BUCKET"
 # Long cache for fingerprinted assets: Astro hashes filenames under _astro/,
 # and the font files are stable, so they can be cached hard.
+#
+# The HTML exclusion is `*.html`, NOT `index.html`. s3 sync matches these
+# patterns against the whole key, so `index.html` matches only the key
+# `index.html` at the root — `pricing/index.html` does not match it. While
+# the site was one page that distinction was invisible; the moment /pricing
+# shipped, it would have been served with max-age=31536000,immutable and
+# every later deploy would have left visitors on a year-stale page that no
+# invalidation could reach, because the browser would never revalidate.
 aws s3 sync dist/ "s3://$BUCKET/" --delete --profile "$PROFILE" \
-  --exclude "index.html" --exclude "*.xml" --exclude "robots.txt" \
+  --exclude "*.html" --exclude "*.xml" --exclude "robots.txt" \
   --cache-control "public,max-age=31536000,immutable" --only-show-errors
 
 # Short cache for anything a deploy is meant to change immediately.
 aws s3 sync dist/ "s3://$BUCKET/" --profile "$PROFILE" \
-  --exclude "*" --include "index.html" --include "*.xml" --include "robots.txt" \
+  --exclude "*" --include "*.html" --include "*.xml" --include "robots.txt" \
   --cache-control "public,max-age=60,must-revalidate" --only-show-errors
 
 echo
