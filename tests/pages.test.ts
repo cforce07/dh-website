@@ -994,6 +994,37 @@ describe('the 404 page is the only page kept out of the index', () => {
 })
 
 describe('BreadcrumbList (spec §4)', () => {
+  it('the exempt list is exactly the two routes argued above — nothing may join it quietly', () => {
+    /*
+     * THE PIN, AND THE LEAK IT CLOSES.
+     *
+     * While ROUTES_AWAITING_BREADCRUMBS existed, the only assertions over
+     * these two lists were: the union equals the set of pages carrying no
+     * BreadcrumbList, the two lists are disjoint, and the exempt one is
+     * non-empty. NOTHING PINNED WHAT WAS IN IT. A reviewer proved the
+     * consequence by moving '/contact/' from the deferred list into the
+     * exempt one: all 184 assertions in this file passed. So "shrink
+     * ROUTES_AWAITING_BREADCRUMBS to empty" — the documented success
+     * condition for Task 11, the one that authorises deleting the block —
+     * was satisfiable by RELOCATING routes rather than by shipping
+     * breadcrumbs, which is strictly weaker than the single list the pair
+     * replaced, on exactly the property the pair existed to protect.
+     *
+     * The deferred list is gone, so that particular route out is closed.
+     * This is the general one: an exemption is now a literal in this
+     * assertion as well as an entry in the list, so granting one is a
+     * two-place diff a reviewer sees, next to the argument it has to carry.
+     * Union-equality alone can never notice a route being excused, because
+     * excusing it changes both sides at once.
+     *
+     * Re-verified by mutation after it was written, with the reviewer's own
+     * case: '/contact/' added here and `breadcrumb="Contact"` deleted from
+     * the page. 187 assertions in this file passed and this one failed —
+     * it is the only thing standing between the site and a silent excusal.
+     */
+    expect([...ROUTES_EXEMPT_FROM_BREADCRUMBS].sort()).toEqual(['/', '/404'])
+  })
+
   it('the pages carrying no BreadcrumbList are exactly the exempt ones', () => {
     const missing = pages
       .filter((p) => !jsonLdTypes(p.html).includes('BreadcrumbList'))
