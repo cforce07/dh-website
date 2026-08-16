@@ -305,8 +305,9 @@ describe("/pricing puts a price above the fold", () => {
    * the suite fully green: the money floor still saw 26 figures, and the
    * "every distinct figure is printed" assertion is satisfied by the two
    * cards alone. So the page could silently go back to a first screen with a
-   * headline, two lines of lede and 452px of empty cream, on a page titled
-   * "Set Out in Full", and nothing would say so.
+   * headline, two lines of lede and 452px of empty cream, on the page whose
+   * entire job is answering "how much does this cost", and nothing would
+   * say so.
    *
    * That is the G-1 regression one layer further in. G-1 was "the money
    * sweep proves every figure is real but no longer proves /pricing has
