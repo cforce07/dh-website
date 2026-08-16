@@ -134,6 +134,11 @@ check_redirect "/services/transfer-helper" "directhired.com" "https://www.direct
 check_no_redirect "/pricing" "www.directhired.com"           "/pricing/index.html"
 check_no_redirect "/pricing" "didceb5na1cjo.cloudfront.net"  "/pricing/index.html"
 check_no_redirect "/"        "notdirecthired.com"            "/index.html"
+# staging is a SUBDOMAIN of the apex, so a host test written as
+# endsWith('directhired.com') would catch it and bounce staging traffic to
+# production — leaving staging useless in a way that looks like a content
+# problem rather than a routing one.
+check_no_redirect "/pricing" "staging.directhired.com"       "/pricing/index.html"
 
 if [ "$fail" -ne 0 ]; then
   echo

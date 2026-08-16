@@ -26,6 +26,8 @@ const CANONICAL_HOST = new URL(company.siteUrl).hostname
 const APEX_HOST = CANONICAL_HOST.replace(/^www\./, '')
 /** The preview distribution shares this function and must be unaffected. */
 const PREVIEW_HOST = 'didceb5na1cjo.cloudfront.net'
+/** The staging alias on that same distribution. Also must not be redirected. */
+const STAGING_HOST = 'staging.directhired.com'
 
 type Querystring = Record<string, { value: string; multiValue?: { value: string }[] }>
 
@@ -110,6 +112,19 @@ describe('the apex redirect does not fire for anything else', () => {
   it('matches the apex exactly, not by suffix — a lookalike host must not match', () => {
     const out = handler(event('/', 'notdirecthired.com'))
     expect(out.statusCode).toBeUndefined()
+  })
+
+  /*
+   * staging.directhired.com is a SUBDOMAIN of the apex, which is exactly the
+   * shape a sloppy host test would catch: `endsWith('directhired.com')` is
+   * true for it. Staging must serve its own content, not bounce visitors to
+   * production — which would make it useless as a staging environment and be
+   * confusing rather than obviously broken.
+   */
+  it('does NOT redirect staging, which is a subdomain of the apex', () => {
+    const out = handler(event('/pricing', STAGING_HOST))
+    expect(out.statusCode).toBeUndefined()
+    expect(out.uri).toBe('/pricing/index.html')
   })
 
   it('tolerates a missing host header rather than throwing', () => {
@@ -239,5 +254,83 @@ describe('production distribution config', () => {
 
   it('serves both hostnames', () => {
     expect(dist.Aliases.Items.sort()).toEqual(['directhired.com', 'www.directhired.com'])
+  })
+})
+
+/*
+ * The same guards on the STAGING distribution config.
+ *
+ * This one deserves its own block rather than a shared loop, because staging
+ * is where the vip trap actually sprang. That distribution ran with
+ * SSLSupportMethod "vip" for weeks at no cost — the field is inert while a
+ * distribution uses the default *.cloudfront.net certificate — and attaching
+ * a real certificate to it is what would have made the pair billable. The
+ * config had to be edited from vip to sni-only in the same change that added
+ * the certificate. Nothing but attention prevented that being missed, so it
+ * gets an assertion.
+ */
+describe('staging distribution config', () => {
+  const dist = JSON.parse(readFileSync('infra/preview-distribution.json', 'utf8'))
+
+  it('uses sni-only, never vip — vip costs ~US$600/month', () => {
+    expect(dist.ViewerCertificate.SSLSupportMethod).toBe('sni-only')
+  })
+
+  it('takes its certificate from us-east-1, as CloudFront requires', () => {
+    expect(dist.ViewerCertificate.ACMCertificateArn).toContain(':us-east-1:')
+  })
+
+  it('requires a modern TLS floor', () => {
+    expect(dist.ViewerCertificate.MinimumProtocolVersion).toBe('TLSv1.2_2021')
+  })
+
+  it('serves the staging hostname', () => {
+    expect(dist.Aliases.Items).toEqual([STAGING_HOST])
+  })
+
+  /*
+   * Staging serves the SAME build as production, including copy that
+   * docs/OPEN-DECISIONS.md records as awaiting compliance sign-off. Without a
+   * noindex directive it would be crawled, putting a second copy of the site
+   * in search results and making unsigned copy publicly quotable. The header
+   * comes from a CUSTOM response headers policy because the managed
+   * SecurityHeadersPolicy cannot carry a custom header.
+   */
+  it('is not the managed policy, which cannot carry X-Robots-Tag', () => {
+    expect(dist.DefaultCacheBehavior.ResponseHeadersPolicyId).not.toBe(
+      '67f7725c-6f97-4210-82d7-5512b31e9d03',
+    )
+    expect(dist.DefaultCacheBehavior.ResponseHeadersPolicyId).toBeTruthy()
+  })
+
+  it('maps 403 and 404 to the built 404 page with a 404 status', () => {
+    const byCode = Object.fromEntries(
+      dist.CustomErrorResponses.Items.map((e: any) => [e.ErrorCode, e]),
+    )
+    for (const code of [403, 404]) {
+      expect(byCode[code]).toBeDefined()
+      expect(byCode[code].ResponsePagePath).toBe('/404.html')
+      expect(byCode[code].ResponseCode).toBe('404')
+    }
+  })
+
+  it('points at the preview bucket, not the production one', () => {
+    expect(dist.Origins.Items[0].DomainName).toContain('directhired-website-preview')
+  })
+})
+
+/*
+ * The X-Robots-Tag directive lives in its own committed file so the value
+ * itself is reviewable, not buried in a distribution config.
+ */
+describe('staging response headers policy', () => {
+  const policy = JSON.parse(readFileSync('infra/staging-response-headers-policy.json', 'utf8'))
+
+  it('tells crawlers not to index staging', () => {
+    const headers = policy.CustomHeadersConfig.Items
+    const robots = headers.find((h: any) => h.Header.toLowerCase() === 'x-robots-tag')
+    expect(robots).toBeDefined()
+    expect(robots.Value).toContain('noindex')
+    expect(robots.Override).toBe(true)
   })
 })

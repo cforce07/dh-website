@@ -363,6 +363,89 @@ deleted the six cPanel names, which is now wrong.
 
 ---
 
+---
+
+## Staging environment — `staging.directhired.com` (2026-08-16)
+
+The former preview stack, given a real hostname. **Not** `dev.directhired.com`,
+which hosts a live application; taking that name would have removed it from the
+internet as a side effect.
+
+| Resource | Value |
+|---|---|
+| Hostname | `staging.directhired.com` |
+| Distribution | `EQFX1V1KHG4IS` (was preview-only) |
+| Bucket | `directhired-website-preview` |
+| Certificate | `arn:aws:acm:us-east-1:354918409802:certificate/9bd88754-5c52-47d3-b111-32c5bb5a3bb7` |
+| Response headers policy | `50dbf328-ddfb-4240-9199-70f9baab6c48` (`directhired-staging-noindex`) |
+| Old CloudFront URL | `didceb5na1cjo.cloudfront.net` — still works |
+
+### THE `vip` TRAP SPRANG HERE, AND WAS CAUGHT
+
+This distribution had run with `SSLSupportMethod: "vip"` since it was created,
+at **no cost** — the field is inert while a distribution uses the default
+`*.cloudfront.net` certificate. Giving it a real hostname meant attaching an ACM
+certificate, **which is the second half of the billable pair.**
+
+Left untouched, that single word would have begun charging roughly **US$600 per
+month** the moment the distribution deployed. No error, no warning, no failed
+request — just a line on next month's bill.
+
+The config was changed to `sni-only` in the same edit that added the
+certificate, and re-read from AWS afterwards to confirm. The rule worth
+remembering: **`vip` alone is free, a custom certificate alone is free, only the
+pair bills.** Both `infra/prod-distribution.json` and
+`infra/preview-distribution.json` are now asserted by `tests/infra.test.ts`.
+
+### Verified 2026-08-16
+
+| Check | Result |
+|---|---|
+| TLS chain valid for `staging.directhired.com` | ✅ `ssl_verify_result=0` |
+| All 6 content pages | ✅ 200 |
+| `/about` | ✅ **200** — was 403 before this change |
+| Missing page | ✅ 404 |
+| `X-Robots-Tag` | ✅ `noindex, nofollow` |
+| HSTS / nosniff / SAMEORIGIN / Referrer-Policy | ✅ all present |
+| Staging is **not** caught by the apex redirect | ✅ 200, no `Location` |
+| `didceb5na1cjo.cloudfront.net` still serves | ✅ 200 |
+| Production unaffected | ✅ still the Exabytes placeholder |
+
+**Why `/about` was 403 and now is not.** The distribution had no custom error
+responses, and a private S3 origin behind OAC is granted `s3:GetObject` but not
+`s3:ListBucket` — so S3 answers a missing key with `403 AccessDenied` rather
+than `404`. The bucket was also a stale deploy holding only `index.html` and
+`pricing/`. Both are fixed: the error mapping is in place and the bucket has
+been redeployed.
+
+**`scripts/deploy-preview.sh` now builds UNGATED** (`npm run build:dev`). It ran
+the gated `npm run build` before, which is right for production and wrong here:
+staging is precisely where an unverified `<Tbd>` value should be *visible* so it
+can be reviewed. Gating staging would block previewing the one thing staging
+exists for. `scripts/deploy-production.sh` keeps the gate.
+
+**Local resolution note.** `staging.directhired.com` resolved from public
+resolvers immediately but not from this network, because the local router had
+cached an `NXDOMAIN` from before the record existed. Route 53's SOA gives a
+negative-cache TTL of `min(86400, 900)` = 900s. Verified via `curl --resolve`
+against a CloudFront address in the meantime. This is the same negative-caching
+hazard noted for the ACM validation records.
+
+### Still to do — Phase 2
+
+GitHub Actions deployment, agreed but not built:
+
+- IAM OIDC provider for `token.actions.githubusercontent.com`, and a role
+  scoped to `cforce07/dh-website` — no long-lived AWS keys in GitHub
+- `deploy-staging.yml`: push to `main` → tests/axe/Lighthouse → `build:dev` →
+  deploy to staging
+- `deploy-production.yml`: manual dispatch behind a GitHub environment approval
+  → gated `build` → deploy to production
+- `scripts/deploy-production.sh` needs a non-interactive path for CI, with the
+  GitHub environment approval replacing its typed prompt
+
+---
+
 ## Dated follow-ups
 
 1. ~~One week after go-live: cancel Exabytes hosting and DNS.~~ **Withdrawn.**
