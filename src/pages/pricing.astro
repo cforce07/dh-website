@@ -1,0 +1,217 @@
+---
+/**
+ * /pricing — the highest-value page on the site.
+ *
+ * It answers source brief §84's number-one customer objection ("how much
+ * does this actually cost?") and owns core-pages design spec §4's
+ * strongest commercial-intent queries: *maid agency pricing Singapore* and
+ * *how much does a maid cost Singapore*. Both appear once, inside
+ * sentences a person would read, in the <title> and the description — the
+ * description is also og:description and the string Google shows in
+ * results, so it carries the two figures rather than an adjective.
+ *
+ * NOT ONE HARDCODED PRICE STRING. Every figure on this page — the two
+ * totals, the gap between them, the recurring components in
+ * ReplacementTerms — resolves from src/data/pricing.ts through
+ * packageTotalCents() and formatSgd(), including the ones inside the meta
+ * description. A page that repeats prices in prose is exactly where a
+ * stale number hides, and the drift guard in tests/content.test.ts cannot
+ * see a string typed into an .astro file.
+ *
+ * The "what's included" block under the cards is derived the same way: the
+ * shared components are computed by comparing the two packages' line
+ * items, and the difference between the packages is subtracted rather than
+ * stated. The claim it makes — that the packages differ in the agent fee
+ * and nothing else — is the same claim tests/pricing.test.ts asserts
+ * against the data, so the prose cannot drift away from it either.
+ *
+ * Section grounds alternate cream / white / cream / white / cream across
+ * the five blocks below (packages, ReplacementTerms, LoanAndPlacement,
+ * Faq, FinalCta). Faq and FinalCta are fixed at white and cream
+ * respectively, which is what fixes the other three. Block 07 of the
+ * homepage keeps --color-deep as the site's only palette register shift;
+ * nothing here is a second dark band.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro'
+import Container from '../components/Container.astro'
+import PricingCard from '../components/PricingCard.astro'
+import ReplacementTerms from '../sections/ReplacementTerms.astro'
+import LoanAndPlacement from '../sections/LoanAndPlacement.astro'
+import Faq from '../sections/Faq.astro'
+import FinalCta from '../sections/FinalCta.astro'
+import { packages, packageTotalCents } from '../data/pricing'
+import { formatSgd } from '../lib/money'
+
+const withReplacement = packages.find((pkg) => pkg.id === 'fly-in-with-replacement')!
+const withoutReplacement = packages.find((pkg) => pkg.id === 'fly-in-without-replacement')!
+
+const withTotal = formatSgd(packageTotalCents(withReplacement))
+const withoutTotal = formatSgd(packageTotalCents(withoutReplacement))
+const difference = formatSgd(
+  packageTotalCents(withReplacement) - packageTotalCents(withoutReplacement),
+)
+
+/*
+ * The line items that are identical in both packages, matched on label AND
+ * amount. Matching on label alone would call two components "the same"
+ * while they carried different prices, which is the specific mistake the
+ * label/amount pairing in tests/pricing.test.ts exists to catch.
+ */
+const sharedComponents =
+  withReplacement.kind === 'itemised' && withoutReplacement.kind === 'itemised'
+    ? withReplacement.lineItems.filter((item) =>
+        withoutReplacement.lineItems.some(
+          (other) => other.label === item.label && other.amountCents === item.amountCents,
+        ),
+      )
+    : []
+
+/** "A, B and C" — used so the shared components read as a sentence. */
+function listSentence(items: readonly string[]): string {
+  if (items.length < 2) return items.join('')
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
+}
+
+const sharedComponentSentence = listSentence(sharedComponents.map((item) => item.label))
+
+const title = 'Maid Agency Pricing in Singapore — Itemised | DirectHired'
+const description =
+  `How much does a maid cost in Singapore? DirectHired's maid agency pricing, itemised — ` +
+  `${withTotal} with a replacement, ${withoutTotal} without — and what sits outside the package.`
+---
+
+<BaseLayout title={title} description={description}>
+  <section class="pricing-packages">
+    <Container>
+      <div class="page-intro">
+        <h1>Maid Agency Pricing, Set Out in Full</h1>
+        <p class="page-lede">
+          Two ways to bring a domestic helper into your home in Singapore, itemised line by line —
+          and a plain account of the two amounts that sit outside both totals.
+        </p>
+      </div>
+
+      {/*
+        This <h2> is structural, not decorative. PricingCard sets each
+        package name as an <h3>, so without a heading here the document
+        went <h1> straight to <h3> and axe's heading-order rule fired on
+        the skipped level. It also earns its place on the page: the cards
+        are the first thing below the lede and they now say what they are.
+      */}
+      <h2 class="grid-heading">The two fly-in packages</h2>
+
+      <div class="package-grid">
+        {packages.map((pkg) => <PricingCard pkg={pkg} />)}
+      </div>
+
+      <div class="whats-included">
+        <h2>What each total covers</h2>
+        <p>
+          Both packages cover the same components at the same amounts: {sharedComponentSentence}.
+          The one line that differs is our agent fee. That gap is {difference}, and what it buys is
+          the replacement — one replacement helper, requested within 6 months of the deployment
+          date, which the {withoutReplacement.name} package does not include.
+        </p>
+        <p>
+          Two further amounts — the helper’s loan and the placement fee — sit outside both totals.
+          They are not an extra charge you carry: you advance them and recover them, and they are
+          explained in full further down this page.
+        </p>
+      </div>
+    </Container>
+  </section>
+
+  <ReplacementTerms />
+  <LoanAndPlacement />
+
+  <Faq
+    surface="pricing"
+    limit={6}
+    heading="Questions about what it costs"
+    lede="The ones families ask us most often once they have seen the figures above."
+  />
+
+  <FinalCta
+    heading="Know the numbers. Now tell us the household."
+    lede="Send us what your family needs and we will come back with helpers who fit it — and the exact figures for each of them."
+  />
+</BaseLayout>
+
+<style>
+  .pricing-packages {
+    padding-block: var(--space-section);
+    /* Cream, so the two white PricingCards read as raised against it —
+       the same reasoning PricingSection.astro records for the homepage.
+       This section carries the <h1>, the cards and the inclusion notes as
+       one block rather than three: splitting them would put two cream
+       sections next to each other, which is the adjacency the site's
+       ground rhythm exists to prevent. */
+    background: var(--color-surface);
+  }
+
+  .page-intro h1 {
+    margin: 0;
+    max-width: 18ch;
+    font-family: var(--font-display);
+    font-size: var(--size-h1);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.1;
+    color: var(--color-ink);
+  }
+
+  .page-lede {
+    max-width: 56ch;
+    margin: var(--space-6) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-lede);
+    line-height: 1.5;
+    color: var(--color-ink-muted);
+  }
+
+  .grid-heading {
+    margin: var(--space-12) 0 0;
+    font-family: var(--font-display);
+    font-size: var(--size-h3);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  .package-grid {
+    display: grid;
+    gap: var(--space-8);
+    margin-top: var(--space-6);
+  }
+
+  .whats-included {
+    max-width: 60ch;
+    margin-top: var(--space-12);
+  }
+
+  .whats-included h2 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--size-h3);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  .whats-included p {
+    margin: var(--space-4) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink);
+  }
+
+  /* 48em = --bp-tablet (tokens.css). Repeated as a literal by hand —
+     custom properties do not resolve inside a media condition. Equal
+     columns for the same reason PricingSection uses them: two packages a
+     visitor is comparing must be presented at the same weight, because a
+     wider card reads as the recommended one. */
+  @media (min-width: 48em) {
+    .package-grid {
+      grid-template-columns: 1fr 1fr;
+      align-items: stretch;
+    }
+  }
+</style>

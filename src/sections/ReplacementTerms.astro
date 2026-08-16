@@ -1,0 +1,361 @@
+---
+/**
+ * ReplacementTerms — the replacement mechanics, /pricing only.
+ *
+ * Everything stated here comes from the core-pages design spec §2.1, which
+ * is the only permitted source of business facts for this page. Nothing is
+ * extended, rounded or inferred: the trigger, the single exclusion, the
+ * entitlement, and which components recur are written exactly as supplied.
+ *
+ * Two things are worth knowing before editing this file.
+ *
+ * 1. THE SUM IS THE POINT. DirectHired asked specifically that the loan
+ *    carry-forward be shown as visible arithmetic rather than described in
+ *    prose — a subtraction a reader can follow line by line. It is a real
+ *    <table> with a <caption> and row headers, not a <pre> block: a screen
+ *    reader announces "New helper's loan, $2,500.00" as a labelled pair,
+ *    and the label column wraps on a narrow phone instead of forcing the
+ *    page to scroll sideways. Preformatted text does neither.
+ *
+ * 2. THE FIGURES ARE ILLUSTRATIVE AND MUST STAY LABELLED AS SUCH. $2,500
+ *    is not DirectHired's loan — the loan is case-by-case and no figure or
+ *    range may be published (spec §2.3, §7). The numbers exist to
+ *    demonstrate the subtraction. That is said in the caption, again in a
+ *    note under the table, and the three values are derived from two
+ *    constants below so the arithmetic is performed rather than typed —
+ *    a wrong total in an example about arithmetic would be its own kind of
+ *    embarrassment.
+ *
+ * The single most customer-favourable true fact available is that the
+ * agent fee is not charged a second time. Before this section it was
+ * published nowhere on the site, so it is stated plainly rather than left
+ * to be inferred from the list of components that do recur.
+ *
+ * The recurring components are read from src/data/pricing.ts rather than
+ * retyped, so a change to the package breakdown reaches this section too.
+ * They are the with-replacement package's line items minus the agent fee,
+ * which is precisely what "the agent fee is not charged again" means.
+ * No subtotal is shown: summing them would read as a complete quotation
+ * for a replacement, which is a claim the spec does not support.
+ */
+import Container from '../components/Container.astro'
+import SectionHeader from '../components/SectionHeader.astro'
+import { packages } from '../data/pricing'
+import { formatSgd } from '../lib/money'
+
+const withReplacement = packages.find((pkg) => pkg.id === 'fly-in-with-replacement')
+
+const recurringComponents =
+  withReplacement && withReplacement.kind === 'itemised'
+    ? withReplacement.lineItems.filter((item) => item.label !== 'Agent fees')
+    : []
+
+/*
+ * Illustrative only — see the file header. Held as integer cents and run
+ * through formatSgd() like every other money value on the site, so the
+ * example is rendered by the same formatter as the real prices instead of
+ * being three hand-typed strings that could disagree with each other.
+ */
+const EXAMPLE_NEW_LOAN_CENTS = 250_000
+const EXAMPLE_OUTSTANDING_CENTS = 150_000
+const exampleAdvanceCents = EXAMPLE_NEW_LOAN_CENTS - EXAMPLE_OUTSTANDING_CENTS
+---
+
+<section class="replacement-terms">
+  <Container>
+    <SectionHeader
+      title="If the placement doesn’t work out"
+      lede="The fly-in package with replacement carries one replacement, and the terms are short enough to state in full."
+    />
+
+    <div class="replacement-body">
+      <div class="terms">
+        <dl class="term-list">
+          <div class="term">
+            <dt>Who asks</dt>
+            <dd>
+              You do. If the placement is not working for your household you request a replacement,
+              and you do not have to justify the request.
+            </dd>
+          </div>
+
+          <div class="term">
+            <dt>The one exception</dt>
+            <dd>
+              A replacement is not available where the employer has breached the Employment Act or
+              has abused the helper. That is the sole exclusion.
+            </dd>
+          </div>
+
+          <div class="term">
+            <dt>How many, and by when</dt>
+            <dd>
+              One replacement, requested within 6 months of your helper’s deployment date. Not an
+              unlimited entitlement, and the 6 months runs from deployment rather than from the day
+              you sign.
+            </dd>
+          </div>
+
+          <div class="term">
+            <dt>What you pay again</dt>
+            <dd>
+              The third-party components are paid a second time for the new helper:
+              <ul class="recurring">
+                {
+                  recurringComponents.map((item) => (
+                    <li>
+                      <span class="recurring-label">{item.label}</span>
+                      <span class="recurring-amount">{formatSgd(item.amountCents)}</span>
+                    </li>
+                  ))
+                }
+              </ul>
+              <strong class="fee-note">Our agent fee is not charged again.</strong>
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+      <div class="carry-forward-panel">
+        <table class="carry-forward">
+          <caption>
+            <span class="caption-title">Loan carry-forward</span>
+            <span class="caption-note">Illustrative figures — an example of the method, not a quote</span>
+          </caption>
+          <tbody>
+            <tr>
+              <th scope="row">New helper’s loan</th>
+              <td>{formatSgd(EXAMPLE_NEW_LOAN_CENTS)}</td>
+            </tr>
+            <tr>
+              <th scope="row">Less: outstanding balance from the replaced helper</th>
+              <td>−{formatSgd(EXAMPLE_OUTSTANDING_CENTS)}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <th scope="row">Employer advances</th>
+              <td>{formatSgd(exampleAdvanceCents)}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <p class="carry-forward-note">
+          If the helper being replaced still has an outstanding loan balance, that balance is
+          subtracted from what you advance for the new helper — so the same amount is not funded
+          twice. The figures above are there to show the subtraction. They are not our loan
+          amounts: the loan is assessed for each helper individually, which is why we publish no
+          figure for it.
+        </p>
+      </div>
+    </div>
+  </Container>
+</section>
+
+<style>
+  .replacement-terms {
+    padding-block: var(--space-section);
+    /* White. The page alternates cream / white / cream / white / cream
+       across its five sections, and this one holds no Card, so white is
+       free here. The carry-forward panel below is the inverse — cream on
+       white — which is what gives the sum its own edge without inventing
+       a fourth surface colour. */
+    background: var(--color-surface-raised);
+  }
+
+  .replacement-body {
+    display: grid;
+    gap: var(--space-12);
+    margin-top: var(--space-12);
+    align-items: start;
+  }
+
+  .term-list {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+  }
+
+  .term {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .term dt {
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+  }
+
+  .term dd {
+    margin: 0;
+    max-width: 60ch;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink);
+  }
+
+  .recurring {
+    list-style: none;
+    margin: var(--space-4) 0 0;
+    padding: 0;
+    max-width: 24rem;
+  }
+
+  .recurring li {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding-block: var(--space-2);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .recurring li:last-child {
+    border-bottom: none;
+  }
+
+  .recurring-label {
+    color: var(--color-ink-muted);
+  }
+
+  .recurring-amount {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .fee-note {
+    display: block;
+    margin-top: var(--space-4);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-ink);
+  }
+
+  .carry-forward-panel {
+    /* min-width: 0 for the same reason Card.astro sets it — a grid item's
+       automatic minimum is its min-content width, and the longest row
+       label here is a full sentence. Without this the panel refuses to
+       shrink below that label's unbroken width and the whole page gains a
+       horizontal scrollbar at 320px. */
+    min-width: 0;
+    /* --space-4, not --space-6, until there is room for it. At a 305px
+       viewport the container already spends 48px on its own gutters; a
+       24px panel inset on top of that left the table 209px, and a table
+       whose amount column will not wrap spends that on the amounts —
+       "New helper's loan" broke across three lines. Measured in Chrome. */
+    padding: var(--space-4);
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+  }
+
+  .carry-forward {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-text);
+  }
+
+  .carry-forward caption {
+    text-align: left;
+    padding-bottom: var(--space-4);
+  }
+
+  .caption-title {
+    display: block;
+    font-family: var(--font-display);
+    font-size: var(--size-h3);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  .caption-note {
+    display: block;
+    margin-top: var(--space-1);
+    font-size: var(--size-small);
+    color: var(--color-ink-muted);
+  }
+
+  .carry-forward th {
+    text-align: left;
+    font-weight: var(--font-weight-regular);
+    color: var(--color-ink-muted);
+  }
+
+  .carry-forward td {
+    text-align: right;
+    /* The amounts never wrap; the labels do. Tabular figures keep the
+       three numbers aligned on their decimal point, which is what makes
+       the block read as a sum rather than as three unrelated prices. */
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-ink);
+  }
+
+  .carry-forward tbody th,
+  .carry-forward tbody td {
+    padding-block: var(--space-2);
+    font-size: var(--size-body);
+    line-height: 1.4;
+  }
+
+  /* The rule under the subtraction — the "———" of the worked sum. It sits
+     on the tfoot cells' top edge, so it spans exactly the table's width at
+     every viewport instead of being drawn as a fixed-length character run
+     that a phone would break. */
+  .carry-forward tfoot th,
+  .carry-forward tfoot td {
+    padding-top: var(--space-4);
+    border-top: 1.5px solid var(--color-ink-muted);
+    font-size: var(--size-body);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-ink);
+  }
+
+  /* The total is the one figure that gets display treatment. It is set at
+     --size-lede until 30em and only then steps up to --size-h3: the
+     amount column never wraps, so on a narrow phone every point of its
+     font size is taken directly out of the label column beside it. The
+     step-up happens where the table has the width to pay for it. */
+  .carry-forward tfoot td {
+    font-family: var(--font-display);
+    font-size: var(--size-lede);
+  }
+
+  .carry-forward-note {
+    max-width: 60ch;
+    margin: var(--space-6) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+  }
+
+  /* 30em (480px) — a local, content-driven step, not a site breakpoint:
+     it is simply where this table stops being width-starved. Deliberately
+     NOT promoted to tokens.css, which reserves that for values more than
+     one file needs; see the --bp-xwide entry there for what happens when
+     two files adopt the same literal independently. */
+  @media (min-width: 30em) {
+    .carry-forward-panel {
+      padding: var(--space-6);
+    }
+
+    .carry-forward tfoot td {
+      font-size: var(--size-h3);
+    }
+  }
+
+  /* 64em = --bp-wide (tokens.css). Custom properties do not resolve inside
+     a media condition, so the literal is repeated here by hand. Below this
+     the sum stacks under the terms at full width, which is where its label
+     column has the most room. */
+  @media (min-width: 64em) {
+    .replacement-body {
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: var(--space-16);
+    }
+  }
+</style>

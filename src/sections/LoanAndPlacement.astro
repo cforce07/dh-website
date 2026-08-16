@@ -1,0 +1,176 @@
+---
+/**
+ * LoanAndPlacement — the two amounts that sit outside the package totals,
+ * /pricing only.
+ *
+ * WHAT THIS SECTION EXISTS TO CORRECT. The site used to say that further
+ * placement-related fees "may apply", which a reader takes to mean a cost
+ * the employer bears, possibly, on top of the package. Both halves of that
+ * are wrong. Core-pages design spec §2.4, binding on all copy: the
+ * employer ADVANCES the loan and the placement fee and RECOVERS them
+ * through the helper's repayment. It is ultimately the HELPER'S cost. Copy
+ * must state both halves — the money leaves the employer's account first,
+ * and it comes back — because either half alone is a different and untrue
+ * claim.
+ *
+ * WHAT IS DELIBERATELY ABSENT, AND MUST STAY ABSENT.
+ *
+ * DirectHired supplied the repayment mechanics on 2026-08-16: the range it
+ * runs over, where in the helper's pay it comes from, and what she
+ * receives alongside it. None of that is published here, on any other
+ * page, or in any FAQ answer. It describes a salary-deduction arrangement
+ * on a licensed employment agency's public website, in an area MOM
+ * regulates closely, and source brief §19 requires the final wording to be
+ * reviewed against DirectHired's actual commercial and regulatory terms
+ * before it goes out. It is the highest-liability sentence on the site.
+ *
+ * The gap is recorded as a declared input in
+ * scripts/generate-info-required.mjs (Category C of
+ * docs/INFORMATION-REQUIRED-BEFORE-PRODUCTION.md) and enforced by
+ * tests/compliance-gate.test.ts, which scans the built HTML. What is
+ * missing is sign-off, not information.
+ *
+ * A PARAPHRASE IS A BREACH. Writing "over several months", "from what she
+ * earns", or "she keeps her rest-day pay" would publish the same
+ * arrangement in different words and would pass a literal search for the
+ * supplied phrases. Do not gesture at the mechanism. The page is complete
+ * and honest without it: a family needs to know who ultimately bears the
+ * cost, which is stated here in full.
+ *
+ * The loan carries no figure and no range — spec §2.3 says it is genuinely
+ * case-by-case and §7 forbids publishing a range. "It depends" is the
+ * true answer, so it is given as the answer rather than softened into an
+ * approximate one.
+ */
+import Container from '../components/Container.astro'
+import SectionHeader from '../components/SectionHeader.astro'
+import Card from '../components/Card.astro'
+---
+
+<section class="loan-placement">
+  <Container>
+    <SectionHeader
+      title="The loan and the placement fee"
+      lede="Two amounts sit outside the package totals above. They are the ones most often misunderstood, so here is what they are and who ends up paying them."
+    />
+
+    <div class="loan-grid">
+      <Card>
+        <div class="amount-card">
+          <h3>Placement fee</h3>
+          <p class="amount-figure">One month’s salary</p>
+          <p>
+            Fixed at one month’s salary, and the same amount whether you take on a new helper or a
+            transfer helper. There is no separate scale to work through.
+          </p>
+        </div>
+      </Card>
+
+      <Card>
+        <div class="amount-card">
+          <h3>Helper loan</h3>
+          <p class="amount-figure">Assessed case by case</p>
+          <p>
+            The loan depends on the individual helper, so there is no standard figure to publish —
+            and we would rather publish none than one that turns out not to be yours. Our team goes
+            through the exact amount for the helper you choose before you commit to anything.
+          </p>
+        </div>
+      </Card>
+    </div>
+
+    <div class="who-pays">
+      <h3 class="who-pays-heading">Who actually bears these</h3>
+      <p>
+        You advance both amounts at the start, and you recover them through the helper’s repayment.
+        Both halves matter: the money does leave your account first, and it does come back. They
+        are ultimately the <strong>helper’s</strong> cost, not an additional charge you carry on
+        top of the package.
+      </p>
+    </div>
+  </Container>
+</section>
+
+<style>
+  .loan-placement {
+    padding-block: var(--space-section);
+    /* Cream, so the two Cards below read as raised against it — the same
+       reasoning PricingSection.astro records for block 06. Also puts this
+       section between the white replacement block above and the white FAQ
+       below, keeping the page's grounds alternating. */
+    background: var(--color-surface);
+  }
+
+  .loan-grid {
+    display: grid;
+    gap: var(--space-8);
+    margin-top: var(--space-12);
+  }
+
+  .amount-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .amount-card h3 {
+    margin: 0;
+    font-family: var(--font-text);
+    font-size: var(--size-small);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
+  }
+
+  .amount-figure {
+    margin: 0;
+    font-family: var(--font-display);
+    /* Deliberately the same display treatment PricingCard gives a package
+       total. "One month's salary" and "assessed case by case" ARE the
+       answers to "how much?" — setting them as prose while every real
+       number on the page is set as a figure would read as evasion. */
+    font-size: 1.75rem;
+    font-weight: var(--font-weight-medium);
+    line-height: 1.2;
+    color: var(--color-accent);
+  }
+
+  .amount-card p:not(.amount-figure) {
+    margin: 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+  }
+
+  .who-pays {
+    max-width: 60ch;
+    margin-top: var(--space-12);
+  }
+
+  .who-pays-heading {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--size-h3);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  .who-pays p {
+    margin: var(--space-4) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink);
+  }
+
+  /* 48em = --bp-tablet (tokens.css); the literal is repeated by hand
+     because custom properties do not resolve inside a media condition. */
+  @media (min-width: 48em) {
+    .loan-grid {
+      grid-template-columns: 1fr 1fr;
+      align-items: stretch;
+    }
+  }
+</style>
