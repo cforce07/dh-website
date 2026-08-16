@@ -10,10 +10,49 @@ Generated status of missing content: `docs/INFORMATION-REQUIRED-BEFORE-PRODUCTIO
 
 ## Blocks launch
 
+Two items, and they are **not** of equal weight. The first is the single
+highest-value thing on this entire document; the second is a sign-off. They
+are listed in that order deliberately.
+
+### 1. The form URL — one line, and nothing on the site works without it
+
+**This is the one to answer first.** If you read nothing else here, read this.
+
+Every "Submit Your Requirements" button on the site points at
+`https://www.directhired.com/employer-requirement`. **That address does not
+exist.** Today, on the live build, that is **46 buttons and links across all
+eight pages** — in the header, in the mobile menu, at the top of every page,
+at the bottom of every page, in the bar fixed to the bottom of every phone
+screen, and even on the "page not found" page.
+
+Every one of them is a dead end.
+
+**What makes this the worst kind of problem is that nothing looks wrong.**
+The site builds cleanly, every automated check passes, every page scores full
+marks for performance and accessibility, and every button renders perfectly
+and appears to work. A visitor clicks the thing the entire site is built to
+make them click, and arrives nowhere. **The site cannot convert a single
+visitor until this is answered**, and no amount of further work here changes
+that — this is the only item on this page with that property.
+
+**What we need from you:** the live URL of the requirement form on your
+existing site. Not a new form — you confirmed on 2026-08-16 that the form
+stays where it is, which is fine. Just the address it currently lives at.
+
+**What it costs us:** one line. `requirementFormUrl` in
+`src/data/company.ts` is the only place that address is written down
+anywhere in the codebase — a test enforces that no page is allowed to type
+it out — so changing that one line moves all 46 links at once. It is
+minutes of work on our side. It has been waiting on one URL.
+
+See the note under *Housekeeping* about what hosting the form elsewhere
+costs you in measurement.
+
+### 2. Compliance sign-off on loan repayment
+
 | | What's needed | Why it blocks |
 |---|---|---|
-| **Compliance sign-off on loan repayment** | Written confirmation that the repayment terms you gave us on 2026-08-16 may be published as-is | **Still open, and only partly narrowed by your 2026-08-16 answer.** You approved one sentence about the *process* — *"We go through the repayment arrangement in full with you before you commit, and it is set out in the contract."* — and that sentence is now live on `/pricing`. The **mechanics are not**: that repayment runs **1 to 7 months**, that it comes from the helper's **basic salary**, and that she receives **off-day compensation** during it. None of those three is on the site, in those words or paraphrased, and a test fails the build if any of them appears. They describe a salary-deduction arrangement on a licensed agency's public website, in an area MOM regulates closely, so they wait for your sign-off rather than your say-so. Approving one process sentence is not that sign-off. |
-| **Production form URL** | The live URL for the employer requirement form, on whichever site hosts it | Every primary CTA points at `company.requirementFormUrl`, which 404s today. One constant, one edit — but nothing converts until it resolves. You confirmed on 2026-08-16 that the form stays on your existing separate site, so what we need is that site's live form URL. See the note under *Housekeeping* about what hosting it elsewhere costs you. |
+| **Compliance sign-off on loan repayment** | Written confirmation that the repayment terms you gave us on 2026-08-16 may be published as-is | **Still open, and only partly narrowed by your 2026-08-16 answer.** You approved one sentence about the *process* — *"We go through the repayment arrangement in full with you before you commit, and it is set out in the contract."* — and that sentence is now live on `/pricing`. The **mechanics are not**: that repayment runs **1 to 7 months**, that it comes from the helper's **basic salary**, and that she receives **off-day compensation** during it. None of those three is on the site, in those words or paraphrased, and a test fails the build if any of them appears. They describe a salary-deduction arrangement on a licensed agency's public website, in an area MOM regulates closely, so they wait for your sign-off rather than your say-so. Approving one process sentence is not that sign-off. **Unlike the form URL above, this one blocks a paragraph, not the business** — the pricing page is complete and honest without it. |
 
 ---
 
@@ -139,10 +178,26 @@ category is reporting that nothing is *marked*, not that nothing is *missing*;
 it cannot currently detect anything at all, and `npm run build` passes its gate.
 
 Nothing is wrong: the gate and the `<Tbd>` component are deliberately kept for
-the next unverified value, and the real outstanding items are the ones in this
-document plus Categories B, C and D of that checklist. It is written down here
-because a client reading "Category A: none found" would reasonably take it as a
-clean bill of health for the whole document, and it is not one.
+the next unverified value. It is written down here because a client reading
+"Category A: none found" would reasonably take it as a clean bill of health for
+the whole document, and it is not one. **That checklist now says so in its own
+words** (revised 2026-08-16) rather than leaving this note to correct it.
+
+**The two documents are companions, not duplicates — read both.** That
+checklist covers what the codebase can *detect* or has *declared*, which is
+everything with a consequence in the build: the empty sections, the
+placeholder images, the form URL, the repayment sign-off. This document covers
+everything else — the decisions, and the copy that is short because nobody has
+said more. A gap with no consequence in the build leaves no trace in that
+checklist at all, which is exactly why your founding story and what your
+insurance covers appear here and not there. Neither file is the whole list on
+its own.
+
+**The form URL was missing from that checklist entirely until 2026-08-16.** It
+was tracked here, under *Blocks launch*, and nowhere else — so the document
+titled "Information Required Before Production" did not mention the one input
+without which nothing on the site converts. It is now the first entry in its
+Category C, and a test fails if it is ever dropped again.
 
 ---
 

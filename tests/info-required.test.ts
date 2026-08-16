@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -85,6 +85,52 @@ describe('docs/INFORMATION-REQUIRED-BEFORE-PRODUCTION.md is regenerated, not sta
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }
+  })
+
+  /**
+   * docs/OPEN-DECISIONS.md is HAND-WRITTEN, and it now tells DirectHired
+   * exactly how many dead buttons are on their site. That number is the
+   * measure of the damage and the reason the item is ranked first, so it
+   * has to be right — and a hand-typed count is precisely the figure that
+   * is correct on the day it is written and quietly wrong one page later.
+   *
+   * The generated checklist derives its copy of the number from dist/ and
+   * cannot drift. This is the assertion that holds the hand-written
+   * document to the same standard, rather than trusting it.
+   */
+  it('docs/OPEN-DECISIONS.md states the real number of dead CTAs', () => {
+    const url = readFileSync('src/data/company.ts', 'utf8').match(
+      /requirementFormUrl:\s*'([^']+)'/,
+    )?.[1]
+    expect(url, 'company.requirementFormUrl must be readable').toBeTruthy()
+
+    const walkDist = (dir: string): string[] =>
+      readdirSync(dir).flatMap((entry) => {
+        const full = join(dir, entry).split('\\').join('/')
+        return statSync(full).isDirectory() ? walkDist(full) : [full]
+      })
+
+    const pages = walkDist('dist').filter((f) => f.endsWith('.html'))
+    let ctas = 0
+    let pagesWithCta = 0
+    for (const file of pages) {
+      const hits = readFileSync(file, 'utf8').split(`href="${url}"`).length - 1
+      if (hits > 0) pagesWithCta++
+      ctas += hits
+    }
+
+    // Sanity: the count must be doing real work, not counting zero.
+    expect(ctas).toBeGreaterThan(0)
+    expect(pagesWithCta).toBe(pages.length)
+
+    const decisions = readFileSync('docs/OPEN-DECISIONS.md', 'utf8')
+    expect(
+      decisions,
+      `docs/OPEN-DECISIONS.md must state the real CTA count (${ctas}). Update the ` +
+        '"form URL" section under "Blocks launch" — both the "N buttons and links" ' +
+        'sentence and the "moves all N links at once" sentence.',
+    ).toContain(`${ctas} buttons and links`)
+    expect(decisions).toContain(`all ${ctas} links at once`)
   })
 
   it('the production form URL is on the checklist at all', () => {

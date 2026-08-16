@@ -80,7 +80,7 @@ const SECTIONS_DIR = 'src/sections'
 const CONTENT_DIR = 'src/content'
 const IMAGE_REGISTRY_PATH = 'src/data/images.json'
 /**
- * The env override exists for ONE consumer: tests/content.test.ts, which
+ * The env override exists for ONE consumer: tests/info-required.test.ts, which
  * regenerates into a temp file and diffs it against the committed document
  * to prove the document is current. Without that test this file's own
  * opening claim — "derived from the codebase and cannot fall out of sync
@@ -100,6 +100,54 @@ const QUOTED_PATTERN = /data-tbd="([^"]*)"/g
 const BARE_PATTERN = /data-tbd(?![-="])/g
 
 /**
+ * How many calls to action currently point at the requirement form, and on
+ * how many pages.
+ *
+ * DERIVED, NOT TYPED, because the whole point of the entry it feeds is that
+ * this number is the measure of the damage — and a hand-typed count in a
+ * client document is exactly the sort of figure that is right on the day it
+ * is written and quietly wrong a page later. The URL is read out of
+ * `src/data/company.ts` rather than repeated here for the same reason
+ * tests/links.test.ts forbids any page from repeating it: there is one
+ * definition of that address in this codebase and this is not it.
+ *
+ * Counted from BUILT HTML, so it counts what a visitor can actually click,
+ * including the instances a component contributes to every page.
+ */
+function requirementFormUsage() {
+  // This runs while DECLARED_INPUTS is being built, which is BEFORE
+  // findCategoryA's own dist check, so it carries its own.
+  if (!existsSync(DIST_DIR)) {
+    console.error(
+      `\nNo "${DIST_DIR}" directory found. The requirement-form CTA count is read from built\n` +
+        'HTML — run "npm run build:dev" first, then re-run this script.\n',
+    )
+    process.exit(1)
+  }
+
+  const companySource = readFileSync('src/data/company.ts', 'utf8')
+  const match = companySource.match(/requirementFormUrl:\s*'([^']+)'/)
+  if (!match) {
+    console.error(
+      '\nCould not read `requirementFormUrl` from src/data/company.ts. That constant is the ' +
+        'only definition of the requirement-form destination; if it has been renamed or moved, ' +
+        'update this function rather than hardcoding the URL here.\n',
+    )
+    process.exit(1)
+  }
+  const url = match[1]
+
+  let ctas = 0
+  let pages = 0
+  for (const file of htmlFiles(DIST_DIR)) {
+    const hits = readFileSync(file, 'utf8').split(`href="${url}"`).length - 1
+    if (hits > 0) pages++
+    ctas += hits
+  }
+  return { ctas, pages }
+}
+
+/**
  * Category C. The ONLY hand-maintained data in this script — everything
  * else is derived. Add an entry here only when the input genuinely leaves
  * no detectable trace in the codebase; if a <Tbd> or an empty collection
@@ -109,7 +157,47 @@ const BARE_PATTERN = /data-tbd(?![-="])/g
  * `handledBy` states what the site does in the meantime — so a reader can
  * confirm the gap is being handled honestly rather than silently ignored.
  */
+const FORM_USAGE = requirementFormUsage()
+
 const DECLARED_INPUTS = [
+  // ADDED 2026-08-16 BY TASK 12, AND IT SHOULD HAVE BEEN HERE FROM THE
+  // START. This is the single highest-value outstanding input on the
+  // project and it was absent from the document named "Information
+  // Required Before Production" — tracked only in docs/OPEN-DECISIONS.md,
+  // which is the decisions register, not the production checklist.
+  //
+  // It is undetectable for the usual Category C reason, and the reason is
+  // worth stating because it is the opposite of the others: the code is not
+  // silent here, it is CONFIDENT. Every CTA renders a real anchor with a
+  // real href. Nothing is missing from the markup, no collection is empty,
+  // no <Tbd> is marked, and the build is correct. The gap is that the URL
+  // the constant holds does not resolve — a fact about the internet, not
+  // about this repository, and no scanner over src/ or dist/ can see it.
+  //
+  // It is listed FIRST because it is the only item here that stops the site
+  // doing the thing it exists to do.
+  {
+    item: 'Production URL for the employer requirement form',
+    source: 'Brief §79; core-pages spec §3; docs/OPEN-DECISIONS.md ("Blocks launch")',
+    blocks:
+      '**every conversion on the site.** `src/data/company.ts` sets ' +
+      '`requirementFormUrl` to `https://www.directhired.com/employer-requirement`, ' +
+      `which does not resolve. That URL is behind **${FORM_USAGE.ctas} calls to action across ` +
+      `all ${FORM_USAGE.pages} built pages** — every "Submit Your Requirements" button in the header, ` +
+      'the mobile nav, every hero, every closing block and the fixed mobile bar, plus ' +
+      'the 404. Nothing on the site is broken to look at and every page passes every ' +
+      'check; the primary conversion path simply ends nowhere. DirectHired confirmed on ' +
+      '2026-08-16 that the form stays on their existing separate site, so what is needed ' +
+      'is **that site\'s live form URL** — not a form to be built.',
+    handledBy:
+      'A single constant. `company.requirementFormUrl` is the only definition of the ' +
+      'destination anywhere in the codebase — `tests/links.test.ts` asserts that no ' +
+      '`.astro` or `.ts` file under `src/` writes the URL as a literal, so repointing it ' +
+      `at launch is one edit to one line and all ${FORM_USAGE.ctas} call sites follow. That is the whole ` +
+      'of the work. Because the form is hosted elsewhere, this site cannot measure ' +
+      'whether anyone arrives at it or finishes it; that consequence is accepted and ' +
+      'written up under *Housekeeping* in `docs/OPEN-DECISIONS.md`.',
+  },
   // RESOLVED 2026-08-16 — "Detailed replacement terms and conditions"
   // (brief §18 / §79 Reminder 04; design spec §5 Category A). DirectHired
   // supplied them, and they are recorded verbatim in core-pages design
@@ -191,44 +279,6 @@ const DECLARED_INPUTS = [
       'provenance is recorded as `ai-generated` in the registry and it appears in ' +
       'Category D below. If the image is ever removed, `twitter:card` must go back ' +
       'to `"summary"` in the same commit.',
-  },
-  // ADDED 2026-08-16 BY TASK 12, AND IT SHOULD HAVE BEEN HERE FROM THE
-  // START. This is the single highest-value outstanding input on the
-  // project and it was absent from the document named "Information
-  // Required Before Production" — tracked only in docs/OPEN-DECISIONS.md,
-  // which is the decisions register, not the production checklist.
-  //
-  // It is undetectable for the usual Category C reason, and the reason is
-  // worth stating because it is the opposite of the others: the code is not
-  // silent here, it is CONFIDENT. Every CTA renders a real anchor with a
-  // real href. Nothing is missing from the markup, no collection is empty,
-  // no <Tbd> is marked, and the build is correct. The gap is that the URL
-  // the constant holds does not resolve — a fact about the internet, not
-  // about this repository, and no scanner over src/ or dist/ can see it.
-  //
-  // It is listed FIRST because it is the only item here that stops the site
-  // doing the thing it exists to do.
-  {
-    item: 'Production URL for the employer requirement form',
-    source: 'Brief §79; core-pages spec §3; docs/OPEN-DECISIONS.md ("Blocks launch")',
-    blocks:
-      '**every conversion on the site.** `src/data/company.ts` sets ' +
-      '`requirementFormUrl` to `https://www.directhired.com/employer-requirement`, ' +
-      'which does not resolve. That URL is behind **46 calls to action across all ' +
-      'eight built pages** — every "Submit Your Requirements" button in the header, ' +
-      'the mobile nav, every hero, every closing block and the fixed mobile bar, plus ' +
-      'the 404. Nothing on the site is broken to look at and every page passes every ' +
-      'check; the primary conversion path simply ends nowhere. DirectHired confirmed on ' +
-      '2026-08-16 that the form stays on their existing separate site, so what is needed ' +
-      'is **that site\'s live form URL** — not a form to be built.',
-    handledBy:
-      'A single constant. `company.requirementFormUrl` is the only definition of the ' +
-      'destination anywhere in the codebase — `tests/links.test.ts` asserts that no ' +
-      '`.astro` or `.ts` file under `src/` writes the URL as a literal, so repointing it ' +
-      'at launch is one edit to one line and all 46 call sites follow. That is the whole ' +
-      'of the work. Because the form is hosted elsewhere, this site cannot measure ' +
-      'whether anyone arrives at it or finishes it; that consequence is accepted and ' +
-      'written up under *Housekeeping* in `docs/OPEN-DECISIONS.md`.',
   },
   // Added 2026-08-16 with /pricing (core-pages Task 4). This is the one
   // entry here whose blocker is NOT missing information — DirectHired
