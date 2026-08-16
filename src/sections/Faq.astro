@@ -30,6 +30,36 @@
  * through <BaseLayout><Faq /></BaseLayout> since Faq isn't given any
  * children to slot in the first place. Google's structured-data guidance
  * permits JSON-LD anywhere in <head> or <body>, so this is valid as-is.
+ *
+ * ---------------------------------------------------------------------
+ * KNOWN DEFECT, FOUND BY TASK 9 AND DELIBERATELY NOT FIXED HERE:
+ * MULTI-PARAGRAPH ANSWERS RUN TOGETHER WITH NO GAP.
+ * ---------------------------------------------------------------------
+ *
+ * global.css resets `* { margin: 0 }`, and the only paragraph rules below
+ * are `p:first-child { margin-top: 0 }` and `p:last-child { margin-bottom:
+ * 0 }` — which zero margins that are already zero. Nothing ever restores
+ * spacing between paragraphs, so an answer with more than one renders as an
+ * unbroken block. Measured in Chrome at 320px on the LIVE homepage: both
+ * paragraphs of faq/cost.md compute marginTop/marginBottom of 0px and the
+ * second sentence starts on the line under the first with no separation.
+ * Lists have the same shape — `ul, ol { list-style: none; padding: 0 }` —
+ * so a bulleted answer renders as unmarked stacked lines.
+ *
+ * It is NOT fixed in this file, and that is a scope decision rather than an
+ * oversight. This component renders on / and /pricing, two live pages, and
+ * Task 9's standing ruling was that those two must come out byte-identical
+ * from a full-file diff of dist/. A spacing fix here changes both. The
+ * grouped layout on /faq — src/sections/FaqGrouped.astro, which duplicates
+ * this component's item CSS for the reason its header measures out — adds
+ * the block spacing for its own surface, where nothing is live yet.
+ *
+ * So the two surfaces now differ in one respect, on purpose, and this note
+ * is here so that the next person to touch either finds the whole picture.
+ * Fixing it properly means adding the same two rules here, re-measuring / and
+ * /pricing, and deciding that the visual change to two live pages is wanted.
+ * That is a small, real piece of work and it belongs to whoever owns the
+ * next pass over the homepage — not to a task building /faq.
  */
 import { getCollection } from 'astro:content'
 import Container from '../components/Container.astro'
