@@ -1,5 +1,5 @@
 ---
-question: Do you arrange medical examinations?
+question: Do you arrange the helper’s medical checkup?
 surfaces: [faq]
 category: process
 order: 100

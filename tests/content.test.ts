@@ -324,7 +324,7 @@ describe('no helper source beyond Indonesia, Myanmar and Mizoram is ever named',
       'src/content/services/direct-hire-processing.md',
       'src/content/services/maid-insurance.md',
       'src/content/services/maid-replacement.md',
-      'src/content/services/medical-examination.md',
+      'src/content/services/medical-checkup.md',
       'src/content/helpers/indonesia.md',
       'src/content/helpers/myanmar.md',
       'src/content/helpers/mizoram.md',
@@ -586,6 +586,165 @@ describe('services', () => {
   })
 })
 
+/*
+ * ONE LINE ITEM, ONE NAME — spec §2.6.10 and §2.6.11.
+ *
+ * §2.6.10 separated the package's `Medical` line from its `Insurance` line:
+ * the medical is the helper's PRE-EMPLOYMENT MEDICAL CHECKUP and "is not
+ * insurance of any kind". src/data/pricing.ts was renamed to match
+ * (`Medical` -> `Medical checkup`), and tests/cost-boundary.test.ts derives
+ * its line-item vocabulary from that label precisely so a rename cannot leave
+ * a guard watching a name nobody uses.
+ *
+ * THE RENAME NEVER REACHED THE SERVICES COLLECTION. A sweep of dist/ on
+ * 2026-08-17 found the same obligation published under THREE names in one
+ * build:
+ *
+ *   "Medical checkup"              /pricing, /faq  — the price-list label
+ *   "Medical Examination"          /              — the services card title
+ *   "pre-employment medical checkup"  /faq        — the FAQ answer
+ *
+ * The third is the canonical name with the qualifier §2.6.10 requires, so it
+ * is right. The second is a different name for the same thing, sitting on the
+ * homepage, and it made the two adjacent service cards near-identical: the
+ * insurance card and the medical card were the same sentence with one noun
+ * swapped ("X is one of the components in our fly-in package — we arrange it
+ * and coordinate it on your behalf"), which is the boilerplate-with-one-word-
+ * swapped tell src/content/config.ts already records deleting once.
+ *
+ * WHY THIS IS A TEST AND NOT A STYLE NOTE. A reader who sees "Medical
+ * Examination" on the homepage and "Medical checkup" on /pricing has two
+ * candidate obligations and a $60 line, and the one thing §2.6.10 exists to
+ * prevent is the reader merging the medical with the insurance. A fourth name
+ * would cost nothing to add and would not fail anything.
+ *
+ * THE RULE: the canonical name is the price-list label, DERIVED not typed,
+ * and "pre-employment" is the only qualifier it takes. Every other name for
+ * this obligation is banned in source and in the build.
+ */
+describe('the medical line item has exactly one name', () => {
+  /** The canonical label, read off the price list rather than typed here. */
+  const canonical = (() => {
+    const labels = packages.flatMap((pkg) =>
+      pkg.kind === 'itemised' ? pkg.lineItems.map((item) => item.label) : [],
+    )
+    const medical = [...new Set(labels.filter((label) => /medical/i.test(label)))]
+    return medical
+  })()
+
+  it('the price list names it once, and that name is the canonical one', () => {
+    // If §2.6.10's rename is ever reverted, or a second medical line appears,
+    // everything below is measuring the wrong string and this says so first.
+    expect(canonical).toEqual(['Medical checkup'])
+  })
+
+  /**
+   * Every OTHER name for the pre-employment medical checkup. Written from the
+   * words a writer actually reaches for, not from the one that shipped:
+   * "examination", "exam", "screening", "test", "check-up" hyphenated, and
+   * "health" swapped for "medical".
+   *
+   * `medical examination` is deliberately NOT banned as a bare phrase in the
+   * abstract — it is banned as a NAME for this line item, which is what
+   * matters — but no exemption is carved out, because the site has no other
+   * subject it could be describing. The FAQ answer's "a one-off examination
+   * before the helper starts work" survives: `examination` there is not
+   * preceded by `medical`.
+   */
+  const OTHER_NAMES =
+    /\bmedical\s+(?:examination|exam|screening|test|assessment|check-up)s?\b|\bhealth\s+(?:checkup|check-up|examination|exam|screening)s?\b|\bpre-?employment\s+(?:medical\s+)?(?:examination|exam|screening)s?\b/i
+
+  it('is called nothing else anywhere in the source a visitor reads', () => {
+    const offenders = renderedCopy()
+      .filter(({ text }) => OTHER_NAMES.test(text))
+      .map(({ file, text }) => `${file}: ${text.match(OTHER_NAMES)![0]}`)
+    expect(offenders).toEqual([])
+  })
+
+  it('is called nothing else on any built page', () => {
+    const offenders = walk('dist')
+      .filter((f) => f.endsWith('.html'))
+      .map((file) => ({ file, text: readFileSync(file, 'utf8') }))
+      .filter(({ text }) => OTHER_NAMES.test(text))
+      .map(({ file, text }) => `${file}: ${text.match(OTHER_NAMES)![0]}`)
+    expect(offenders).toEqual([])
+  })
+
+  it('the canonical name really is published, so the ban is not satisfied by silence', () => {
+    // A rule that only forbids can be passed by deleting the subject. This is
+    // the half that says the obligation is still named.
+    const built = walk('dist')
+      .filter((f) => f.endsWith('.html'))
+      .map((f) => readFileSync(f, 'utf8'))
+    expect(built.some((html) => /Medical checkup/.test(html))).toBe(true)
+    expect(built.some((html) => /pre-employment medical checkup/i.test(html))).toBe(true)
+  })
+
+  it('catches the names that actually shipped, and the obvious neighbours', () => {
+    for (const name of [
+      'Medical Examination',
+      'the medical examination is one of the components',
+      'medical exam',
+      'health screening',
+      'pre-employment medical examination',
+      'Medical Check-up',
+    ]) {
+      expect(OTHER_NAMES.test(name), `not caught: ${name}`).toBe(true)
+    }
+  })
+
+  it('does not fire on the canonical name or on the copy that surrounds it', () => {
+    for (const ok of [
+      'Medical checkup — $60',
+      'the helper’s pre-employment medical checkup',
+      'a one-off examination before the helper starts work',
+      'It is a checkup, not insurance.',
+      'Medical insurance — in-patient care and day surgery',
+    ]) {
+      expect(OTHER_NAMES.test(ok), `false positive on: ${ok}`).toBe(false)
+    }
+  })
+
+  it('the insurance and medical service cards are not the same sentence with a noun swapped', () => {
+    /*
+     * The defect §2.6.10 was written against, in its visual form: the two
+     * cards render side by side on the homepage. Compared on their summaries,
+     * which is the line a reader sees in the grid.
+     */
+    const summaryOf = (file: string) =>
+      readFileSync(`src/content/services/${file}`, 'utf8').match(/^summary:\s*(.+)$/m)![1].trim()
+    const insurance = summaryOf('maid-insurance.md')
+    const medical = summaryOf('medical-checkup.md')
+
+    expect(insurance).not.toEqual(medical)
+    // Not merely different — differently ARGUED. One is two ongoing policies,
+    // the other a single completed step, and each summary must say its own
+    // thing rather than the other's with one word changed.
+    const words = (s: string) => new Set(s.toLowerCase().match(/[a-z]+/g) ?? [])
+    const shared = [...words(insurance)].filter((w) => words(medical).has(w))
+    const overlap = shared.length / Math.min(words(insurance).size, words(medical).size)
+    expect(overlap, `summaries share ${Math.round(overlap * 100)}% of their vocabulary`).toBeLessThan(
+      0.5,
+    )
+  })
+
+  it('the insurance copy says TWO policies, never "this coverage" in the singular', () => {
+    /*
+     * §2.6.11: the Insurance line "is one price for two policies". The
+     * services entry said "DirectHired arranges this coverage", singular,
+     * which describes one policy and is the same merge §2.6.11 records
+     * catching in DirectHired's own first answer.
+     */
+    const text = readFileSync('src/content/services/maid-insurance.md', 'utf8')
+    expect(text).toMatch(/\btwo\b/i)
+    expect(text).toMatch(/medical insurance/i)
+    expect(text).toMatch(/personal accident/i)
+    expect(text, 'the two policies are merged into one singular noun').not.toMatch(
+      /\bthis (?:coverage|cover|policy|insurance)\b/i,
+    )
+  })
+})
+
 describe('faq categories', () => {
   // Task 1 (core-pages): `category` groups /faq's grouped layout. Required,
   // no default — a default would let a miscategorised entry silently land
@@ -610,7 +769,7 @@ describe('faq categories', () => {
     'insurance.md': 'cost',
     'how-long-does-it-take.md': 'process',
     'response-time.md': 'process',
-    'medical-examination.md': 'process',
+    'medical-checkup.md': 'process',
     'direct-hire-processing.md': 'process',
     'replacement-six-months.md': 'replacement',
     'replacement-what-covered.md': 'replacement',

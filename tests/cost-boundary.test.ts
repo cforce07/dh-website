@@ -42,31 +42,6 @@
  * `<strong>helper's</strong> cost` is one phrase to a reader and must be
  * one string here.
  *
- * WHY ATTRIBUTES ARE IN THE CORPUS, AND WHY THEY WERE NOT. Until 2026-08-17
- * `blocksOf` stripped every tag WITH ITS ATTRIBUTES (`.replace(/<[^>]+>/g)`),
- * so only <title> text and body text ever reached the rules. A reviewer
- * proved the hole end to end: /pricing's meta `description` was replaced with
- * "The insurance is billed to the helper and you recover it through her
- * repayment", it shipped into <meta name="description"> AND og:description,
- * and the suite scored 771/771 green. That string is the search-result
- * snippet and the WhatsApp link preview — a channel this project's own docs
- * call a secondary conversion path — carrying verbatim the claim MOM forbids
- * (spec §2.6.11: "You cannot pass on the cost of purchasing the insurance to
- * your helper").
- *
- * tests/compliance-gate.test.ts, written days apart, runs its patterns over
- * the RAW html and so covered meta and JSON-LD all along. Two guards made
- * opposite choices and the weaker one guarded the MOM rule. This file now has
- * the same reach.
- *
- * THE BLOCK-SPLITTING IS KEPT, because the rules need sentence-level context
- * to bind a line-item label to a recovery verb — see WHY BLOCKS above; the
- * raw-html approach the compliance gate takes would glue a <meta> tag to the
- * <link> after it. So attribute-borne text is lifted out FIRST, one block per
- * attribute value, and the body pass below is byte-for-byte what it was.
- * Each attribute value is its own block for the same reason a <li> is: it is
- * the unit a claim is made in.
- *
  * WHY ATTRIBUTES AND JSON-LD ARE IN THE CORPUS, AND WHY THEY WERE NOT.
  * Until 2026-08-17 `blocksOf` stripped every tag WITH ITS ATTRIBUTES
  * (`.replace(/<[^>]+>/g, ' ')`), so only <title> text and body text ever
@@ -1109,7 +1084,7 @@ describe('the insurance answer never reaches for the recovery framing', () => {
     // it is one of the components inside the fly-in package…", drawing an
     // equivalence between an examination and an insurance policy. Whatever
     // blurs one of them will be written next to the other.
-    for (const file of ['insurance.md', 'medical-examination.md']) {
+    for (const file of ['insurance.md', 'medical-checkup.md']) {
       const content = readFileSync(`${FAQ}/${file}`, 'utf8')
       expect(content, `${file} applies §2.4's framing to an employer-borne cost`).not.toMatch(
         RECOVERY_VERB,

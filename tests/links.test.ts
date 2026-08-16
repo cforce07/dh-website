@@ -133,7 +133,7 @@ const DEFERRED_ROUTES: readonly string[] = [
   '/services/direct-hire-processing',
   '/services/maid-insurance',
   '/services/maid-replacement',
-  '/services/medical-examination',
+  '/services/medical-checkup',
   '/services/new-helper-placement',
   '/services/transfer-helper',
 
