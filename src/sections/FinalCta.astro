@@ -31,11 +31,26 @@
  * immediately above it is white. Changed 2026-08-16 with the rest of the
  * sequence; the two must be judged together, so do not flip this one
  * back on its own.
+ *
+ * `heading` and `lede` are optional so other pages can close with this
+ * same conversion surface under their own framing. The CTA pair — order,
+ * labels, and both hrefs — is not parameterised: every caller gets the
+ * same primary/secondary buttons pointed at the same single-sourced URLs.
  */
 import Container from '../components/Container.astro'
 import Button from '../components/Button.astro'
 import { company } from '../data/company'
 import { defaultWhatsappUrl } from '../lib/whatsapp'
+
+interface Props {
+  heading?: string
+  lede?: string
+}
+
+const {
+  heading = 'Tell us what your family needs.',
+  lede = 'Take the first step toward finding a helper who fits your family’s needs.',
+} = Astro.props
 
 const whatsappHref = defaultWhatsappUrl()
 ---
@@ -43,8 +58,8 @@ const whatsappHref = defaultWhatsappUrl()
 <section class="final-cta">
   <Container width="narrow">
     <span class="cta-mark" aria-hidden="true"></span>
-    <h2 class="cta-headline">Tell us what your family needs.</h2>
-    <p class="cta-copy">Take the first step toward finding a helper who fits your family’s needs.</p>
+    <h2 class="cta-headline">{heading}</h2>
+    <p class="cta-copy">{lede}</p>
 
     <div class="cta-actions">
       <Button variant="primary" href={company.requirementFormUrl}>Submit Your Requirements</Button>

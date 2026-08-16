@@ -15,10 +15,23 @@
  * placement runs this way; and §78 forbids inventing staff details, so
  * step 4 says "our team", not "your consultant" — DirectHired has not
  * confirmed that one named person carries a placement end to end.
+ *
+ * `heading` and `lede` are optional so other pages (e.g. /find-your-helper)
+ * can reframe this section without touching the four steps, which stay
+ * single-sourced here. The default lede keeps deriving its step count from
+ * `steps.length` via NUMBER_WORDS below — a caller that passes its own
+ * `lede` owns that string outright and gets no such derivation.
  */
 import Container from '../components/Container.astro'
 import SectionHeader from '../components/SectionHeader.astro'
 import ProcessStep from '../components/ProcessStep.astro'
+
+interface Props {
+  heading?: string
+  lede?: string
+}
+
+const { heading = 'A better match starts with understanding.', lede } = Astro.props
 
 const steps = [
   // Steps 1 and 2 of the brief's five ("Understand your family" /
@@ -48,13 +61,14 @@ const steps = [
 // when two steps merged.
 const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'] as const
 const stepCount = NUMBER_WORDS[steps.length] ?? String(steps.length)
+const resolvedLede = lede ?? `A placement typically follows ${stepCount} steps, built around your family rather than a shortlist.`
 ---
 
 <section class="process">
   <Container>
     <SectionHeader
-      title="A better match starts with understanding."
-      lede={`A placement typically follows ${stepCount} steps, built around your family rather than a shortlist.`}
+      title={heading}
+      lede={resolvedLede}
     />
 
     <ol class="process-rail">
