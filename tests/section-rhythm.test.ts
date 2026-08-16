@@ -49,6 +49,31 @@ const BLOCKS = [
   { block: '12', file: 'FinalCta', selector: '.final-cta' },
 ] as const
 
+/**
+ * Section files in the order src/pages/pricing.astro renders them.
+ *
+ * ADDED because the homepage list above was, for a while, the ONLY ground
+ * sequence asserted anywhere — on a branch whose /pricing work grounded
+ * ReplacementTerms in --color-surface-teal specifically so that five more
+ * pages would inherit a three-ground rhythm from it. The rule "exactly one
+ * section in the brand wash" was written against BLOCKS alone, so it went on
+ * passing while becoming false site-wide, and the page setting the pattern
+ * had its own rhythm checked nowhere.
+ *
+ * Note the first entry is not in src/sections: /pricing carries its hero,
+ * the two cards and the inclusion notes as ONE block defined in the page
+ * file, deliberately, so that splitting them cannot put two cream sections
+ * next to each other. `path` rather than `file` is what lets this list say
+ * that.
+ */
+const PRICING_BLOCKS = [
+  { block: 'P1', path: 'src/pages/pricing.astro', selector: '.pricing-packages' },
+  { block: 'P2', path: 'src/sections/ReplacementTerms.astro', selector: '.replacement-terms' },
+  { block: 'P3', path: 'src/sections/LoanAndPlacement.astro', selector: '.loan-placement' },
+  { block: 'P4', path: 'src/sections/Faq.astro', selector: '.faq' },
+  { block: 'P5', path: 'src/sections/FinalCta.astro', selector: '.final-cta' },
+] as const
+
 /** Blocks 10a and 10b render nothing while their collections are empty. */
 const CONDITIONAL = new Set(['10a', '10b'])
 
@@ -62,12 +87,17 @@ const stripComments = (source: string) =>
  * The ground a section paints. A section with no `background` of its own
  * shows the body ground, which global.css sets to --color-surface.
  */
-function groundOf(file: string, selector: string): string {
-  const css = stripComments(read(file))
+function groundOfPath(path: string, selector: string): string {
+  const css = stripComments(readFileSync(path, 'utf8'))
   const rule = new RegExp(`(?:^|\\n)\\s*\\${selector}\\s*\\{([^}]*)\\}`).exec(css)
-  if (!rule) throw new Error(`${file}.astro has no top-level rule for ${selector}`)
+  if (!rule) throw new Error(`${path} has no top-level rule for ${selector}`)
   const bg = /(?:^|\s|;)background(?:-color)?:\s*var\((--color-[a-z-]+)\)/.exec(rule[1])
   return bg ? bg[1] : '--color-surface'
+}
+
+/** The same reader, for the homepage list's `file` shorthand. */
+function groundOf(file: string, selector: string): string {
+  return groundOfPath(`src/sections/${file}.astro`, selector)
 }
 
 describe('the homepage ground sequence alternates', () => {
@@ -125,13 +155,88 @@ describe('the homepage ground sequence alternates', () => {
     expect(grounds.filter((g) => g.ground === '--color-deep').map((g) => g.block)).toEqual(['07'])
   })
 
-  it('grounds exactly one section in the brand wash', () => {
+  it('grounds exactly one HOMEPAGE section in the brand wash', () => {
     // Same argument as --color-deep. --color-surface-teal exists to give
     // #00a4a6 real area without ever putting it behind text; a second teal
-    // section turns that from a register into wallpaper.
+    // section ON THE SAME PAGE turns that from a register into wallpaper.
+    //
+    // PER PAGE, NOT SITE-WIDE, and the title now says so. This assertion
+    // used to read "exactly one section", which was true of the homepage and
+    // false of the site the moment /pricing grounded its replacement block
+    // in the same wash. It kept passing because BLOCKS enumerates homepage
+    // sections by hand and nothing else was enumerated at all — a rule that
+    // had quietly stopped describing the thing it was named after.
+    //
+    // The per-page reading is the correct one and always was: rarity within
+    // one scroll is what makes a register change land. The equivalent
+    // assertion for /pricing is in the describe below.
     expect(grounds.filter((g) => g.ground === '--color-surface-teal').map((g) => g.block)).toEqual([
       '05',
     ])
+  })
+})
+
+describe('the /pricing ground sequence alternates', () => {
+  /*
+   * /pricing sets the pattern the five remaining core pages inherit, which
+   * is the reason its own rhythm is asserted rather than left to the
+   * homepage's list to imply.
+   */
+  const grounds = PRICING_BLOCKS.map((b) => ({ ...b, ground: groundOfPath(b.path, b.selector) }))
+
+  it('is exactly the approved sequence', () => {
+    // Three grounds, not two. This page ran cream / white / cream / white /
+    // cream — 5,201px of metronomic alternation at identical padding with no
+    // register change anywhere — against the homepage's three light grounds
+    // plus one dark. As with the homepage list, changing any one entry
+    // changes at least two adjacencies: re-derive the whole thing.
+    expect(grounds.map((g) => `${g.block} ${g.ground}`)).toEqual([
+      'P1 --color-surface',
+      'P2 --color-surface-teal',
+      'P3 --color-surface',
+      'P4 --color-surface-raised',
+      'P5 --color-surface',
+    ])
+  })
+
+  it('never puts two consecutive blocks on the same ground', () => {
+    for (let i = 1; i < grounds.length; i += 1) {
+      expect(
+        grounds[i].ground,
+        `blocks ${grounds[i - 1].block} and ${grounds[i].block} share a ground`,
+      ).not.toBe(grounds[i - 1].ground)
+    }
+  })
+
+  it('grounds exactly one section in the brand wash', () => {
+    expect(grounds.filter((g) => g.ground === '--color-surface-teal').map((g) => g.block)).toEqual([
+      'P2',
+    ])
+  })
+
+  it('adds no second dark band', () => {
+    // Block 07 of the homepage is the site's ONLY --color-deep section, and
+    // restoring a pale ground here is not a second one. This is the
+    // assertion that keeps those two facts from being confused by whoever
+    // reads the teal ground as licence for a register shift.
+    expect(grounds.filter((g) => g.ground === '--color-deep')).toEqual([])
+  })
+
+  it('shares its section files with the homepage where it says it does', () => {
+    // Faq and FinalCta are the same components the homepage renders at
+    // blocks 11 and 12, so their grounds are FIXED for both pages and the
+    // two sequences have to be solved together. If someone flips one to fix
+    // /pricing, the homepage sequence above fails — which is the coupling
+    // this assertion exists to make visible rather than surprising.
+    const shared = [
+      ['P4', '11'],
+      ['P5', '12'],
+    ] as const
+    for (const [pricingBlock, homeBlock] of shared) {
+      const p = grounds.find((g) => g.block === pricingBlock)!
+      const h = BLOCKS.find((b) => b.block === homeBlock)!
+      expect(p.ground).toBe(groundOf(h.file, h.selector))
+    }
   })
 })
 
