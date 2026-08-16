@@ -70,7 +70,9 @@ Current site copy says these fees "may apply", which reads as a cost the employe
 
 ### 2.6 Supplied 2026-08-16 (second round)
 
-Five questions put to DirectHired in `docs/OPEN-DECISIONS.md`, answered the same day, plus **2.6.6** and **2.6.7** — two further questions raised by the `/why-directhired` review and answered by DirectHired on 2026-08-16 — plus **2.6.8** and **2.6.9**, the two `docs/OPEN-DECISIONS.md` "facts to confirm in writing" raised by `/about`, answered by DirectHired on 2026-08-16. Same rule as the rest of §2: nothing here may be extended, rounded or inferred beyond what is written.
+Five questions put to DirectHired in `docs/OPEN-DECISIONS.md`, answered the same day, plus **2.6.6** and **2.6.7** — two further questions raised by the `/why-directhired` review and answered by DirectHired on 2026-08-16 — plus **2.6.8** and **2.6.9**, the two `docs/OPEN-DECISIONS.md` "facts to confirm in writing" raised by `/about`, answered by DirectHired on 2026-08-16, plus **2.6.10** and **2.6.11**, which separate the package's `Medical` and `Insurance` line items into the two different obligations they are, supplied by DirectHired on 2026-08-16. Same rule as the rest of §2: nothing here may be extended, rounded or inferred beyond what is written.
+
+**One exception, and it is confined to §2.6.11.** The two insurance minimums in that entry are **MOM's**, read off the regulator's own page rather than supplied by DirectHired — the only values in §2 that do not rest on the client's word. That entry records what was checked, what it corrected, and what it therefore may not be extended past.
 
 - **2.6.1 — The replacement terms are complete.** Asked "are those five facts the whole of your replacement terms?", DirectHired answered **yes**. §2.1's five facts are therefore the whole of the replacement terms, and that is now a supplied fact rather than an inference.
 
@@ -105,6 +107,30 @@ Five questions put to DirectHired in `docs/OPEN-DECISIONS.md`, answered the same
 - **2.6.9 — The UEN is `202240964Z`.** *Answered 2026-08-16.* DirectHired supplied it in answer to the `docs/OPEN-DECISIONS.md` question that asked for the number "if you want it published". It ships as a row in `/about`'s record block, single-sourced from `src/data/company.ts` like every other value there.
 
   **Same standing as 2.6.8: client-supplied, not verified.** A web search for the number returned nothing, and the MOM directory is unreachable for the same reason. The *format* is consistent with the rest of §2 — YYYY plus five digits plus a check letter is the shape a local company incorporated in 2022 gets, and "since 2022" is §2's founding year — but a format that parses is not a registry entry that was read, and that consistency is recorded as a sanity check rather than as corroboration.
+
+- **2.6.10 — "Medical" in the package is the PRE-EMPLOYMENT MEDICAL CHECKUP, not medical insurance.** *Answered 2026-08-16.* The `Medical` line item — **$60.00** in both packages — pays for the helper's pre-employment medical examination. **It is not insurance of any kind.** The package's `Insurance` line (§2.6.11) is a separate obligation buying separate policies, and the two must never be described as one thing or as two halves of one thing.
+
+  **This corrects a premise the site was already built on.** `src/content/faq/medical-examination.md` opened *"Like the insurance, it is one of the components inside the fly-in package…"*, which on these facts is a category error: it drew an equivalence between an examination and an insurance policy. It also assumed what else was on the page around it, which is the same defect this repo bans `/find-your-helper` links in markdown for — a content entry cannot know which surface renders it. Both reasons stand alone; the clause is deleted.
+
+- **2.6.11 — "Insurance" covers BOTH required policies, at MOM's minimums.** *Answered 2026-08-16.* The `Insurance` line item — **$425.10** in both packages — buys the two policies MOM requires of every MDW employer: **medical insurance** and **personal accident insurance**, each at the regulator's minimum. It is one price for two policies, and the site publishes the two policies with their own figures rather than merging them into a single number.
+
+  **THE FIGURES ARE MOM'S, AND THEY WERE READ OFF MOM BEFORE ANY OF THIS WAS WRITTEN** (https://www.mom.gov.sg/passes-and-permits/work-permit-for-foreign-domestic-worker/eligibility-and-requirements/insurance-requirements):
+
+  - **Personal accident insurance — a sum assured of at least $60,000.** MOM requires it to cover sudden, unforeseen and unexpected incidents resulting in permanent disability or death.
+  - **Medical insurance — an annual claim limit of at least $60,000 per year**, for in-patient care and day surgery, for policies starting on or after 1 July 2023.
+
+  These are **the regulator's floor, not DirectHired's product.** Copy must say so. Nothing here states what DirectHired's chosen policies actually pay beyond that floor, who underwrites them, or on what conditions they pay — the `docs/OPEN-DECISIONS.md` item asking for the insurer, the product name or a policy summary stays open, narrowed rather than closed.
+
+  **VERIFICATION IS WHY THIS ENTRY HAS THE NUMBERS IT HAS, AND IT CAUGHT TWO ERRORS RATHER THAN ONE.** Both are recorded because the lesson is the process, not the arithmetic.
+
+  1. **DirectHired's first answer was wrong.** Asked what the insurance covers, they said *"death, personal accident and hospitalization to be at least 60k"* — one figure spanning everything. Written as given, that would have published a single merged number for two policies MOM regulates separately, on the page where a family pays $425.10 for them. Asking a second time produced the two-policy split.
+  2. **The correction supplied in its place was also wrong, in the other direction.** The medical-insurance minimum was given as **$15,000 per year**. It is **$60,000 per year**. $15,000 does appear on MOM's page — it is the threshold above which the enhanced-MI co-payment applies (75% insurer / 25% employer) — so it is a real number in the right document doing a different job, which is exactly the kind of error that survives a careless read. Publishing it would have understated the helper's hospitalisation cover **fourfold**. Caught by fetching the MOM page rather than by trusting either party's phrasing; confirmed twice, from the requirements page and from MOM's own search index.
+
+  **The standing of these two figures is therefore NOT the standing of the rest of §2.** Every other fact here is DirectHired's word. These were read off the regulator, and they are the only values in §2 that a third party can check without asking DirectHired anything. If MOM revises either minimum, this copy is wrong the day it changes — that is the cost of publishing a statutory figure, and it is accepted deliberately rather than by oversight.
+
+  **"DEATH" IS NOT WRITTEN ANYWHERE.** MOM folds it into personal accident ("permanent disability or death") rather than listing it as its own cover; it entered this project only in the client answer that turned out to be wrong; and no source available here states it as a separate policy or a separate figure. There is no wording it could be added in that would not be one of those three things.
+
+  **MOM FORBIDS PASSING THE INSURANCE COST TO THE WORKER** — verbatim from the same page: *"You cannot pass on the cost of purchasing the insurance to your helper."* Nothing on the site suggests otherwise and nothing needs changing for it. It is written down because **§2.4 sits close to it and points the other way**: the employer *advances* the loan and placement fee and *recovers* them through the helper's repayment, so those are ultimately the helper's cost. Insurance is not. It is inside the package the employer bears and it stays there, and the boundary between the two framings is one word of drift wide. §2.4's framing is unchanged by this entry and must not be extended to reach the package.
 
 ---
 
