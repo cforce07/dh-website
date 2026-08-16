@@ -53,6 +53,19 @@ check "/_astro/style.css"  "/_astro/style.css"
 check "/sitemap-index.xml" "/sitemap-index.xml"
 check "/robots.txt"        "/robots.txt"
 
+# Nested routes. The function is generic and these take the same code path
+# as /pricing, but this project has now shipped FIVE separate pieces of
+# machinery written when the site had one page and silently wrong at two:
+# a link allowlist, an accessibility script, this suite's cache patterns,
+# the distribution itself, and a Lighthouse config that dropped pages past
+# a default cap. Proving two route shapes out of the eventual seven is how
+# that list got to five. Sub-project 3 ships /services/<slug> and
+# /helpers/<slug>; they are tested here before they exist, not after they
+# break.
+check "/services/transfer-helper"   "/services/transfer-helper/index.html"
+check "/services/transfer-helper/"  "/services/transfer-helper/index.html"
+check "/helpers/indonesia"          "/helpers/indonesia/index.html"
+
 if [ "$fail" -ne 0 ]; then
   echo
   echo "Tests failed — NOT publishing. The live function is unchanged."

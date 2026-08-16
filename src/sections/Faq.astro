@@ -89,9 +89,18 @@ const faqSchema = emitSchema
   */}
   <Container>
     <div class="faq-column">
+    {/*
+      The lede carries no frequency claim. "The things we're asked most
+      often" ranks questions by how often they arrive, and nobody has that
+      data — the same defect as the two claims W-6 deleted from /pricing,
+      and the third found while sweeping for them. This default renders on
+      the homepage, so leaving it would have shipped a claim this branch
+      removed three times elsewhere. Restore one only when DirectHired
+      supplies what families actually ask (live audit, C3).
+    */}
     <SectionHeader
       title={heading ?? 'Questions families ask us'}
-      lede={lede ?? 'A few of the things we’re asked most often. See the full list for everything else.'}
+      lede={lede ?? 'A few answers to begin with. See the full list for everything else.'}
     />
 
     <div class="faq-list">
