@@ -152,11 +152,58 @@ describe('the placement count is published that way on EVERY surface', () => {
       .replace(/<!--[\s\S]*?-->/g, ' ')
 
   /**
+   * Files under public/ that could carry a legible literal. Fonts and any
+   * other binary are filtered out by extension rather than read as utf8 —
+   * a woff2 read as text is noise, and noise in a negative sweep is how a
+   * false positive arrives. Same filter, for the same reason, as the
+   * licence/entity/UEN sweep below.
+   */
+  const PUBLIC_TEXT = /\.(txt|xml|json|webmanifest|svg|html)$/
+
+  /**
    * Every surface a visitor's words can come from: the markup files with
    * their comments stripped (both existing surfaces explain this very rule
    * in prose above the markup that obeys it, quoting the forbidden wording),
    * plus content markdown verbatim — a FAQ answer is published copy too, and
    * /faq is one of the five pages Phase B adds.
+   *
+   * ---------------------------------------------------------------------
+   * THE src/lib HOLE, CLOSED 2026-08-16.
+   * ---------------------------------------------------------------------
+   *
+   * This corpus was markup and src/content and nothing else, which is the
+   * IDENTICAL hole the licence/entity/UEN sweep below carried until Task 8
+   * closed it. That sweep's own header records how the hole was proved
+   * rather than argued: adding a literal to employmentAgencySchema() in
+   * src/lib/structured-data.ts scored a fully green suite, because the
+   * function that writes the site's JSON-LD was not in anybody's corpus.
+   *
+   * The placement count is reachable by exactly the same route and is a
+   * better fit for it than the licence ever was. `numberOfEmployees`,
+   * `slogan`, `description` — an EmploymentAgency schema has obvious
+   * places for "500+ helpers placed", and structured data is READ BY
+   * SEARCH ENGINES AND RENDERED TO NOBODY, so a narrowed claim there is
+   * the one copy on the site that no human proofreads. The figure has
+   * already been revised once (down from "1,000+"), which is the other
+   * half of why a second copy anywhere is a problem.
+   *
+   * The previous implementer found this hole while closing the licence one
+   * and flagged it rather than widening scope unasked. Closed here, with
+   * the same corpus and the same exclusions, so the two sweeps cannot
+   * disagree about what a surface is:
+   *
+   *   src/lib/*.ts  — the modules that BUILD strings the pages emit.
+   *   src/data/*.ts — except company.ts, the single definition, excluded
+   *                   by name exactly as it is below. Its BASIS comment
+   *                   quotes "500+ placements across all services since
+   *                   2022" in a `//` comment, which sourceText() does not
+   *                   strip, so including it would fail the retyping check
+   *                   on the file the value is defined in.
+   *   public/**     — text files only; everything there is served verbatim.
+   *
+   * docs/ and scripts/ stay out for the reasons the sweep below gives:
+   * docs/OPEN-DECISIONS.md must be able to state the figure and its basis,
+   * because it is the document that asked for them.
    */
   function authoredSurfaces(): { file: string; text: string }[] {
     const markup = ['src/components', 'src/sections', 'src/layouts', 'src/pages']
@@ -166,7 +213,14 @@ describe('the placement count is published that way on EVERY surface', () => {
     const markdown = walk('src/content')
       .filter((f) => f.endsWith('.md'))
       .map((file) => ({ file, text: readFileSync(file, 'utf8') }))
-    return [...markup, ...markdown]
+    const modules = ['src/lib', 'src/data']
+      .flatMap(walk)
+      .filter((f) => f.endsWith('.ts') && f !== 'src/data/company.ts')
+      .map((file) => ({ file, text: sourceText(file) }))
+    const served = walk('public')
+      .filter((f) => PUBLIC_TEXT.test(f))
+      .map((file) => ({ file, text: readFileSync(file, 'utf8') }))
+    return [...markup, ...markdown, ...modules, ...served]
   }
 
   /** Every built page's rendered text — derived from dist/, never listed. */
@@ -195,6 +249,18 @@ describe('the placement count is published that way on EVERY surface', () => {
     expect(authored.length).toBeGreaterThanOrEqual(20)
     expect(authored.map((s) => s.file)).toContain('src/sections/TrustBar.astro')
     expect(authored.map((s) => s.file)).toContain('src/components/Footer.astro')
+    // The 2026-08-16 corpus extension, named file by file. Every assertion
+    // in this describe is a negative one, so a walk that quietly stopped
+    // covering src/lib would reopen the exact hole this closed and report
+    // nothing at all — which is how the hole existed in the first place.
+    expect(authored.map((s) => s.file)).toContain('src/lib/structured-data.ts')
+    expect(authored.map((s) => s.file)).toContain('src/data/pricing.ts')
+    expect(authored.map((s) => s.file)).toContain('public/robots.txt')
+    // ...and the single definition stays out, or the retyping check below
+    // would fail on the file the value is defined in.
+    expect(authored.map((s) => s.file)).not.toContain('src/data/company.ts')
+    expect(authored.some((s) => s.file.startsWith('docs/'))).toBe(false)
+    expect(authored.some((s) => s.file.startsWith('scripts/'))).toBe(false)
 
     const built = builtPages()
     expect(built.length).toBeGreaterThanOrEqual(2)
