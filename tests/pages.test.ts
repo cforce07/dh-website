@@ -23,6 +23,7 @@ import { describe, it, expect } from 'vitest'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { company } from '../src/data/company'
+import { forbiddenPlaceNames, namedSources } from './support/helper-sources'
 
 interface Page {
   /** Path on disk, e.g. `dist/pricing/index.html`. */
@@ -319,6 +320,57 @@ describe.each(pages)('$route publishes no invented information', (page) => {
       expect(renderedText(page.html)).not.toMatch(pattern)
     })
   }
+})
+
+// ---------------------------------------------------------------------
+// The source rule as an allowlist, over the build
+// ---------------------------------------------------------------------
+//
+// Task 5B, G-1. FORBIDDEN_CLAIMS above carries the four-name denylist —
+// Philippines, Sri Lanka, Cambodia, Bangladesh — and keeps it byte-identical
+// with tests/content.test.ts's copy, which is asserted there. That list is
+// the four a Singapore agency writer reaches for by habit, and spec §7 is
+// not a list of four: it is "any source beyond Indonesia, Myanmar and
+// Mizoram". "We also place helpers from Nepal and Thailand." satisfied every
+// assertion in this file.
+//
+// So the same rule also runs as an ALLOWLIST here: every country name on
+// earth, derived from Node's ICU data, minus the three permitted sources and
+// two documented exemptions. The denylist is kept as well — it is
+// case-insensitive and stem-based, so it catches a lowercased or mangled
+// spelling that a proper-noun sweep can miss. See
+// tests/support/helper-sources.ts for the choice and the two rejected
+// alternatives.
+
+describe.each(pages)('$route names no source beyond the three', (page) => {
+  it('names no country except the permitted sources and the documented exemptions', () => {
+    const offenders = namedSources(renderedText(page.html))
+    expect(offenders).toEqual([])
+  })
+})
+
+describe('the source allowlist is doing real work', () => {
+  it('derives a real country list, not an empty one', () => {
+    // Same non-vacuity guard as the content-side sweep, for the same reason:
+    // a small-icu Node would empty the list and make every assertion above
+    // pass on anything. Asserted in both files because either could be run
+    // alone.
+    const names = forbiddenPlaceNames()
+    expect(names.length).toBeGreaterThan(200)
+    expect(names).toContain('Philippines')
+    expect(names).toContain('Nepal')
+    expect(names).not.toContain('Singapore')
+  })
+
+  it('fires on the sentence a built page would have to carry', () => {
+    // These strings live in this test file and are never built or published.
+    expect(namedSources('We also place helpers from Nepal and Thailand.').sort()).toEqual([
+      'Nepal',
+      'Thailand',
+    ])
+    // ...and not on what every page on this site actually says.
+    expect(namedSources('DirectHired is a Singapore maid agency.')).toEqual([])
+  })
 })
 
 /**

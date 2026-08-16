@@ -3,6 +3,12 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { packages, packageTotalCents } from '../src/data/pricing'
 import { formatSgd, formatSgdProse } from '../src/lib/money'
+import {
+  EXEMPT_PLACES,
+  PERMITTED_SOURCES,
+  forbiddenPlaceNames,
+  namedSources,
+} from './support/helper-sources'
 
 /**
  * Strips every comment form this codebase uses, so a comment that explains
@@ -292,6 +298,104 @@ describe('no helper source beyond Indonesia, Myanmar and Mizoram is ever named',
     // ...and not on the three real sources, or the suite would be
     // unsatisfiable by correct copy.
     expect(FORBIDDEN_SOURCE.test('Indonesia, Myanmar and Mizoram.')).toBe(false)
+  })
+})
+
+describe('the source rule is enforced as the allowlist it is written as', () => {
+  /*
+   * Task 5B, G-1. Spec §7 says "never name the Philippines OR ANY SOURCE
+   * BEYOND Indonesia, Myanmar and Mizoram". The describe above implements
+   * the first half — four named countries — and nothing implemented the
+   * second. Appending "We also place helpers from Nepal and Thailand." to
+   * src/content/services/transfer-helper.md scored 317 green.
+   *
+   * This closes it by inverting the rule: every country on earth is a
+   * candidate source, the three permitted ones and two documented
+   * exemptions are subtracted, and whatever is left is a violation. The
+   * country list is derived from Node's ICU data rather than maintained
+   * here — see tests/support/helper-sources.ts for the full reasoning,
+   * including the two alternatives that were rejected and why.
+   *
+   * This runs BEFORE the five Phase B pages are written, deliberately.
+   * /why-directhired, /about and /faq are the three that discuss where
+   * helpers come from; hardening afterwards would mean shaping the guard
+   * around copy that had already shipped.
+   */
+  const copy = renderedCopy()
+
+  it('derives a real country list, not an empty one (guards the whole sweep)', () => {
+    // Intl.DisplayNames comes from the runtime's ICU data. A Node built with
+    // small-icu returns the alpha-2 code for most regions, which would leave
+    // this list nearly empty and every assertion below vacuously green — the
+    // exact failure this fix wave exists to remove. So the list is checked
+    // for size AND for the specific names the rule is about.
+    const names = forbiddenPlaceNames()
+    expect(names.length).toBeGreaterThan(200)
+    for (const name of ['Philippines', 'Nepal', 'Thailand', 'Sri Lanka', 'Cambodia', 'Bangladesh']) {
+      expect(names, `${name} is not in the derived list`).toContain(name)
+    }
+    // ...and the permitted three are absent from it, or correct copy could
+    // never pass.
+    for (const permitted of [...PERMITTED_SOURCES, 'Burma', ...EXEMPT_PLACES.keys()]) {
+      expect(names, `${permitted} must not be flagged`).not.toContain(permitted)
+    }
+  })
+
+  it('flags a source the old denylist could not see', () => {
+    // The mutation that scored 317 green, plus the four the denylist already
+    // covered, plus a demonym no suffix rule derives. These strings live in
+    // this test file and are never built or published.
+    const found = (sentence: string) => namedSources(sentence).sort()
+    expect(found('We also place helpers from Nepal and Thailand.')).toEqual(['Nepal', 'Thailand'])
+    expect(found('Vietnamese and Cambodian candidates are available.')).toEqual([
+      'Cambodian',
+      'Vietnamese',
+    ])
+    expect(found('We also place helpers from the Philippines.')).toEqual(['Philippines'])
+    expect(found('Filipina helpers coming soon.')).toEqual(['Filipina'])
+    expect(found('Sri Lankan and Bangladeshi helpers.')).toEqual(['Bangladeshi', 'Sri Lankan'])
+  })
+
+  it('does not fire on the copy this site legitimately writes', () => {
+    // The half that decides whether the guard survives contact with the
+    // site. A sweep that fires on a real sentence gets loosened by the next
+    // person to meet it, and then it guards nothing.
+    expect(namedSources('Indonesia, Myanmar and Mizoram.')).toEqual([])
+    expect(namedSources('Indonesian and Burmese helpers, placed in Singapore.')).toEqual([])
+    expect(
+      namedSources('DirectHired is a Singapore maid agency placing helpers with Singaporean families.'),
+    ).toEqual([])
+    // India-as-a-state. Mizoram cannot be described without the word, and
+    // this sweep is not the rule that governs it — see the exemption test
+    // below, and EXEMPT_PLACES for why.
+    expect(namedSources('Mizoram is a state in the north-east of India.')).toEqual([])
+  })
+
+  it('exempts India only because a stricter rule already bans it outright', () => {
+    /*
+     * The one exemption that could hide something, so the thing that makes
+     * it safe is asserted rather than described. Both guards ban the word
+     * India in copy a visitor reads — over the source sweep here and over
+     * every built page in tests/pages.test.ts — which is strictly stronger
+     * than flagging it as a source would be. If either of those bans is
+     * ever deleted, this fails and the exemption has to be reconsidered in
+     * the same commit.
+     */
+    expect(EXEMPT_PLACES.has('India')).toBe(true)
+    const INDIA = /\bIndian?\b/
+    expect(INDIA.test('Mizoram is a state in the north-east of India.')).toBe(true)
+    for (const file of ['tests/content.test.ts', 'tests/pages.test.ts']) {
+      expect(readFileSync(file, 'utf8'), `${file} no longer bans the word India`).toContain(
+        INDIA.source,
+      )
+    }
+  })
+
+  it('names no source beyond the three in any surface a visitor reads', () => {
+    const offenders = copy.flatMap(({ file, text }) =>
+      namedSources(text).map((place) => `${file}: ${place}`),
+    )
+    expect(offenders).toEqual([])
   })
 })
 
