@@ -818,69 +818,32 @@ describe('every built page spaces the markdown it renders', () => {
 })
 
 // ---------------------------------------------------------------------
-// BreadcrumbList — a spec requirement that currently fails by omission
+// BreadcrumbList — built by Task 11, and now policed in both directions
 // ---------------------------------------------------------------------
 //
-// Task 7 fix round, W-2. Spec §4 requires `BreadcrumbList` per page. Four
-// pages ship zero of them, src/lib/structured-data.ts has no breadcrumb code,
-// and until this block there was no test, no TODO and no allowlist entry
-// anywhere that named it. Task 11 owns building it — but a requirement that
-// fails by OMISSION has nothing to notice if that task silently does not
-// happen, which is strictly worse than a rule that passes by omission.
+// Task 7 fix round, W-2 recorded spec §4's `BreadcrumbList` requirement as
+// failing by OMISSION and shipped a self-policing deferral list —
+// ROUTES_AWAITING_BREADCRUMBS — so that the gap could neither widen silently
+// nor be forgotten. Task 11 built the thing: `breadcrumbSchema` in
+// src/lib/structured-data.ts, applied through BaseLayout's `breadcrumb` prop,
+// on every page that has a position in the hierarchy.
 //
-// So: no breadcrumbs are built here. Shipping them on one route while the
-// other three carry none would be worse than shipping none at all — an
-// inconsistent trail is a worse SEO signal than an absent one, and Task 11
-// exists precisely so all seven pages get the same treatment in one sitting.
-// What ships instead is the cheap self-policing version, modelled on
-// tests/links.test.ts's DEFERRED_ROUTES, which works because it is policed in
-// BOTH directions:
+// THE DEFERRAL LIST IS GONE BECAUSE IT REACHED ZERO, which is what its own
+// comment asked for. What survives is the permanent exemption below, and the
+// assertions are unchanged in shape: the set of pages carrying no
+// BreadcrumbList must equal the exempt set EXACTLY, so a page that loses its
+// trail fails just as loudly as a page that gains one it should not have.
 //
-//   - a page that GAINS a BreadcrumbList fails until it is removed from the
-//     list, so Task 11 is forced to shrink the list to empty as it goes;
-//   - a NEW page without one fails until it is added, so the gap cannot widen
-//     silently while nobody is looking.
-//
-// Delete an entry in the same commit that gives its route a BreadcrumbList,
-// and delete this whole block when the list reaches zero.
+// The CONTENT of every trail — positions, names, absolute URLs, and whether
+// each URL resolves to a page that exists — is validated in
+// tests/json-ld.test.ts, over every JSON-LD block on every built page. This
+// block answers "is there one"; that file answers "is it true".
 
 /**
- * Built routes that ship no `BreadcrumbList` because Task 11 has not run
- * yet. Enumerated — not derived.
+ * Routes that must NEVER carry a `BreadcrumbList`.
  *
- * Every entry is a defect against spec §4 awaiting Task 11, which adds the
- * helper to src/lib/structured-data.ts and applies it to every page. The one
- * entry that may legitimately survive that task is '/': foundation spec §242
- * asks for `BreadcrumbList` "on nested pages", and the site root is not
- * nested. That is Task 11's call to make and to record here — it is listed
- * today because today it carries none, not because it has been excused.
- *
- * Task 11 shrinks THIS list to empty. It must not touch the one below it.
- */
-const ROUTES_AWAITING_BREADCRUMBS: readonly string[] = [
-  '/',
-  // Added by Task 8 in the same commit that created the route, which is
-  // what the block comment above asks for: a new page carrying no
-  // BreadcrumbList must fail until it is enumerated here, so the gap cannot
-  // widen silently.
-  '/about/',
-  // Added by Task 9 in the same commit that created the route, for the same
-  // reason as '/about/' above.
-  '/faq/',
-  '/find-your-helper/',
-  '/pricing/',
-  '/why-directhired/',
-  // Added by Task 10, same commit as the route, same reason.
-  '/contact/',
-]
-
-/**
- * Routes that must NEVER carry a `BreadcrumbList` — a separate list, because
- * these are not waiting for anything.
- *
- * Task 10 was asked to decide whether '/404' belongs in the deferred list or
- * permanently outside the requirement. It is permanent, for three reasons,
- * any one of which would be enough:
+ * '/404' — decided by Task 10, for three reasons, any one of which would be
+ * enough:
  *
  *   1. A BreadcrumbList states WHERE A PAGE SITS in the site's hierarchy.
  *      A 404 sits nowhere. The URL that produced it is not a node in any
@@ -900,17 +863,36 @@ const ROUTES_AWAITING_BREADCRUMBS: readonly string[] = [
  *      indexing it — while the directly-reachable /404.html carries
  *      `noindex`. Rich results are computed for indexed pages.
  *
- * So Task 11 must leave this alone. If it ever empties
- * ROUTES_AWAITING_BREADCRUMBS and deletes the whole block, this list is what
- * has to survive the deletion — which is why it is stated separately rather
- * than as a comment on an entry in the other one.
+ * '/' — decided by Task 11, which is the call ROUTES_AWAITING_BREADCRUMBS's
+ * docblock explicitly delegated to it ("the one entry that may legitimately
+ * survive that task is '/'... That is Task 11's call to make and to record
+ * here"). The homepage is EXEMPT, and this is the argument:
+ *
+ *   1. FOUNDATION SPEC §242 SCOPES THE REQUIREMENT: "`BreadcrumbList` on
+ *      nested pages". The site root is not nested. Core-pages spec §4's
+ *      "per page" list does not overrule that — it is the same requirement
+ *      restated for the six pages that task was about, all six of which are
+ *      nested.
+ *   2. THE ONLY TRAIL IT COULD CARRY WOULD DESCRIBE NOTHING. Every trail on
+ *      this site starts at the root, so the homepage's own trail is a single
+ *      ListItem whose `item` is the page it is already on. That states no
+ *      position: it is a path of length zero written down as if it were a
+ *      path. Google's breadcrumb guidance is about the route to a page, and
+ *      there is no route to the root.
+ *   3. IT IS NOT A GAP IN COVERAGE. The homepage is position 1 of all six
+ *      trails the site does ship, so the root's place in the hierarchy is
+ *      already stated six times, by the pages that actually have a position
+ *      relative to it.
+ *
+ * NOTE THE ASYMMETRY WITH THE DELETED LIST, because it is the point. This
+ * list is not a to-do: an entry here is a decision that has been made and
+ * argued, and both assertions below run in both directions over it. Nothing
+ * may be added without an argument of the same kind, and the moment a route
+ * here starts shipping a BreadcrumbList the first assertion fails.
  */
-const ROUTES_EXEMPT_FROM_BREADCRUMBS: readonly string[] = ['/404']
+const ROUTES_EXEMPT_FROM_BREADCRUMBS: readonly string[] = ['/', '/404']
 
-const ROUTES_WITHOUT_BREADCRUMBS: readonly string[] = [
-  ...ROUTES_AWAITING_BREADCRUMBS,
-  ...ROUTES_EXEMPT_FROM_BREADCRUMBS,
-]
+const ROUTES_WITHOUT_BREADCRUMBS: readonly string[] = ROUTES_EXEMPT_FROM_BREADCRUMBS
 
 /**
  * Every `@type` in every JSON-LD block on a page, however nested — an array at
@@ -1011,8 +993,8 @@ describe('the 404 page is the only page kept out of the index', () => {
   })
 })
 
-describe('BreadcrumbList (spec §4) — deferred to Task 11, and enumerated so it cannot be forgotten', () => {
-  it('the pages carrying no BreadcrumbList are exactly the enumerated ones', () => {
+describe('BreadcrumbList (spec §4)', () => {
+  it('the pages carrying no BreadcrumbList are exactly the exempt ones', () => {
     const missing = pages
       .filter((p) => !jsonLdTypes(p.html).includes('BreadcrumbList'))
       .map((p) => p.route)
@@ -1020,22 +1002,25 @@ describe('BreadcrumbList (spec §4) — deferred to Task 11, and enumerated so i
     expect(missing).toEqual([...ROUTES_WITHOUT_BREADCRUMBS].sort())
   })
 
-  it('keeps the deferred list and the permanent exemption apart', () => {
+  it('every other page carries exactly one, and never two', () => {
     /*
-     * Task 11 shrinks ROUTES_AWAITING_BREADCRUMBS to empty and must not
-     * touch ROUTES_EXEMPT_FROM_BREADCRUMBS. A route in both lists would let
-     * that task "resolve" a permanent exemption by deleting it from the
-     * deferred half and leave the combined list unchanged, which is the one
-     * way the separation could be undone without anybody noticing.
+     * The other direction, and it is not implied by the assertion above.
+     * That one asks whether the type appears at all; a page emitting two
+     * BreadcrumbList blocks — the layout's plus a hand-rolled one — would
+     * satisfy it while shipping a structured-data defect of exactly the kind
+     * /faq avoids by not rendering <Faq /> alongside <FaqGrouped />.
      */
-    const overlap = ROUTES_AWAITING_BREADCRUMBS.filter((r) =>
-      ROUTES_EXEMPT_FROM_BREADCRUMBS.includes(r),
-    )
-    expect(overlap).toEqual([])
-    expect(ROUTES_EXEMPT_FROM_BREADCRUMBS.length).toBeGreaterThan(0)
+    const counts = pages
+      .filter((p) => !ROUTES_WITHOUT_BREADCRUMBS.includes(p.route))
+      .map((p) => ({
+        route: p.route,
+        n: jsonLdTypes(p.html).filter((t) => t === 'BreadcrumbList').length,
+      }))
+    expect(counts.length, 'no page is required to carry a breadcrumb').toBeGreaterThan(0)
+    expect(counts.filter((c) => c.n !== 1)).toEqual([])
   })
 
-  it('every enumerated route is a page that actually exists', () => {
+  it('every exempt route is a page that actually exists', () => {
     // The DEFERRED_ROUTES lesson: an entry for a route nothing builds is an
     // exemption granted in advance, and it would let a deleted page hide here.
     const built = new Set(pages.map((p) => p.route))
@@ -1074,5 +1059,65 @@ describe('BreadcrumbList (spec §4) — deferred to Task 11, and enumerated so i
     const all = pages.flatMap((p) => jsonLdTypes(p.html))
     expect(all).toContain('EmploymentAgency')
     expect(all).toContain('FAQPage')
+  })
+})
+
+// ---------------------------------------------------------------------
+// The sitemap — every real page, and nothing that is not a page
+// ---------------------------------------------------------------------
+//
+// Task 11. @astrojs/sitemap generates this from the build, so nobody
+// maintains a list — which is exactly why nobody would notice it going
+// wrong. Two things can, and both are silent:
+//
+//   A PAGE MISSING FROM IT is a page Google is never told about. The
+//   integration has options (`filter`, `exclude`) that make that a one-line
+//   change, and public/robots.txt points crawlers at the sitemap as the
+//   authoritative list, so an omission here is not softened by the site's
+//   internal linking.
+//
+//   /404 PRESENT IN IT is the opposite defect: submitting an error page for
+//   indexing, on the one page of the site that carries `noindex`. The
+//   integration excludes it today because Astro emits it as `dist/404.html`
+//   rather than as a route; nothing about that is guaranteed, and it is
+//   cheaper to assert than to re-derive.
+//
+// The expected list is DERIVED from dist/ rather than typed, for the reason
+// this whole file is: a page added next month has to appear here without
+// anybody remembering this test exists.
+
+describe('the sitemap', () => {
+  const sitemap = readFileSync('dist/sitemap-0.xml', 'utf8')
+  const locations = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])
+
+  /** Routes that belong in a sitemap: every built page except the 404. */
+  const indexableRoutes = pages.map((p) => p.route).filter((r) => r !== '/404')
+
+  it('lists every built page except the 404, and nothing else', () => {
+    expect(indexableRoutes.length, 'no indexable pages were found').toBe(7)
+    expect([...locations].sort()).toEqual(
+      indexableRoutes.map((r) => `${company.siteUrl}${r}`).sort(),
+    )
+  })
+
+  it('does not list the 404, under any spelling of it', () => {
+    /*
+     * Asserted separately from the equality above, and deliberately not by
+     * the same means. The equality compares against routes derived from
+     * dist/, so a build that stopped emitting the 404 page altogether would
+     * make it pass with nothing to say — and "/404.html" and "/404/" are two
+     * different strings, only one of which the derived route can be.
+     */
+    const notFound = locations.filter((loc) => /\/404(\.html|\/)?$/.test(loc))
+    expect(notFound).toEqual([])
+    // ...and the page really is built, so the check above has a subject.
+    expect(pages.map((p) => p.route)).toContain('/404')
+  })
+
+  it('is reachable from the sitemap index robots.txt points at', () => {
+    // public/robots.txt names sitemap-index.xml, not sitemap-0.xml. A
+    // sitemap file nothing indexes is a sitemap nothing reads.
+    const index = readFileSync('dist/sitemap-index.xml', 'utf8')
+    expect(index).toContain(`${company.siteUrl}/sitemap-0.xml`)
   })
 })

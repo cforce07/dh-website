@@ -16,6 +16,7 @@ import '../styles/global.css'
 import Header from '../components/Header.astro'
 import Footer from '../components/Footer.astro'
 import MobileCtaBar from '../components/MobileCtaBar.astro'
+import { breadcrumbSchema } from '../lib/structured-data'
 import ogSource from '../assets/og-share.png'
 
 interface Props {
@@ -43,10 +44,51 @@ interface Props {
    * available on this site.
    */
   noindex?: boolean
+  /**
+   * This page's name in the breadcrumb trail — "Pricing", "FAQ", not the
+   * <h1>, which on this site is a sentence rather than a label.
+   *
+   * WHY A NAME AND NOT A TRAIL. The page supplies the one thing only it
+   * knows; the URL is derived from `Astro.url.pathname`, the same source
+   * the canonical above uses. A page that could type its own crumb URL
+   * could type another page's, which is the canonical-copied-from-another-
+   * page defect with a different tag around it — a breadcrumb naming the
+   * wrong page is markup that misdescribes where the page sits, and Google
+   * penalises that across the site rather than on the page.
+   *
+   * The site is one level deep, so one crumb below the root is the whole
+   * trail everywhere today. When sub-project 3 ships /services/<slug> this
+   * becomes a trail with an ancestor in it: `breadcrumbSchema` already
+   * takes a list and prepends Home, so what changes is this prop, not that
+   * helper.
+   *
+   * TWO ROUTES DELIBERATELY PASS NOTHING, and both are argued in
+   * tests/pages.test.ts's ROUTES_EXEMPT_FROM_BREADCRUMBS: '/' (the root is
+   * not nested — foundation spec §242 — and a one-crumb trail pointing at
+   * the page it is on describes no position at all) and '/404' (a 404 sits
+   * nowhere in any hierarchy). That guard runs over dist/ in both
+   * directions, so an omission here fails rather than passing quietly.
+   */
+  breadcrumb?: string
 }
 
-const { title, description, noindex = false } = Astro.props
+const { title, description, noindex = false, breadcrumb } = Astro.props
 const canonical = noindex ? null : new URL(Astro.url.pathname, Astro.site).href
+
+/*
+ * The route as served. `Astro.url.pathname` is already '/pricing/' under the
+ * default `directory` build format; the append covers the dev server, which
+ * resolves the same route without the trailing slash. breadcrumbSchema
+ * throws on anything that is not a route as served, so this normalisation is
+ * what keeps that throw pointed at real mistakes rather than at `astro dev`.
+ */
+const routeAsServed = Astro.url.pathname.endsWith('/')
+  ? Astro.url.pathname
+  : `${Astro.url.pathname}/`
+
+const breadcrumbJson = breadcrumb
+  ? JSON.stringify(breadcrumbSchema([{ name: breadcrumb, path: routeAsServed }]))
+  : null
 
 /*
  * The share card. Two things about it are not negotiable:
@@ -118,6 +160,13 @@ const ogImageAlt = 'Illustration of two people working side by side at one kitch
       them.
     */}
     {canonical && <link rel="canonical" href={canonical} />}
+    {/*
+      The BreadcrumbList (design spec §4). In <head> beside the canonical
+      because it makes the same kind of claim — where this page sits — and
+      the two are built from one source, `Astro.url.pathname`, so they
+      cannot disagree about which page this is.
+    */}
+    {breadcrumbJson && <script type="application/ld+json" set:html={breadcrumbJson} />}
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
