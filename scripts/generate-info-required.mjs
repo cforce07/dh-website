@@ -79,7 +79,20 @@ const DIST_DIR = 'dist'
 const SECTIONS_DIR = 'src/sections'
 const CONTENT_DIR = 'src/content'
 const IMAGE_REGISTRY_PATH = 'src/data/images.json'
-const OUTPUT_PATH = 'docs/INFORMATION-REQUIRED-BEFORE-PRODUCTION.md'
+/**
+ * The env override exists for ONE consumer: tests/content.test.ts, which
+ * regenerates into a temp file and diffs it against the committed document
+ * to prove the document is current. Without that test this file's own
+ * opening claim — "derived from the codebase and cannot fall out of sync
+ * with it" — was false in the ordinary way: the document is only derived at
+ * the moment somebody remembers to run this script, and on 2026-08-16 it was
+ * found carrying six stale line-number citations from before
+ * BaseLayout.astro and config.ts grew. Nothing was wrong except that nobody
+ * had re-run it. Writing to a temp path is what lets the test check that
+ * without mutating a tracked file.
+ */
+const OUTPUT_PATH =
+  process.env.INFO_REQUIRED_OUT ?? 'docs/INFORMATION-REQUIRED-BEFORE-PRODUCTION.md'
 
 // Same two patterns as scripts/check-tbd.mjs (kept in sync deliberately —
 // this script and the build gate must agree on what counts as a gap).
@@ -178,6 +191,44 @@ const DECLARED_INPUTS = [
       'provenance is recorded as `ai-generated` in the registry and it appears in ' +
       'Category D below. If the image is ever removed, `twitter:card` must go back ' +
       'to `"summary"` in the same commit.',
+  },
+  // ADDED 2026-08-16 BY TASK 12, AND IT SHOULD HAVE BEEN HERE FROM THE
+  // START. This is the single highest-value outstanding input on the
+  // project and it was absent from the document named "Information
+  // Required Before Production" — tracked only in docs/OPEN-DECISIONS.md,
+  // which is the decisions register, not the production checklist.
+  //
+  // It is undetectable for the usual Category C reason, and the reason is
+  // worth stating because it is the opposite of the others: the code is not
+  // silent here, it is CONFIDENT. Every CTA renders a real anchor with a
+  // real href. Nothing is missing from the markup, no collection is empty,
+  // no <Tbd> is marked, and the build is correct. The gap is that the URL
+  // the constant holds does not resolve — a fact about the internet, not
+  // about this repository, and no scanner over src/ or dist/ can see it.
+  //
+  // It is listed FIRST because it is the only item here that stops the site
+  // doing the thing it exists to do.
+  {
+    item: 'Production URL for the employer requirement form',
+    source: 'Brief §79; core-pages spec §3; docs/OPEN-DECISIONS.md ("Blocks launch")',
+    blocks:
+      '**every conversion on the site.** `src/data/company.ts` sets ' +
+      '`requirementFormUrl` to `https://www.directhired.com/employer-requirement`, ' +
+      'which does not resolve. That URL is behind **46 calls to action across all ' +
+      'eight built pages** — every "Submit Your Requirements" button in the header, ' +
+      'the mobile nav, every hero, every closing block and the fixed mobile bar, plus ' +
+      'the 404. Nothing on the site is broken to look at and every page passes every ' +
+      'check; the primary conversion path simply ends nowhere. DirectHired confirmed on ' +
+      '2026-08-16 that the form stays on their existing separate site, so what is needed ' +
+      'is **that site\'s live form URL** — not a form to be built.',
+    handledBy:
+      'A single constant. `company.requirementFormUrl` is the only definition of the ' +
+      'destination anywhere in the codebase — `tests/links.test.ts` asserts that no ' +
+      '`.astro` or `.ts` file under `src/` writes the URL as a literal, so repointing it ' +
+      'at launch is one edit to one line and all 46 call sites follow. That is the whole ' +
+      'of the work. Because the form is hosted elsewhere, this site cannot measure ' +
+      'whether anyone arrives at it or finishes it; that consequence is accepted and ' +
+      'written up under *Housekeeping* in `docs/OPEN-DECISIONS.md`.',
   },
   // Added 2026-08-16 with /pricing (core-pages Task 4). This is the one
   // entry here whose blocker is NOT missing information — DirectHired
@@ -417,13 +468,27 @@ function renderMarkdown(categoryA, categoryB, categoryC, categoryD) {
     lines.push('_None found — every inline value in the current build is verified._')
     lines.push('')
     lines.push(
-      `**Read that carefully:** there are currently **${tbdCallSites().length} \`<Tbd>\` call sites** ` +
-        'anywhere in `src/`. The last one, the MOM licence number, was resolved on 2026-08-15. ' +
-        'So this category is not reporting that nothing is missing — it is reporting that ' +
-        'nothing is *marked*, which is a weaker statement. `npm run build` passes the gate ' +
-        'today. The gate and the `<Tbd>` component are deliberately kept for the next ' +
-        'unverified value; until one is marked, Category A cannot detect anything and ' +
-        'Categories B, C and D carry the whole checklist.',
+      `**Read that carefully — it is not a clean bill of health.** There are currently ` +
+        `**${tbdCallSites().length} \`<Tbd>\` call sites** anywhere in \`src/\`. The last one, the MOM ` +
+        'licence number, was resolved on 2026-08-15. So this category is not reporting that ' +
+        'nothing is missing — it is reporting that nothing is *marked*, which is a much weaker ' +
+        'statement. With zero markers, Category A cannot detect anything at all: it would say ' +
+        '"none found" on a site with a hundred gaps in it, and `npm run build` would pass its ' +
+        'gate. The gate and the `<Tbd>` component are deliberately kept for the next ' +
+        'unverified value.',
+    )
+    lines.push('')
+    lines.push(
+      '**What is actually outstanding is below, and in one other place.** Categories B, C and ' +
+        'D carry the whole of this document. They are not the whole of what DirectHired still ' +
+        'owes: this checklist covers what the codebase can *detect* (B, D) or has *declared* ' +
+        '(C), and by construction that is everything with a consequence in the build. Items ' +
+        'with no consequence in the build — a founding story that is one sentence long, what ' +
+        'your insurance covers above MOM\'s floor, whether one consultant carries a placement ' +
+        'end to end — leave no trace here at all, because the honest response to not having ' +
+        'them was to write less rather than to write something. Those live in ' +
+        '`docs/OPEN-DECISIONS.md`, which is the companion to this file and not a duplicate of ' +
+        'it. **Read both, or you have read half the list.**',
     )
   } else {
     for (const { item, files } of categoryA) {
@@ -483,9 +548,12 @@ function renderMarkdown(categoryA, categoryB, categoryC, categoryD) {
     'Design spec §5 named three Category A items — the MOM licence number, detailed ' +
       'replacement terms, and the without-replacement inclusion list. **All three have since ' +
       'been supplied**: the licence number on 2026-08-15 (its `<Tbd>` removed), the other two ' +
-      'on 2026-08-16. What remains below is one item that is not missing information at all — ' +
-      'the facts are in hand and what is outstanding is DirectHired’s sign-off on publishing ' +
-      'them — and one that is a placeholder asset rather than a gap in the copy.',
+      'on 2026-08-16. What remains below are three items, and no two of them are the same ' +
+      'kind of thing. **The form URL is the one that matters**: nothing is missing from the ' +
+      'code at all, the destination simply does not resolve, and until it does the site ' +
+      'cannot convert. The second is not missing information either — those facts are in ' +
+      'hand, and what is outstanding is DirectHired’s sign-off on publishing them. The third ' +
+      'is a placeholder asset rather than a gap in the copy.',
   )
   lines.push('')
 
