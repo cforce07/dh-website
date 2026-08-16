@@ -658,6 +658,62 @@ function markdownContainers(html: string): string[] {
   )
 }
 
+describe('every <Content /> in the source is wrapped in .rich-text', () => {
+  /*
+   * THE SOURCE-SIDE HALF, AND THE ONLY ONE THAT CAN SEE TWO OF THE FOUR
+   * SURFACES.
+   *
+   * MeetHelpers.astro's helper bio and Reviews.astro's review quote render
+   * nothing today — both collections are deliberately empty — so no built
+   * page carries them and the dist/-derived rules below cannot say a word
+   * about either. Both carried the identical defect, and both would have
+   * shipped it the day DirectHired supplies profiles or reviews, as a
+   * rendering fault in content nobody changed.
+   *
+   * So the opt-in is asserted where it is written. DERIVED from the
+   * <Content /> call sites rather than from a list of files: a fifth
+   * markdown surface is caught by this the moment it exists, which is the
+   * whole reason the treatment was moved to one shared class.
+   */
+  const astroFiles = walk('src').filter((f) => f.endsWith('.astro'))
+  const CONTENT_TAG = /<Content\s*\/>/g
+  const WRAPPED = /<[a-z]+ class="([^"]*)"[^>]*>\s*<Content\s*\/>/g
+
+  /**
+   * Comments stripped, or every file that EXPLAINS <Content /> counts as
+   * four more call sites — Faq.astro's header alone mentions it twice. The
+   * repo's convention: a rule explained next to the code obeying it must
+   * not read as a breach of itself.
+   */
+  const template = (file: string) =>
+    readFileSync(file, 'utf8')
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, ' ')
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/<!--[\s\S]*?-->/g, ' ')
+      // `//` only at the start of a line: a `//` mid-line is the one in an
+      // https:// URL, and eating the rest of that line could hide real code.
+      .replace(/^[ \t]*\/\/.*$/gm, ' ')
+
+  it('finds the call sites it claims to check (guards the assertion below)', () => {
+    const total = astroFiles.reduce((n, f) => n + (template(f).match(CONTENT_TAG) ?? []).length, 0)
+    // Four today: the two FAQ layouts, the helper bio and the review quote.
+    // A floor rather than an equality, so adding a fifth surface fails on
+    // the class rather than on the count.
+    expect(total).toBeGreaterThanOrEqual(4)
+  })
+
+  it('wraps every one of them in an element carrying the class', () => {
+    const offenders: string[] = []
+    for (const file of astroFiles) {
+      const source = template(file)
+      const calls = (source.match(CONTENT_TAG) ?? []).length
+      const wrapped = [...source.matchAll(WRAPPED)].filter((m) => /\brich-text\b/.test(m[1]))
+      if (wrapped.length !== calls) offenders.push(`${file}: ${wrapped.length}/${calls} wrapped`)
+    }
+    expect(offenders).toEqual([])
+  })
+})
+
 describe('every built page spaces the markdown it renders', () => {
   const withMarkdown = pages.filter((p) => markdownContainers(p.html).length > 0)
 
