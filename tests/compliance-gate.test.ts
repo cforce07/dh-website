@@ -128,10 +128,43 @@ const NUMBER = '\\d+|one|two|three|four|five|six|seven|eight|nine|ten|a few|seve
  * which is safe only because it must land within 70 characters of a
  * REST_ENTITLEMENT phrase; neither list fires alone.
  */
+/*
+ * TASK 6 FIX WAVE — the entitlement register, added to both halves.
+ *
+ * Two reviewer sentences walked straight through axis 3 and scored a full
+ * green suite. They are in the paraphrase fixture below; the diagnosis is
+ * here because it is the vocabulary, not the pairing, that was wrong.
+ *
+ *   1. "Her entitlement for the weekly day she does not work remains
+ *      payable in full"
+ *      REST_ENTITLEMENT DID fire — "weekly day" was already covered. It was
+ *      COMPENSATION that matched nothing: `\bpay\b` does not match
+ *      "payable" (the word boundary fails on the following "a"), and
+ *      "entitlement" was not in the list at all. The pair could not form in
+ *      either direction, so neither ordered pattern fired.
+ *
+ *   2. "She is not out of pocket for the days she is entitled to rest"
+ *      NOTHING fired. "Out of pocket" is money vocabulary COMPENSATION did
+ *      not have, and "the days she is entitled to rest" puts four words
+ *      between "days" and "rest", so none of `rest\s*days?`, `days?\s*off`
+ *      or `day\s+of\s+rest` reached it either.
+ *
+ * So both lists grew, and they had to: a COMPENSATION addition alone fixes
+ * the first sentence and leaves the second walking through. The register
+ * both were written in is ENTITLEMENT — what she is owed rather than what
+ * she is paid — and it was absent from an axis whose whole subject is what
+ * the helper is entitled to during repayment.
+ *
+ * THIS IS THE LAST VOCABULARY CHANGE. The standing ruling against chasing
+ * synonyms holds: the gate fails this project by becoming annoying, not by
+ * missing a paraphrase, and the real rule lives in
+ * src/sections/LoanAndPlacement.astro's header. A structural blind spot is
+ * worth closing once; a thesaurus is not.
+ */
 const REST_ENTITLEMENT =
-  'rest\\s*days?|days?\\s*off|off[-\\s]days?|day\\s+of\\s+rest|weekly\\s+(?:rest|break|day|time\\s+away|time\\s+off)|entitled\\s+break|time\\s+away\\s+from\\s+the\\s+(?:household|home|family)|non[-\\s]working\\s+days?'
+  'rest\\s*days?|days?\\s*off|off[-\\s]days?|day\\s+of\\s+rest|weekly\\s+(?:rest|break|day|time\\s+away|time\\s+off)|entitled\\s+break|time\\s+away\\s+from\\s+the\\s+(?:household|home|family)|non[-\\s]working\\s+days?|entitled\\s+to\\s+rest|days?\\s+(?:she|he|they)\\s+(?:does|do)\\s+not\\s+work'
 const COMPENSATION =
-  'paid|pay|payment|allowance|compensat\\w*|sum\\s+due|amount\\s+due|remunerat\\w*|wages?'
+  'paid|pay|payment|allowance|compensat\\w*|sum\\s+due|amount\\s+due|remunerat\\w*|wages?|payable|entitlement\\w*|owed|due\\s+to\\s+(?:her|him|them)|out\\s+of\\s+pocket'
 
 const GATED_PATTERNS: { label: string; pattern: RegExp }[] = [
   // --- AXIS 1: how long repayment runs ---
@@ -341,6 +374,17 @@ const PARAPHRASES_THAT_MUST_BE_CAUGHT = [
   // missing. Written by us against known gaps, not an independent corpus.
   'Full recovery of the advance takes seven wage packets',
   'She pays it back over her first few paydays',
+  /*
+   * Task 6 fix wave. A reviewer's sentences again, written without sight of
+   * the patterns, and both scored 287 green — an independent 26-mutation
+   * sweep found the same two. They are the entitlement register: what the
+   * helper is OWED rather than what she is PAID, which axis 3 had no
+   * vocabulary for at all. See the note above REST_ENTITLEMENT for which
+   * half of the pair failed on each, and why fixing only COMPENSATION would
+   * have left the second one walking through.
+   */
+  'Her entitlement for the weekly day she does not work remains payable in full',
+  'She is not out of pocket for the days she is entitled to rest',
 ]
 
 /*
