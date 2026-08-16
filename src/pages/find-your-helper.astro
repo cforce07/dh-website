@@ -1,0 +1,438 @@
+---
+/**
+ * /find-your-helper — the page that explains what DirectHired actually
+ * does, for the visitor who has not yet decided to send anything.
+ *
+ * Core-pages design spec §3.2 gives it four parts and no others:
+ * matching explained · `Process` reframed as "what happens after you
+ * submit" · the response expectation · the form CTA. It owns §4's *maid
+ * placement Singapore* intent, which the <title> and the description carry
+ * once each, inside sentences a person would read.
+ *
+ * IT IS NOT A HELPER SEARCH, FILTER OR BROWSE. Spec §7 and source brief
+ * §40 rule that out for the whole site, and this is the page a contributor
+ * would most naturally add one to — its URL says "find your helper", and
+ * every competitor puts a gallery of profiles behind that phrase. There is
+ * nothing to filter here on purpose: the product IS the matching, and a
+ * catalogue would describe a different business. If a future task wants a
+ * list of helpers on this page, that is a spec change, not a page change.
+ *
+ * WHAT THIS PAGE MAY SAY. Every fact below already exists somewhere the
+ * client has approved: the four process steps come from Process.astro
+ * (single-sourced, reframed by a prop, never copied), the response
+ * expectation is DirectHired's own "within 1 business day" as published in
+ * src/content/faq/response-time.md, and the two placement timings are spec
+ * §2.2's approximately 2 weeks / approximately 1 week. Nothing here rounds,
+ * extends or infers past those. Three claims that would have been natural
+ * to write are deliberately absent, because nobody has supplied them:
+ * how long the interview stage usually takes, how many helpers a
+ * recommendation typically contains, and what proportion of families
+ * accept the first shortlist. Each needs DirectHired, not an author.
+ *
+ * Section grounds run cream / teal / white / cream across the four blocks
+ * (this page's .helper-match, Process, this page's .match-timing,
+ * FinalCta). Process is fixed at --color-surface-teal and FinalCta at
+ * --color-surface, which is what fixes the other two; the sequence is
+ * registered and asserted in tests/section-rhythm.test.ts. Block 07 of the
+ * homepage keeps --color-deep as the site's only palette register shift —
+ * TwoSidedMatch is deliberately NOT rendered here, both because spec §3.2
+ * does not list it for this page and because a second dark band is a
+ * decision this page has no reason to take.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro'
+import Container from '../components/Container.astro'
+import Button from '../components/Button.astro'
+import Process from '../sections/Process.astro'
+import FinalCta from '../sections/FinalCta.astro'
+import { company } from '../data/company'
+import { defaultWhatsappUrl } from '../lib/whatsapp'
+
+const whatsappHref = defaultWhatsappUrl()
+
+/*
+ * The two halves a match is made from. Kept as data rather than typed into
+ * the markup twice so the two panels cannot drift apart in length or
+ * shape — and so that adding a third half is a data edit somebody reviews
+ * rather than a copy-paste.
+ *
+ * Both entries are restatements of facts already on the site: the
+ * household side is Process step 1 ("your household, your routines, and
+ * the specific tasks, schedule and expectations a helper would take on"),
+ * the helper side is the Helper column of TwoSidedMatch (block 07). They
+ * are restated rather than imported because this page explains the INPUTS
+ * to a match, and block 07 is a composition about the outcome — reusing
+ * that section here would put its dark band and its "Happy Employer.
+ * Happy Helper." line on a page that spec §3.2 does not give them to.
+ */
+const matchInputs = [
+  {
+    title: 'What we ask you about',
+    body: 'Your household and how it runs — the tasks a helper would take on, the schedule they would work to, and the expectations you want met. That conversation happens before any name is put in front of you.',
+  },
+  {
+    title: 'What we know about a helper',
+    body: 'The work a helper has done before, the responsibilities that experience suits them to, and what they expect from the household they join.',
+  },
+]
+
+const title = 'Maid Placement in Singapore — How We Match | DirectHired'
+const description =
+  'Maid placement in Singapore, explained: how DirectHired matches a domestic helper to your ' +
+  'household, and what happens after you submit your requirements.'
+---
+
+<BaseLayout title={title} description={description}>
+  <section class="helper-match">
+    <Container>
+      <div class="page-intro">
+        {/*
+          "Fits", not "the perfect fit". The word this site is allowed is
+          the one Difference (block 04) already uses — a helper whose
+          experience fits what you described. A promise of a perfect match
+          is banned outright by tests/pages.test.ts, and for a reason
+          stronger than the guard: nobody can promise it, and a family that
+          has had a placement go wrong is exactly who reads this page.
+        */}
+        <h1>Finding a Helper Who Fits Your Household</h1>
+        <p class="page-lede">
+          Matching here is a conversation, not a catalogue. You tell us about your household; our
+          team recommends a small number of helpers whose experience fits what you described, and
+          you interview them yourself.
+        </p>
+      </div>
+
+      {/*
+        This <h2> is structural as well as editorial: the two panels below
+        set their titles as <h3>, so without it the document would go <h1>
+        straight to <h3> and break its own outline — the same skipped level
+        /pricing needed a heading for. tests/pages.test.ts asserts it,
+        because axe's heading-order rule is a best-practice rule and sits
+        outside the wcag2a/wcag2aa tags scripts/run-axe.mjs filters to.
+      */}
+      <h2 class="section-title">What a match is made from</h2>
+
+      <div class="match-inputs">
+        {
+          matchInputs.map((input) => (
+            <div class="match-input">
+              <h3>{input.title}</h3>
+              <p>{input.body}</p>
+            </div>
+          ))
+        }
+      </div>
+
+      {/*
+        The sentence that has to be on this page and nowhere else.
+
+        Its URL is /find-your-helper, and the visitor's learned expectation
+        of that phrase is a grid of photographs with filters above it. Left
+        unsaid, the absence of one reads as a page that has not been built
+        yet. Said plainly, it is the product: the recommendation comes
+        after the household is understood, which is the ONE ordering claim
+        this whole page makes and which Process directly below demonstrates
+        step by step.
+      */}
+      <p class="match-order">
+        Because a match is made from both halves, there is no list of helpers to browse here. The
+        recommendation comes after your household is understood — not before.
+      </p>
+
+      {/*
+        The internal linking triangle (spec §4), from its new vertex.
+        /pricing exists and resolves; /faq is enumerated in
+        tests/links.test.ts's DEFERRED_ROUTES until its own task ships it.
+        No figure is named here on purpose — a total typed into this
+        sentence would be a second copy of a number that lives in
+        src/data/pricing.ts, which is precisely where a stale price hides.
+      */}
+      <p class="match-links">
+        What a placement costs is itemised on the <a href="/pricing">pricing page</a>, and the
+        questions families put to us are answered in the <a href="/faq">FAQ</a>.
+      </p>
+
+      {/*
+        Primary before secondary, both resolved from the single-sourced
+        URLs, exactly as every other CTA surface on the site renders them.
+        Placed here rather than only at the foot of the page: this is the
+        point at which a reader has just been told what we do with what
+        they send, and the next block is literally titled "what happens
+        after you submit".
+      */}
+      <div class="match-cta">
+        <Button variant="primary" href={company.requirementFormUrl}>Submit Your Requirements</Button>
+        <Button variant="secondary" href={whatsappHref} external>WhatsApp Us</Button>
+      </div>
+    </Container>
+  </section>
+
+  {/*
+    The homepage's block 05, reframed by prop and not by copy. The four
+    steps stay single-sourced in Process.astro — they went from five to
+    four on 2026-08-16, and that must never need doing twice (spec §3.1).
+    The lede is overridden too: Process's default derives "four steps" from
+    its own array, which is the right sentence to open a homepage section
+    and the wrong one directly under a paragraph that has just described
+    the same sequence in prose.
+  */}
+  <Process
+    heading="What happens after you submit"
+    lede="From the form landing with us to the placement itself, in the order it happens."
+  />
+
+  <section class="match-timing">
+    <Container>
+      <h2 class="section-title">When you will hear from us</h2>
+
+      {/*
+        THREE FIGURES, AND NOT ONE MORE.
+
+        "within 1 business day" is DirectHired's own wording, published in
+        src/content/faq/response-time.md and allowlisted by name in
+        tests/pages.test.ts's duration guard. Do not reword it to "one
+        business day", "24 hours" or "2 business days" — the last of those
+        is a commitment DirectHired has never made, and the guard correctly
+        rejects it.
+
+        The two placement timings are spec §2.2 verbatim: approximately 2
+        weeks for a helper coming to Singapore from overseas, approximately
+        1 week for a transfer helper already here, both measured from
+        confirmation. "Approximately" is part of the fact, not a hedge to
+        be tidied away, and no third timing exists — how long the interview
+        stage runs is not something DirectHired has told us, which is why
+        the closing paragraph describes what that depends on instead of
+        putting a number on it.
+      */}
+      <dl class="timing">
+        <div class="timing-row">
+          <dt>Our response</dt>
+          <dd>
+            We aim to respond within 1 business day, whether you send your requirements through the
+            form or message us on WhatsApp.
+          </dd>
+        </div>
+        <div class="timing-row">
+          <dt>A helper coming to Singapore</dt>
+          <dd>Approximately 2 weeks after you confirm the helper.</dd>
+        </div>
+        <div class="timing-row">
+          <dt>A transfer helper already here</dt>
+          <dd>Approximately 1 week after you confirm the helper.</dd>
+        </div>
+      </dl>
+
+      <p class="timing-note">
+        Everything before that confirmation depends on your requirements and on the interviews. We
+        would rather find the right person than rush you to a decision.
+      </p>
+    </Container>
+  </section>
+
+  <FinalCta
+    heading="Tell us about your household."
+    lede="Send us what your family needs and we will come back with helpers whose experience fits it."
+  />
+</BaseLayout>
+
+<style>
+  .helper-match {
+    /*
+     * --space-12 top, --space-section bottom — Hero's treatment, and
+     * /pricing's, for the same reason both use it: this block carries the
+     * page's hero, and a full --space-section (128px at ≥1280) above an
+     * image-less single-column headline spends the first screen on cream.
+     */
+    padding-block: var(--space-12) var(--space-section);
+    background: var(--color-surface);
+  }
+
+  .page-intro h1 {
+    margin: 0;
+    max-width: 18ch;
+    font-family: var(--font-display);
+    font-size: var(--size-h1);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.1;
+    color: var(--color-ink);
+  }
+
+  .page-lede {
+    max-width: 56ch;
+    margin: var(--space-6) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-lede);
+    line-height: 1.5;
+    color: var(--color-ink-muted);
+  }
+
+  /* Shared by both blocks' <h2>, at --size-h3 rather than --size-h2: these
+     head a sub-part of a section the <h1> has already opened, and setting
+     them at section-header scale would put three competing display sizes
+     on one screen. Same size and role as /pricing's `.grid-heading`. */
+  .section-title {
+    margin: var(--space-12) 0 0;
+    font-family: var(--font-display);
+    font-size: var(--size-h3);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  /*
+   * Two panels, each opened by a hairline. The rule is --color-border
+   * (decorative, ~1.3:1 — see tokens.css, it carries no text and no
+   * control boundary), not --color-brand-teal: teal as a drawn line is
+   * reserved for exactly two places on this site, block 07's crossbar and
+   * FinalCta's mark, and spending it on routine section furniture is what
+   * makes those two stop meaning anything.
+   */
+  .match-inputs {
+    display: grid;
+    gap: var(--space-8);
+    margin-top: var(--space-6);
+  }
+
+  .match-input {
+    padding-top: var(--space-6);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .match-input h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  .match-input p {
+    max-width: 46ch;
+    margin: var(--space-3) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+  }
+
+  /* At lede size and in full ink, because it is the one claim on the page
+     that a visitor arriving from a competitor's filter grid needs to read
+     rather than skim. */
+  .match-order {
+    max-width: 52ch;
+    margin: var(--space-12) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-lede);
+    line-height: 1.5;
+    color: var(--color-ink);
+  }
+
+  .match-links {
+    max-width: 56ch;
+    margin: var(--space-6) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+  }
+
+  /* --color-accent (6.03:1 on cream), never --color-brand-teal, which
+     measures 2.89:1 and carries no text anywhere on this site. */
+  .match-links a {
+    color: var(--color-accent);
+    text-decoration: none;
+    border-bottom: 1px solid var(--color-accent);
+  }
+
+  .match-links a:hover {
+    color: var(--color-accent-hover);
+    border-color: var(--color-accent-hover);
+  }
+
+  .match-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    margin-top: var(--space-12);
+  }
+
+  .match-timing {
+    padding-block: var(--space-section);
+    /* White, between Process's teal wash above and FinalCta's cream below
+       — the third ground in this page's sequence, and the one that keeps
+       the two neighbours from meeting. Registered in
+       tests/section-rhythm.test.ts; the three grounds have to be judged
+       together, so do not flip this one alone. */
+    background: var(--color-surface-raised);
+  }
+
+  .match-timing .section-title {
+    margin-top: 0;
+  }
+
+  .timing {
+    max-width: 60rem;
+    margin: var(--space-8) 0 0;
+  }
+
+  /*
+   * A term/description pair per row, stacked on a phone and two columns
+   * from --bp-tablet up, with the rule between rows rather than around
+   * them. A card each would have boxed three short facts into three
+   * surfaces on a white ground, which is the generic-UI-kit reading
+   * Card.astro's own header warns about; a bare paragraph each would have
+   * buried the figures in prose, and the figures are the reason a visitor
+   * is in this block.
+   */
+  .timing-row {
+    display: grid;
+    gap: var(--space-2);
+    padding-block: var(--space-6);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .timing-row:last-child {
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .timing dt {
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-ink);
+  }
+
+  .timing dd {
+    max-width: 52ch;
+    margin: 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+  }
+
+  .timing-note {
+    max-width: 56ch;
+    margin: var(--space-8) 0 0;
+    font-family: var(--font-text);
+    font-size: var(--size-body);
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+  }
+
+  /* 48em = --bp-tablet (tokens.css); the literal is repeated by hand
+     because custom properties do not resolve inside a media condition. */
+  @media (min-width: 48em) {
+    .match-inputs {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    /* The term column is fixed rather than fluid so the three descriptions
+       start on one axis; `minmax(0, 1fr)` on the second track lets it
+       shrink below its content's min-content width instead of pushing the
+       row wider than the container. */
+    .timing-row {
+      grid-template-columns: 18rem minmax(0, 1fr);
+      gap: var(--space-8);
+      align-items: baseline;
+    }
+  }
+</style>
