@@ -295,6 +295,85 @@ describe('no helper source beyond Indonesia, Myanmar and Mizoram is ever named',
   })
 })
 
+describe("/pricing puts a price above the fold", () => {
+  /*
+   * The hero summary line — "$1,640.10 with a replacement · $1,140.10
+   * without" — and the one thing about it that is load-bearing: WHERE it is.
+   *
+   * WHY THIS NEEDED ITS OWN GUARD. Deleting the whole `.page-summary` block
+   * from src/pages/pricing.astro dropped two figures from the page and left
+   * the suite fully green: the money floor still saw 26 figures, and the
+   * "every distinct figure is printed" assertion is satisfied by the two
+   * cards alone. So the page could silently go back to a first screen with a
+   * headline, two lines of lede and 452px of empty cream, on a page titled
+   * "Set Out in Full", and nothing would say so.
+   *
+   * That is the G-1 regression one layer further in. G-1 was "the money
+   * sweep proves every figure is real but no longer proves /pricing has
+   * any"; this is "the sweep proves /pricing has figures but not that a
+   * reader meets one before scrolling". Each time, a property that was
+   * genuinely being relied on was asserted by nothing.
+   *
+   * ORDER IS THE ASSERTION, not the mere presence of the element. Measured
+   * in Chrome at 320x568 with the sticky header and the fixed CTA bar
+   * accounted for, 448px of viewport is usable. With this block after the
+   * lede it rendered at y=527 — still below the fold, which is the exact
+   * defect it exists to fix. Before the lede it renders at y=263. Presence
+   * without position would pass in both cases, so both are checked.
+   *
+   * Static, from the built HTML: position in source order is what the
+   * measurement came down to, and re-measuring in a headless browser here
+   * would only be as trustworthy as its layout engine.
+   */
+  function pricingBody(): string {
+    const html = readFileSync('dist/pricing/index.html', 'utf8')
+    // <style> holds the scoped CSS, which mentions every one of these class
+    // names before the markup does — comparing raw indices would compare
+    // stylesheet positions and pass on anything.
+    return html
+      .slice(html.indexOf('<body'))
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+  }
+
+  it('finds the markers it orders (guards the assertion itself)', () => {
+    const body = pricingBody()
+    for (const marker of ['<h1', 'page-summary', 'page-lede', 'pkg-total', 'package-grid']) {
+      expect(body.indexOf(marker), `${marker} not found in the built page body`).toBeGreaterThan(-1)
+    }
+  })
+
+  it('renders the summary between the <h1> and the lede', () => {
+    const body = pricingBody()
+    const h1 = body.indexOf('<h1')
+    const summary = body.indexOf('page-summary')
+    const lede = body.indexOf('page-lede')
+    expect(h1).toBeLessThan(summary)
+    // The load-bearing half. At 320 the lede is 210px tall, so a summary
+    // after it starts below the fold no matter how short the summary is.
+    expect(summary, 'the price summary must precede the lede').toBeLessThan(lede)
+  })
+
+  it('reaches the reader before either package card does', () => {
+    const body = pricingBody()
+    expect(body.indexOf('page-summary')).toBeLessThan(body.indexOf('package-grid'))
+    expect(body.indexOf('page-summary')).toBeLessThan(body.indexOf('pkg-total'))
+  })
+
+  it('carries both package totals, derived rather than typed', () => {
+    const body = pricingBody()
+    const start = body.indexOf('class="page-summary"')
+    const summary = body.slice(start, body.indexOf('</p>', start))
+    for (const pkg of packages) {
+      const total = formatSgd(packageTotalCents(pkg))
+      expect(summary, `the hero summary omits ${total}`).toContain(total)
+    }
+    // Two packages, two figures — not one restated. Guards against the
+    // block surviving as a single-number teaser.
+    expect(new Set(packages.map((p) => formatSgd(packageTotalCents(p))))).toHaveProperty('size', 2)
+  })
+})
+
 describe('services', () => {
   it('has the six current services', () => {
     expect(readdirSync('src/content/services')).toHaveLength(6)
