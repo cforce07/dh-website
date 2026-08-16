@@ -42,6 +42,54 @@
  * `<strong>helper's</strong> cost` is one phrase to a reader and must be
  * one string here.
  *
+ * WHY ATTRIBUTES ARE IN THE CORPUS, AND WHY THEY WERE NOT. Until 2026-08-17
+ * `blocksOf` stripped every tag WITH ITS ATTRIBUTES (`.replace(/<[^>]+>/g)`),
+ * so only <title> text and body text ever reached the rules. A reviewer
+ * proved the hole end to end: /pricing's meta `description` was replaced with
+ * "The insurance is billed to the helper and you recover it through her
+ * repayment", it shipped into <meta name="description"> AND og:description,
+ * and the suite scored 771/771 green. That string is the search-result
+ * snippet and the WhatsApp link preview — a channel this project's own docs
+ * call a secondary conversion path — carrying verbatim the claim MOM forbids
+ * (spec §2.6.11: "You cannot pass on the cost of purchasing the insurance to
+ * your helper").
+ *
+ * tests/compliance-gate.test.ts, written days apart, runs its patterns over
+ * the RAW html and so covered meta and JSON-LD all along. Two guards made
+ * opposite choices and the weaker one guarded the MOM rule. This file now has
+ * the same reach.
+ *
+ * THE BLOCK-SPLITTING IS KEPT, because the rules need sentence-level context
+ * to bind a line-item label to a recovery verb — see WHY BLOCKS above; the
+ * raw-html approach the compliance gate takes would glue a <meta> tag to the
+ * <link> after it. So attribute-borne text is lifted out FIRST, one block per
+ * attribute value, and the body pass below is byte-for-byte what it was.
+ * Each attribute value is its own block for the same reason a <li> is: it is
+ * the unit a claim is made in.
+ *
+ * WHY ATTRIBUTES AND JSON-LD ARE IN THE CORPUS, AND WHY THEY WERE NOT.
+ * Until 2026-08-17 `blocksOf` stripped every tag WITH ITS ATTRIBUTES
+ * (`.replace(/<[^>]+>/g, ' ')`), so only <title> text and body text ever
+ * reached the rules. A reviewer proved the hole end to end: /pricing's meta
+ * `description` was replaced with "The insurance is billed to the helper and
+ * you recover it through her repayment", it shipped into
+ * <meta name="description"> AND og:description, and the suite scored 771/771
+ * green. That string is the search-result snippet and the WhatsApp link
+ * preview — a channel this project's own docs call a secondary conversion
+ * channel — carrying verbatim the claim MOM forbids (spec §2.6.11: "You
+ * cannot pass on the cost of purchasing the insurance to your helper").
+ *
+ * tests/compliance-gate.test.ts, written days apart, runs its patterns over
+ * the RAW html and so has covered meta and JSON-LD all along. Two guards made
+ * opposite choices and the weaker one guarded the MOM rule. This file now has
+ * the same reach, by a route that keeps what it had.
+ *
+ * THE BLOCK-SPLITTING IS KEPT, because the rules need sentence-level context
+ * to bind a line-item label to a recovery verb, and the raw-html approach
+ * would concatenate a <meta> to the <link> after it. So attribute values and
+ * JSON-LD strings are lifted out as blocks of their own, and the body pass is
+ * unchanged.
+ *
  * WHY dist/ RATHER THAN src/. The rule is about what is PUBLISHED, and
  * several source files necessarily name both framings in order to explain
  * where the line between them falls — this file, spec §2.6.11,
@@ -70,13 +118,9 @@ function walk(dir: string): string[] {
 const BLOCK_TAG =
   /<\/?(?:p|li|h[1-6]|td|th|tr|dt|dd|dl|ul|ol|table|thead|tbody|tfoot|blockquote|figcaption|summary|details|div|section|main|header|footer|nav|article|aside)\b[^>]*>/gi
 
-/** The visible text of one built page, one entry per block-level element. */
-function blocksOf(html: string): string[] {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(BLOCK_TAG, '\u0000')
-    .replace(/<[^>]+>/g, ' ')
+/** HTML entities to the characters a reader actually sees. */
+function decodeEntities(text: string): string {
+  return text
     .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
     .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
     .replace(/&nbsp;/g, ' ')
@@ -84,6 +128,154 @@ function blocksOf(html: string): string[] {
     .replace(/&quot;/g, '"')
     .replace(/&apos;/g, "'")
     .replace(/&[a-z]+;/gi, ' ')
+}
+
+/**
+ * Attributes whose values are PROSE — text a reader, a screen reader, a search
+ * engine or a link-preview crawler consumes as a sentence.
+ *
+ * `content` is the one the reviewer's mutation used: it carries every
+ * <meta name="description"> and every og:/twitter: property, which is the
+ * search-result snippet and the WhatsApp link preview. `alt` and
+ * `aria-label` are read aloud, which makes them published copy under any
+ * reading of the rule.
+ *
+ * `href`, `src`, `class` and `srcset` are deliberately absent — they are
+ * machine addresses, not claims, and sweeping them would put URL slugs like
+ * /helper-loan-placement-fee in front of rules whose whole job is to notice
+ * the words "loan" and "helper" near each other. The rule of thumb: if a human
+ * reads it as a sentence it is in; if a browser resolves it, it is not.
+ */
+const TEXT_ATTRS = new Set([
+  'content',
+  'alt',
+  'title',
+  'label',
+  'placeholder',
+  'aria-label',
+  'aria-description',
+  'aria-placeholder',
+  'aria-roledescription',
+  'aria-valuetext',
+])
+
+/** Any start tag, with its attribute run captured. */
+const TAG_WITH_ATTRS =
+  /<[a-zA-Z][-\w:]*((?:\s+[^\s"'>/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'`=<>]+))?)*)\s*\/?>/g
+/** One attribute inside such a run. */
+const ONE_ATTR = /([^\s"'>/=]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'`=<>]+))/g
+
+/**
+ * Every prose-bearing attribute value on the page, ONE BLOCK PER VALUE.
+ *
+ * One block per value for the same reason a <li> is one block: it is the unit
+ * a claim is made in. A meta description is a sentence or two, which is
+ * exactly the context rule A needs to bind a line-item label to a recovery
+ * verb — and exactly what the raw-html sweep tests/compliance-gate.test.ts
+ * runs cannot give it, since that concatenates the whole document.
+ */
+function attributeBlocks(html: string): string[] {
+  const blocks: string[] = []
+  for (const tag of html.matchAll(TAG_WITH_ATTRS)) {
+    const attrRun = tag[1]
+    if (!attrRun) continue
+    for (const attr of attrRun.matchAll(ONE_ATTR)) {
+      if (!TEXT_ATTRS.has(attr[1].toLowerCase())) continue
+      const value = decodeEntities(attr[2] ?? attr[3] ?? attr[4] ?? '')
+        .replace(/\s+/g, ' ')
+        .trim()
+      if (value) blocks.push(value)
+    }
+  }
+  return blocks
+}
+
+/**
+ * Every string value inside every JSON-LD graph, one block each.
+ *
+ * Structured data is published copy: Google renders `description` and
+ * `acceptedAnswer` into rich results, and src/lib/structured-data.ts feeds
+ * them the same sentences the pages carry. A blur that reached only the
+ * FAQPage answers would be invisible to the body pass below, which throws
+ * every <script> away.
+ *
+ * A graph that will not parse is pushed whole rather than skipped — a
+ * malformed graph is a thing to look at, not a thing to be silently exempt.
+ *
+ * WHY THESE ARE SPLIT ON SENTENCES WHERE THE BODY IS SPLIT ON BLOCKS, and it
+ * is not the file changing its mind. The body pass splits on blocks because
+ * the block structure is THERE to split on, and a price list's <li> rows carry
+ * no terminal punctuation. In a JSON-LD graph there is no block structure
+ * left: schema.org's `text` is a single string, so src/lib/structured-data.ts
+ * flattens a whole multi-paragraph FAQ answer into one field, joining the
+ * paragraphs with a space. Keeping that as one block is what the header's
+ * "does NOT glue a price row to the paragraph after it" warns against, in a
+ * worse form — the FIRST sweep after attributes were added reported three
+ * violations, all of them the same shape: a paragraph listing "MOM;
+ * Insurance; SIP; Medical checkup" glued to a paragraph three paragraphs
+ * later saying "you advance them at the start and recover them", copy which
+ * spec §2.4 requires and which the body pass passes correctly.
+ *
+ * So the sentence is the largest unit here that is still ONE claim. This is
+ * the granularity tests/compliance-gate.test.ts's inverse sweep already uses,
+ * and it is not a loosening of rule A: a block is only ever the unit a claim
+ * is made in, and a flattened four-paragraph answer is four claims.
+ */
+const SENTENCE_BREAK = /(?<=[.!?])\s+(?=[A-Z“"'(])/
+
+function jsonLdBlocks(html: string): string[] {
+  const blocks: string[] = []
+  const collect = (value: unknown): void => {
+    if (typeof value === 'string') {
+      value
+        .replace(/\s+/g, ' ')
+        .trim()
+        .split(SENTENCE_BREAK)
+        .map((sentence) => sentence.trim())
+        .filter(Boolean)
+        .forEach((sentence) => blocks.push(sentence))
+    } else if (Array.isArray(value)) {
+      value.forEach(collect)
+    } else if (value && typeof value === 'object') {
+      Object.values(value as Record<string, unknown>).forEach(collect)
+    }
+  }
+  const scripts = html.matchAll(
+    /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
+  )
+  for (const script of scripts) {
+    try {
+      collect(JSON.parse(script[1]))
+    } catch {
+      const raw = script[1].replace(/\s+/g, ' ').trim()
+      if (raw) blocks.push(raw)
+    }
+  }
+  return blocks
+}
+
+/**
+ * The published text of one built page — one entry per BLOCK, where a block is
+ * a block-level element, a prose-bearing attribute value, or one string inside
+ * the JSON-LD graph.
+ *
+ * `bodyBlocks` is byte-for-byte what `blocksOf` was the day it was written.
+ * The two passes joined to it are purely additive: nothing that used to be a
+ * block stopped being one, and nothing that used to be caught can now escape.
+ */
+function blocksOf(html: string): string[] {
+  return [...bodyBlocks(html), ...attributeBlocks(html), ...jsonLdBlocks(html)]
+}
+
+/** The visible body text of one built page, one entry per block-level element. */
+function bodyBlocks(html: string): string[] {
+  return decodeEntities(
+    html
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(BLOCK_TAG, '\u0000')
+      .replace(/<[^>]+>/g, ' '),
+  )
     .split('\u0000')
     .map((block) => block.replace(/\s+/g, ' ').trim())
     .filter(Boolean)
@@ -400,6 +592,68 @@ describe('the guard reads what it claims to read', () => {
     expect(
       blocksOf('<ul><li>Insurance — $425.10</li></ul><p>You advance the loan.</p>'),
     ).toEqual(['Insurance — $425.10', 'You advance the loan.'])
+  })
+
+  /* -----------------------------------------------------------------------
+   * THE ATTRIBUTE AND JSON-LD CORPUS.
+   *
+   * These four assertions are the ones that would have failed on 2026-08-16,
+   * and they are unit assertions rather than sweeps so that a regression names
+   * the surface that went blind rather than a count that moved.
+   * -------------------------------------------------------------------- */
+
+  it('reads the meta description and og:description, which the search snippet and the link preview are', () => {
+    const html =
+      '<meta name="description" content="The insurance is billed to the helper." />' +
+      '<meta property="og:description" content="You recover the insurance through her repayment." />'
+    expect(blocksOf(html)).toEqual([
+      'The insurance is billed to the helper.',
+      'You recover the insurance through her repayment.',
+    ])
+  })
+
+  it('reads alt and aria-label, which a screen reader speaks aloud', () => {
+    const html =
+      '<img src="/a.png" alt="Insurance is charged to the helper." />' +
+      '<a href="/x" aria-label="The medical checkup is deducted from her salary.">More</a>'
+    expect(blocksOf(html)).toContain('Insurance is charged to the helper.')
+    expect(blocksOf(html)).toContain('The medical checkup is deducted from her salary.')
+  })
+
+  it('reads the JSON-LD graph, string by string', () => {
+    const html =
+      '<script type="application/ld+json">' +
+      JSON.stringify({
+        '@type': 'FAQPage',
+        mainEntity: [
+          { name: 'Who pays?', acceptedAnswer: { text: 'The insurance is ultimately hers.' } },
+        ],
+      }) +
+      '</script>'
+    expect(blocksOf(html)).toContain('The insurance is ultimately hers.')
+  })
+
+  it('does not sweep href, src or class, which are addresses rather than claims', () => {
+    // A URL slug is not a sentence, and feeding one to rules that key on the
+    // words "loan", "helper" and "placement fee" is how a guard starts crying
+    // wolf. This pins the exclusion so nobody widens TEXT_ATTRS by reflex.
+    const html = '<a href="/faq/helper-loan-placement-fee" class="recover-loan">Read</a>'
+    expect(blocksOf(html)).toEqual(['Read'])
+  })
+
+  it('the built site really does publish attribute-borne and JSON-LD copy', () => {
+    /*
+     * Otherwise the three passes could quietly stop finding anything and the
+     * rules would go green over the body text alone — which is exactly the
+     * state this file was in until 2026-08-17.
+     */
+    const pricing = readFileSync('dist/pricing/index.html', 'utf8')
+    expect(attributeBlocks(pricing).length).toBeGreaterThan(5)
+    expect(attributeBlocks(pricing).some((b) => /\bpricing\b/i.test(b))).toBe(true)
+    const jsonLd = walk('dist')
+      .filter((f) => f.endsWith('.html'))
+      .flatMap((f) => jsonLdBlocks(readFileSync(f, 'utf8')))
+    expect(jsonLd.length).toBeGreaterThan(20)
   })
 
   it('derives the package line items from pricing.ts, and finds Insurance among them', () => {
@@ -719,6 +973,60 @@ describe('the rules catch the blurs they exist for', () => {
       expect(BREAKS[rule](text), `rule ${rule} did not fire on: ${text}`).toBe(true)
     })
   }
+})
+
+/*
+ * THE SURFACE MUTATIONS — the reviewer's sentence in each place the guard used
+ * to be blind, run through the WHOLE pipeline rather than against a regex.
+ *
+ * `BLURS_THAT_MUST_BE_CAUGHT` above tests the rules against bare strings, and
+ * every one of them passed on 2026-08-16 while the guard was blind, because
+ * the defect was never in the rules — it was in what reached them. So these
+ * assert the composition: HTML in, violation out. If anybody ever narrows
+ * `blocksOf` back to body text, the rules stay green and these do not.
+ */
+describe('a blur in an attribute or in JSON-LD is caught, not just one in body text', () => {
+  const MUTATION =
+    'The insurance is billed to the helper and you recover it through her repayment.'
+
+  const violationsIn = (html: string) =>
+    blocksOf(html).filter((block) => breaksRuleA(block) || breaksRuleB(block) || breaksRuleC(block))
+
+  const SURFACES: { surface: string; html: string }[] = [
+    {
+      surface: 'the meta description — the search-result snippet',
+      html: `<html><head><meta name="description" content="${MUTATION}"></head><body><p>Hello.</p></body></html>`,
+    },
+    {
+      surface: 'og:description — the WhatsApp link preview',
+      html: `<html><head><meta property="og:description" content="${MUTATION}"></head><body><p>Hello.</p></body></html>`,
+    },
+    {
+      surface: 'an image alt, which a screen reader speaks',
+      html: `<body><img src="/a.png" alt="${MUTATION}"></body>`,
+    },
+    {
+      surface: 'an aria-label on a link, which a screen reader speaks instead of the anchor text',
+      html: `<body><a href="/pricing" aria-label="${MUTATION}">Pricing</a></body>`,
+    },
+    {
+      surface: 'a JSON-LD description, which Google renders into a rich result',
+      html: `<script type="application/ld+json">${JSON.stringify({
+        '@type': 'WebPage',
+        description: MUTATION,
+      })}</script>`,
+    },
+  ]
+
+  for (const { surface, html } of SURFACES) {
+    it(`catches the blur in ${surface}`, () => {
+      expect(violationsIn(html), `no rule fired on ${surface}`).not.toEqual([])
+    })
+  }
+
+  it('catches it in the body text too, which is the case that already worked', () => {
+    expect(violationsIn(`<body><p>${MUTATION}</p></body>`)).not.toEqual([])
+  })
 })
 
 describe('the rules pass everything the site legitimately publishes', () => {
