@@ -446,6 +446,84 @@ GitHub Actions deployment, agreed but not built:
 
 ---
 
+## GO-LIVE — 2026-08-17
+
+`directhired.com` and `www.directhired.com` now serve the Astro site from
+CloudFront `E3R68EGASPTMJ3`. Change id `/change/C0030647HGA75SXD7VZA`, `INSYNC`.
+
+### Why this happened earlier than the plan said
+
+The plan parked go-live behind *Blocks launch* in `docs/OPEN-DECISIONS.md`. That
+was **over-cautious, and the caution was aimed at the wrong thing.** Re-examined
+on 2026-08-17:
+
+- **The compliance sign-off never blocked launch.** `OPEN-DECISIONS.md` says so
+  itself — it "blocks a paragraph, not the business". The gated repayment
+  mechanics are not on the site, and `tests/` fails the build if they appear. The
+  site is compliant *by construction*, so waiting protected nothing.
+- **The form URL blocks conversion, not publication.** 46 buttons point at
+  `/employer-requirement`. That path was probed on the live Exabytes site and
+  **already returned 404**, so the cutover neither created nor worsened the
+  problem. It is still the highest-value open item, but it is not a reason to
+  keep the old page up.
+- **What was being protected was worth nothing.** The old site was probed
+  path-by-path: a single 793-byte W3Schools "coming soon" template at `/` and
+  `/index.php`. Every other path 404'd. There was no content, no form, no
+  landing page — nothing a cutover could lose.
+
+The lesson worth keeping: *"blocks launch"* had quietly come to mean two
+different things — work that must precede publication, and work that must
+precede the site being *good*. Only the first is a cutover gate.
+
+### The one real hazard, and how it was handled
+
+`mail.directhired.com` was a **`CNAME` to the apex**. Re-pointing the apex at
+CloudFront would have dragged it along, so a mail client configured with
+`mail.directhired.com` as its IMAP/SMTP host would have been sent to a CDN.
+
+Delivery was never at risk — `MX` is `smtp.google.com` and was untouched — but
+"probably unused" is not a standard to apply to the one thing the owner named as
+paramount. It was pinned to `103.7.9.45` in a **separate batch applied first**
+(`infra/route53-mail-pin.json`), so its answer today is byte-identical to its
+answer yesterday. Splitting it from the cutover kept the two blast radii apart.
+
+### What changed, and what deliberately did not
+
+| Name | Before | After |
+|---|---|---|
+| `directhired.com` | `A 103.7.9.45` | `A`/`AAAA` ALIAS → `d3ov6snrv878q6.cloudfront.net` |
+| `www.directhired.com` | `CNAME directhired.com` | `A`/`AAAA` ALIAS → same |
+| `mail.directhired.com` | `CNAME directhired.com` | `A 103.7.9.45` *(same answer, pinned)* |
+
+Verified unchanged after the batch: `MX`, `default._domainkey`, the Google
+Workspace verification `CNAME`, the entire `dev.*` tree, and every cPanel host.
+
+`www` needed `DELETE` + `UPSERT` rather than a plain `UPSERT` — a name cannot
+hold both a `CNAME` and an `A`, so the type change has to be expressed as a
+removal and an addition inside one atomic batch.
+
+### Verified live
+
+All seven pages `200`; `/no-such-page` `404`; apex `301`s to `www` preserving
+query strings; `http` `301`s to `https`; TLS valid without `-k`; `robots.txt`
+allows indexing and points at the sitemap; canonical and sitemap both on `www`;
+production carries **no** `X-Robots-Tag` while staging still does.
+
+**Note on verifying from the operator's own machine:** it resolved
+`www.directhired.com` to `103.7.9.45` for some time after `INSYNC`, because its
+upstream resolver still held the old delegation. Testing without `--resolve`
+produced `/` `200` and every other path `404` — which looks exactly like a broken
+deploy and is not. Confirm against `8.8.8.8`/`1.1.1.1`/`9.9.9.9` before
+diagnosing anything.
+
+### Rollback
+
+`infra/route53-golive-rollback.json` restores the apex `A` and `www` `CNAME` to
+`103.7.9.45`. TTL 300, so about five minutes. It does **not** revert the
+`mail` pin — that is intentional, since the pin is correct either way.
+
+---
+
 ## Dated follow-ups
 
 1. ~~One week after go-live: cancel Exabytes hosting and DNS.~~ **Withdrawn.**
@@ -457,3 +535,18 @@ GitHub Actions deployment, agreed but not built:
    validation `CNAME` records are still in the Route 53 zone. Confirm they are.
    If they are missing, renewal fails silently and the first symptom is a browser
    TLS error in production.
+4. **Left deliberately unchanged at go-live — four `SRV` records still target the
+   apex.** `_caldav._tcp`, `_caldavs._tcp`, `_carddav._tcp` and `_carddavs._tcp`
+   at `directhired.com` point at `directhired.com` on ports 2079/2080, which now
+   resolves to CloudFront rather than cPanel. Anything genuinely using cPanel
+   calendars or contacts on this domain would now fail.
+
+   They were not touched because the fix is a *functional* change to service
+   discovery, not a preservation of it: re-targeting them at
+   `cpcalendars.directhired.com` keeps the IP identical but changes the name a
+   TLS client validates against, and cPanel's certificate may not cover it. Mail
+   is Google Workspace, so these are near-certainly vestigial — but "near-certainly"
+   is the reason to ask rather than the reason to act. Confirm whether any client
+   uses them, then either re-target or delete.
+
+   The `dev.*` equivalents point at `dev.directhired.com` and are unaffected.

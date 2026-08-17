@@ -178,7 +178,7 @@ const DECLARED_INPUTS = [
   // doing the thing it exists to do.
   {
     item: 'Production URL for the employer requirement form',
-    source: 'Brief §79; core-pages spec §3; docs/OPEN-DECISIONS.md ("Blocks launch")',
+    source: 'Brief §79; core-pages spec §3; docs/OPEN-DECISIONS.md ("Costs you money every day")',
     blocks:
       '**every conversion on the site.** `src/data/company.ts` sets ' +
       '`requirementFormUrl` to `https://www.directhired.com/employer-requirement`, ' +

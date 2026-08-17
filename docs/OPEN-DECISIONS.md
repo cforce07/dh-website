@@ -1,18 +1,33 @@
 # DirectHired — What's waiting on you
 
-Last updated 2026-08-16. Everything here needs a decision or an asset from
+Last updated 2026-08-17. Everything here needs a decision or an asset from
 DirectHired; none of it can be resolved from the codebase.
 
 Detail and reasoning for each: `docs/design/implementation-plan-2026-08-16.md` §5.
 Generated status of missing content: `docs/INFORMATION-REQUIRED-BEFORE-PRODUCTION.md`.
 
+> **THE SITE IS LIVE as of 2026-08-17** at `https://www.directhired.com`.
+> See `docs/runbooks/2026-08-16-dns-cutover.md` § *GO-LIVE*.
+>
+> That changes what this section means, so read the heading carefully: it is now
+> **"Costs you money every day"**, not "blocks launch". Item 1 below is no longer
+> holding a launch back — it is losing enquiries from real visitors, right now.
+
 ---
 
-## Blocks launch
+## Costs you money every day (was: *Blocks launch*)
 
 Two items, and they are **not** of equal weight. The first is the single
 highest-value thing on this entire document; the second is a sign-off. They
 are listed in that order deliberately.
+
+**Why this was renamed.** Both items sat under *Blocks launch* while the domain
+still served a 793-byte placeholder. Re-examined at cutover, neither actually
+gated publication: the compliance item blocks a paragraph and says so in its own
+row, and the form URL was already a 404 on the old site, so going live neither
+created nor worsened it. Keeping them under *Blocks launch* was protecting an
+empty page. Item 1's urgency did not fall when the site went live — it rose,
+because the dead buttons now have an audience.
 
 ### 1. The form URL — one line, and nothing on the site works without it
 
@@ -194,7 +209,7 @@ insurance covers appear here and not there. Neither file is the whole list on
 its own.
 
 **The form URL was missing from that checklist entirely until 2026-08-16.** It
-was tracked here, under *Blocks launch*, and nowhere else — so the document
+was tracked here, under what was then called *Blocks launch*, and nowhere else — so the document
 titled "Information Required Before Production" did not mention the one input
 without which nothing on the site converts. It is now the first entry in its
 Category C, and a test fails if it is ever dropped again.
@@ -211,7 +226,7 @@ Category C, and a test fails if it is ever dropped again.
 | Process steps 1 and 2 | Merged into "Understand your household needs" | 2026-08-16 |
 | Helper source differences | None — same service, package and process; only the source differs | 2026-08-16 |
 | **Are those five facts the whole of your replacement terms?** | **Yes.** `/pricing` now says so: the replacement section states that these are its terms in full. That claim rests on this answer alone, so if anything is ever added to your terms — a replaced helper who is already deployed, refund treatment, how long a replacement takes to arrange — tell us, because the site is now asserting there is nothing else | 2026-08-16 |
-| May we publish *"We go through the repayment arrangement in full with you before you commit, and it is set out in the contract"*? | **Yes.** Live on `/pricing`, in your wording. It approves **this sentence only** — the repayment mechanics remain gated; see *Blocks launch* above | 2026-08-16 |
+| May we publish *"We go through the repayment arrangement in full with you before you commit, and it is set out in the contract"*? | **Yes.** Live on `/pricing`, in your wording. It approves **this sentence only** — the repayment mechanics remain gated; see *Costs you money every day* above | 2026-08-16 |
 | Do you recommend the with-replacement package to first-time employers? | **Yes.** The recommendation is live on **both pages that show the packages** — `/pricing` and the homepage — and on **one card only**, the with-replacement one, marked **"Recommended for first-time employers"**. Deliberately worded with the audience rather than as a bare "Recommended": the other package is not marked as second best, because for an experienced employer it is the right one, and it carries no counterpart label of any kind | 2026-08-16 |
 | What do families ask after seeing the figures? | *"Normally they will ask similar question for re-assurance."* Recorded rather than acted on: it means an FAQ that restates what the page already says is doing its job, not repeating itself, and it is the basis for writing those answers as reassurance. No FAQ entries were added or re-tagged on the strength of it — the entries removed from `/pricing` earlier were ones repeating the price cards a screen above them, which is a different problem | 2026-08-16 |
 | Is the requirements form staying on your existing site? | *"Yes it's a different site. We can audit design on that later."* Recorded; a design audit of that form is deferred. What it costs is written up under *Housekeeping* | 2026-08-16 |

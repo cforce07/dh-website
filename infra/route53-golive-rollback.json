@@ -1,0 +1,23 @@
+{
+  "Comment": "ROLLBACK go-live: restore apex+www to Exabytes 103.7.9.45. Apply if the new site must be pulled. TTL was 300 so this takes effect in ~5 min.",
+  "Changes": [
+    { "Action": "DELETE", "ResourceRecordSet": {
+        "Name": "directhired.com.", "Type": "A",
+        "AliasTarget": { "HostedZoneId": "Z2FDTNDATAQYW2", "DNSName": "d3ov6snrv878q6.cloudfront.net.", "EvaluateTargetHealth": false } } },
+    { "Action": "DELETE", "ResourceRecordSet": {
+        "Name": "directhired.com.", "Type": "AAAA",
+        "AliasTarget": { "HostedZoneId": "Z2FDTNDATAQYW2", "DNSName": "d3ov6snrv878q6.cloudfront.net.", "EvaluateTargetHealth": false } } },
+    { "Action": "DELETE", "ResourceRecordSet": {
+        "Name": "www.directhired.com.", "Type": "A",
+        "AliasTarget": { "HostedZoneId": "Z2FDTNDATAQYW2", "DNSName": "d3ov6snrv878q6.cloudfront.net.", "EvaluateTargetHealth": false } } },
+    { "Action": "DELETE", "ResourceRecordSet": {
+        "Name": "www.directhired.com.", "Type": "AAAA",
+        "AliasTarget": { "HostedZoneId": "Z2FDTNDATAQYW2", "DNSName": "d3ov6snrv878q6.cloudfront.net.", "EvaluateTargetHealth": false } } },
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "directhired.com.", "Type": "A", "TTL": 300,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } },
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "www.directhired.com.", "Type": "CNAME", "TTL": 300,
+        "ResourceRecords": [{ "Value": "directhired.com" }] } }
+  ]
+}

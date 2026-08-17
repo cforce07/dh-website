@@ -1161,7 +1161,9 @@ git commit -m "Runbook: production stack verified under the real hostnames"
 
 **This is the only step the public sees, and it is deliberately separable from everything above.** Infrastructure is complete and verified after Task 9; this task may run immediately or weeks later.
 
-**Hold until `docs/OPEN-DECISIONS.md` "Blocks launch" is clear** — compliance sign-off on the loan repayment terms, and a production form URL, without which every primary CTA 404s. That is a business decision, not a technical one. The infrastructure does not care when it is taken.
+**DONE 2026-08-17.** See `docs/runbooks/2026-08-16-dns-cutover.md` § *GO-LIVE*.
+
+~~Hold until `docs/OPEN-DECISIONS.md` "Blocks launch" is clear~~ — **this hold was wrong and was lifted.** Neither item under that heading actually gated publication: the compliance sign-off blocks a paragraph (its own row says so), and the form URL already 404'd on the old Exabytes site, so the cutover neither created nor worsened it. What the hold protected was a 793-byte placeholder — verified path-by-path at cutover. The heading has been renamed *Costs you money every day* to stop the same conflation recurring.
 
 **Files:**
 - Create: `infra/route53-golive.json`
@@ -1173,7 +1175,7 @@ git commit -m "Runbook: production stack verified under the real hostnames"
 
 - [ ] **Step 1: Confirm the site is ready to be public (human decision)**
 
-Re-read the "Blocks launch" table in `docs/OPEN-DECISIONS.md`. Proceed only if it is clear, or if you are knowingly accepting what remains. Record which.
+Re-read the *Costs you money every day* table in `docs/OPEN-DECISIONS.md`. Proceed only if it is clear, or if you are knowingly accepting what remains. Record which. **Recorded 2026-08-17: proceeded knowingly, accepting the dead form URL** — it was already a 404 on the old site, so publication did not make it worse, and the old page had no content to lose.
 
 - [ ] **Step 2: Write the atomic swap**
 

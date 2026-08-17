@@ -1,0 +1,11 @@
+{
+  "Comment": "Pin mail.directhired.com to 103.7.9.45 BEFORE the apex flip. It was a CNAME to the apex, so repointing the apex to CloudFront would drag it along. This preserves today's answer exactly.",
+  "Changes": [
+    { "Action": "DELETE", "ResourceRecordSet": {
+        "Name": "mail.directhired.com.", "Type": "CNAME", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "directhired.com" }] } },
+    { "Action": "CREATE", "ResourceRecordSet": {
+        "Name": "mail.directhired.com.", "Type": "A", "TTL": 14400,
+        "ResourceRecords": [{ "Value": "103.7.9.45" }] } }
+  ]
+}

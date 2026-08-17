@@ -1,0 +1,20 @@
+{
+  "Comment": "GO-LIVE: apex + www to CloudFront E3R68EGASPTMJ3. Touches ONLY these two names. MX, DKIM, Google verification, the dev tree and every cPanel host are untouched. Rollback: route53-golive-rollback.json",
+  "Changes": [
+    { "Action": "DELETE", "ResourceRecordSet": {
+        "Name": "www.directhired.com.", "Type": "CNAME", "TTL": 300,
+        "ResourceRecords": [{ "Value": "directhired.com" }] } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "www.directhired.com.", "Type": "A",
+        "AliasTarget": { "HostedZoneId": "Z2FDTNDATAQYW2", "DNSName": "d3ov6snrv878q6.cloudfront.net.", "EvaluateTargetHealth": false } } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "www.directhired.com.", "Type": "AAAA",
+        "AliasTarget": { "HostedZoneId": "Z2FDTNDATAQYW2", "DNSName": "d3ov6snrv878q6.cloudfront.net.", "EvaluateTargetHealth": false } } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "directhired.com.", "Type": "A",
+        "AliasTarget": { "HostedZoneId": "Z2FDTNDATAQYW2", "DNSName": "d3ov6snrv878q6.cloudfront.net.", "EvaluateTargetHealth": false } } },
+    { "Action": "UPSERT", "ResourceRecordSet": {
+        "Name": "directhired.com.", "Type": "AAAA",
+        "AliasTarget": { "HostedZoneId": "Z2FDTNDATAQYW2", "DNSName": "d3ov6snrv878q6.cloudfront.net.", "EvaluateTargetHealth": false } } }
+  ]
+}
