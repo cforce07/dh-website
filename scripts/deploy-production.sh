@@ -61,7 +61,23 @@ aws s3 sync dist/ "s3://$BUCKET/" --delete --profile "$PROFILE" \
   --cache-control "public,max-age=31536000,immutable" --only-show-errors
 
 # Short cache for anything a deploy is meant to change immediately.
-aws s3 sync dist/ "s3://$BUCKET/" --profile "$PROFILE" \
+#
+# `--delete` HAS TO BE ON THIS PASS TOO, and it was missing until 2026-08-17.
+# The AWS CLI documents it as: "Files that exist in the destination but not
+# in the source are deleted during sync. Note that files excluded by filters
+# are excluded from deletion." Pass 1 above carries --delete but excludes
+# *.html, so HTML is excluded from ITS deletion; this pass is the only one
+# that sees HTML, and without --delete nothing could ever remove a page.
+#
+# A page deleted or renamed in src/ therefore stayed live on the bucket
+# indefinitely — served at max-age=60 so browsers kept revalidating it,
+# self-canonical, and indexable. No dist/-reading test could see it, because
+# by definition it is not in dist/ any more.
+#
+# The `--exclude "*"` above is what makes this safe: deletion applies only to
+# the filter's included set, so this pass can delete a stale .html, .xml or
+# robots.txt and cannot touch a fingerprinted asset under _astro/.
+aws s3 sync dist/ "s3://$BUCKET/" --delete --profile "$PROFILE" \
   --exclude "*" --include "*.html" --include "*.xml" --include "robots.txt" \
   --cache-control "public,max-age=60,must-revalidate" --only-show-errors
 

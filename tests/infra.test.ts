@@ -334,3 +334,75 @@ describe('staging response headers policy', () => {
     expect(robots.Override).toBe(true)
   })
 })
+
+/*
+ * THE DEPLOY SCRIPTS MUST BE ABLE TO DELETE A PAGE.
+ *
+ * Both scripts sync in two passes: pass 1 writes the fingerprinted assets
+ * with a one-year immutable cache and excludes *.html; pass 2 writes the
+ * HTML, XML and robots.txt with a 60-second cache.
+ *
+ * Until 2026-08-17 only pass 1 carried `--delete`. The AWS CLI documents the
+ * flag as: "Files that exist in the destination but not in the source are
+ * deleted during sync. Note that files excluded by filters are excluded from
+ * deletion." Pass 1 excludes *.html, so HTML was excluded from its deletion,
+ * and pass 2 had no --delete at all — so NO pass could remove a page. A route
+ * deleted or renamed in src/ stayed live on the bucket, self-canonical and
+ * indexable, and no dist/-reading guard could see it, because by definition
+ * it is no longer in dist/.
+ *
+ * This is asserted on the script SOURCE rather than by running a sync,
+ * because the behaviour lives in flags handed to an external CLI against a
+ * real bucket. That is the same reason tests/section-rhythm.test.ts asserts
+ * CSS declarations out of a page's <style> rather than measuring a render:
+ * a source-level assertion that can fail beats an integration test that
+ * cannot run.
+ */
+describe('the deploy scripts can remove a page that no longer exists', () => {
+  const SCRIPTS = ['scripts/deploy-preview.sh', 'scripts/deploy-production.sh'] as const
+
+  /** Every `aws s3 sync` invocation in a script, joined across line continuations. */
+  const syncCommands = (path: string): string[] =>
+    readFileSync(path, 'utf8')
+      // These scripts are CRLF on disk. Normalise BEFORE joining continuations:
+      // a trailing `\` followed by \r\n does not match a backslash-newline
+      // pattern, so without this the joiner returns only each command's FIRST
+      // line, and every flag assertion below passes vacuously against text it
+      // never saw. That is exactly how it behaved when first written — the
+      // assertions failed loudly rather than silently only because the flags
+      // they look for live on the continuation lines.
+      .replace(/\r\n/g, '\n')
+      .split('\n')
+      .filter((line) => !line.trim().startsWith('#'))
+      .join('\n')
+      .replace(/\\\n\s*/g, ' ')
+      .split('\n')
+      .filter((line) => line.includes('aws s3 sync'))
+
+  for (const script of SCRIPTS) {
+    it(`${script} runs exactly two sync passes`, () => {
+      expect(syncCommands(script)).toHaveLength(2)
+    })
+
+    it(`${script}'s HTML pass carries --delete, so a removed page is removed`, () => {
+      const htmlPass = syncCommands(script).find((c) => c.includes('--include "*.html"'))
+      expect(htmlPass, 'no sync pass includes *.html').toBeDefined()
+      expect(htmlPass).toContain('--delete')
+    })
+
+    it(`${script}'s HTML pass excludes everything else first, so --delete cannot reach the assets`, () => {
+      // `--exclude "*"` before the includes is what bounds the deletion to
+      // HTML, XML and robots.txt. Without it, --delete on this pass would be
+      // free to remove fingerprinted assets that pass 1 had just written.
+      const htmlPass = syncCommands(script).find((c) => c.includes('--include "*.html"'))!
+      expect(htmlPass).toContain('--exclude "*"')
+      expect(htmlPass.indexOf('--exclude "*"')).toBeLessThan(htmlPass.indexOf('--include "*.html"'))
+    })
+
+    it(`${script}'s asset pass still carries --delete`, () => {
+      const assetPass = syncCommands(script).find((c) => c.includes('--exclude "*.html"'))
+      expect(assetPass, 'no sync pass excludes *.html').toBeDefined()
+      expect(assetPass).toContain('--delete')
+    })
+  }
+})
