@@ -39,6 +39,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
+import { company } from '../src/data/company'
 import { navItems } from '../src/lib/nav'
 
 /**
@@ -305,8 +306,33 @@ describe('conversion surfaces after the header CTA trim', () => {
   })
 
   it('the header never hardcodes either CTA URL', () => {
+    /*
+     * THE SECOND HALF OF THIS USED TO READ `employer-requirement`, A LITERAL.
+     * That was the requirement form's path until 2026-08-17, when DirectHired
+     * supplied the real address and `company.requirementFormUrl` was
+     * repointed. From that moment the assertion was searching the header for a
+     * string that exists nowhere in the codebase: it would have passed against
+     * a Header.astro with the NEW URL typed straight into the anchor, which is
+     * the one thing it is here to prevent.
+     *
+     * Derived from the constant instead, in both of the shapes a hardcode
+     * takes. The path-only form is the one that matters now: the form moved
+     * onto this site's own domain, so `href="/app/requirements"` in the header
+     * would work — it would render, resolve, and take the visitor to the
+     * form — while quietly ending the constant's status as the single
+     * definition. tests/links.test.ts carries the same pair of needles across
+     * the whole of src/ and public/; this file keeps its own copy because the
+     * header is the one surface where a CTA regression is site-wide.
+     */
+    const formPath = new URL(company.requirementFormUrl).pathname
+    expect(formPath.replace(/\/+$/, ''), 'the form URL has no path to match on').not.toBe('')
+
     expect(header).toContain('company.requirementFormUrl')
-    expect(header).not.toMatch(/wa\.me|https?:\/\/[^\s"']*employer-requirement/)
+    expect(header).not.toMatch(/wa\.me/)
+    expect(header, 'the header types the requirement-form URL out in full').not.toContain(
+      company.requirementFormUrl,
+    )
+    expect(header, 'the header links the requirement form by path').not.toContain(formPath)
   })
 
   it('every surface that carries BOTH CTAs still orders primary before secondary', () => {

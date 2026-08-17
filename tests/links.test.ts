@@ -51,6 +51,35 @@ function normalize(f: string): string {
   return f.split('\\').join('/').replace(/^\.\//, '')
 }
 
+/*
+ * THE NEEDLES THIS SWEEP LOOKS FOR, DERIVED FROM THE SINGLE DEFINITION.
+ *
+ * This test filtered on the literal `'/employer-requirement'` for the whole
+ * of the project. That string was the requirement form's path until
+ * 2026-08-17, when DirectHired supplied the real address and
+ * `company.requirementFormUrl` was repointed — at which moment the guard
+ * protecting the site's single most important URL was searching for a string
+ * that no longer existed anywhere. It would have reported "no offenders"
+ * against a codebase in which every file had hardcoded the new one.
+ *
+ * A guard that has to be hand-edited whenever the value it guards changes is
+ * a guard that is green precisely when it matters most. Both needles now come
+ * from the constant.
+ *
+ * TWO NEEDLES, NOT ONE, AND THE SECOND MATTERS MORE THAN IT USED TO.
+ *
+ *   THE ABSOLUTE URL — the obvious retype, `href="https://…/app/requirements"`.
+ *
+ *   THE PATH ALONE — `href="/app/requirements"`. This is what the old literal
+ *   actually matched, and it is now the DANGEROUS one: the form moved onto
+ *   this site's own domain, so a site-relative hardcode WORKS. It renders, it
+ *   resolves, a visitor reaches the form, every other assertion in this suite
+ *   passes — and the constant has silently stopped being the single
+ *   definition. A broken hardcode announces itself; a working one does not.
+ */
+const FORM_URL = company.requirementFormUrl
+const FORM_PATH = new URL(FORM_URL).pathname
+
 describe('CTA integrity', () => {
   it('no component hardcodes the requirement-form URL', () => {
     // Task 16 review, fix round 1: `!f.endsWith('company.ts')` was a
@@ -60,8 +89,66 @@ describe('CTA integrity', () => {
     // definition. Compare the normalised path exactly instead.
     const offenders = hardcodeScanFiles()
       .filter((f) => normalize(f) !== 'src/data/company.ts')
-      .filter((f) => readFileSync(f, 'utf8').includes('/employer-requirement'))
+      .filter((f) => {
+        const text = readFileSync(f, 'utf8')
+        return text.includes(FORM_URL) || text.includes(FORM_PATH)
+      })
     expect(offenders.map(normalize)).toEqual([])
+  })
+
+  it('the sweep above is looking for something real (its needles are not vacuous)', () => {
+    /*
+     * The assertion above is a negative over a corpus that contains neither
+     * needle, so a needle that had quietly become unmatchable — an empty
+     * string, a `/`, a value read from the wrong property — would report
+     * nothing forever. That is exactly the failure the derivation replaced,
+     * in a new form.
+     *
+     * src/data/company.ts is the one file that MUST contain both, and it is
+     * the one file the sweep excludes. Reading it back through the same
+     * predicate is the proof that the predicate can fire at all.
+     */
+    const definition = readFileSync('src/data/company.ts', 'utf8')
+    expect(definition, 'the URL needle matches nothing, even at its definition').toContain(FORM_URL)
+    expect(definition, 'the path needle matches nothing, even at its definition').toContain(
+      FORM_PATH,
+    )
+
+    // A bare `/` would match every href on the site and every offender list
+    // would be the whole corpus — the opposite failure, and just as useless.
+    expect(FORM_PATH.replace(/\/+$/, ''), 'the form URL has no path to match on').not.toBe('')
+    // ...and the two needles must be different strings, or the path check is
+    // doing nothing the URL check does not already do.
+    expect(FORM_PATH).not.toBe(FORM_URL)
+  })
+
+  it('the requirement form is not a route this build produces', () => {
+    /*
+     * THE SAME-ORIGIN HAZARD, which did not exist before 2026-08-17 and now
+     * does. The form is at `/app/requirements` on this site's own host —
+     * served from a different S3 origin behind the shared CloudFront
+     * distribution, and built by a codebase that is not this one.
+     *
+     * If a page ever appeared in THIS build at that path, CloudFront would
+     * have two origins claiming one route and the primary CTA would lead to
+     * whichever won. Equally, if `requirementFormUrl` were ever pointed at a
+     * route this site does serve — `https://www.directhired.com/contact`,
+     * say — all 46 CTAs would loop back into the marketing site and every
+     * other assertion here would pass.
+     *
+     * This is also what keeps the path needle above honest: a form URL whose
+     * path collides with one of this site's own routes would make that sweep
+     * fire on nav.ts and read as a false positive. It fails here instead,
+     * where the message says what is actually wrong.
+     *
+     * It is the assertion a host-equality check in tests/company.test.ts was
+     * reaching for, without that check's cost — see the reasoning recorded
+     * there for why no host is asserted.
+     */
+    expect(
+      resolvesInDist(FORM_PATH),
+      `this build serves a page at ${FORM_PATH}, which is also the requirement form`,
+    ).toBe(false)
   })
 
   // The five built-HTML assertions that used to sit here — form URL,
