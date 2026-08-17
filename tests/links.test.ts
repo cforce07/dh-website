@@ -151,6 +151,101 @@ describe('CTA integrity', () => {
     ).toBe(false)
   })
 
+  /*
+   * =====================================================================
+   * THE BUILT SITE, NOT THE CONSTANT — the check A-1 could not do for
+   * itself.
+   * =====================================================================
+   *
+   * Everything above is about SOURCE files. tests/pages.test.ts asserts
+   * that every built page CONTAINS `company.requirementFormUrl`
+   * somewhere. Neither of those can see a PARTIAL replacement, and that is
+   * the failure mode this whole item had: 46 anchors, spread across four
+   * components and five page templates, all of which had to move together
+   * on 2026-08-17. A build in which 40 followed the constant and 6 kept a
+   * dead address would pass both — every page still "contains the URL",
+   * and no source file hardcodes anything the sweep above knows about,
+   * because a stale `href` in a component the sweep's needle no longer
+   * matches is invisible to it.
+   *
+   * So this reads the CALLS TO ACTION back out of dist/ and asserts about
+   * every one of them individually. A CTA is identified by the words a
+   * visitor reads on it, which is the only property that does not come
+   * from the thing being tested: an anchor whose text is "Submit your
+   * requirements" must lead to the requirement form, whatever any constant
+   * says.
+   *
+   * WHY NOT ASSERT THE OLD URL IS ABSENT. That would put the dead literal
+   * back into a test, which is exactly the staleness this item removed
+   * from two guards. The set assertion below says something strictly
+   * stronger: the distinct hrefs on the site's CTAs are EXACTLY one value,
+   * and it is the constant. Nothing can be pointing at the old address, or
+   * at any other address, and pass.
+   */
+  const CTA_LABEL = /submit your requirements/i
+
+  /** Every anchor in the build whose visible text is the primary CTA. */
+  function ctaAnchors(): { page: string; href: string }[] {
+    return builtHtmlFiles().flatMap((page) =>
+      [...readFileSync(page, 'utf8').matchAll(/<a\b[^>]*>[\s\S]*?<\/a>/gi)]
+        .map((m) => m[0])
+        .filter((anchor) => CTA_LABEL.test(anchor))
+        .map((anchor) => ({ page, href: anchor.match(/href="([^"]*)"/)?.[1] ?? '(no href)' })),
+    )
+  }
+
+  /** Raw occurrences of the configured URL as an href, across the build. */
+  function configuredHrefCount(): number {
+    return builtHtmlFiles().reduce(
+      (n, page) => n + readFileSync(page, 'utf8').split(`href="${FORM_URL}"`).length - 1,
+      0,
+    )
+  }
+
+  it('the build really carries calls to action (guards the three assertions below)', () => {
+    // All three are statements about a derived list. A regex that stopped
+    // matching — a renamed button, a markup change that splits the anchor —
+    // would empty that list and make every one of them pass on nothing,
+    // silently retiring the only check that reads the shipped CTAs.
+    const anchors = ctaAnchors()
+    expect(builtHtmlFiles().length).toBeGreaterThanOrEqual(2)
+    expect(anchors.length, 'no CTA anchors found in dist — the label match has drifted').toBeGreaterThan(
+      20,
+    )
+  })
+
+  it('EVERY call to action in the build points at the configured URL, and nothing else does', () => {
+    /*
+     * Set equality, not "every one contains it". A partial replacement
+     * leaves a second value in this set and fails here by name — the page
+     * it is on and the address it points at are both in the message.
+     */
+    const distinct = [...new Set(ctaAnchors().map(({ href }) => href))]
+    expect(distinct).toEqual([FORM_URL])
+  })
+
+  it('no page has been missed — every built page carries at least one', () => {
+    // The set assertion above is satisfied by a build with one CTA on one
+    // page. The header, the footer and the mobile bar put one on all of
+    // them, so a page with none is a page that lost a shared component.
+    const without = builtHtmlFiles().filter(
+      (page) => !ctaAnchors().some(({ page: p }) => p === page),
+    )
+    expect(without).toEqual([])
+  })
+
+  it('the CTA count and the raw href count agree (neither measure has drifted)', () => {
+    /*
+     * Two independent readings of the same build: one counts anchors by the
+     * words on them, the other counts occurrences of the configured URL as
+     * an href. They must be the same number. If a CTA is ever rendered
+     * without its label, or the URL ever appears as an href somewhere that
+     * is not a CTA, this is what says so — and it is what makes the count
+     * published in docs/ a measurement rather than a claim.
+     */
+    expect(ctaAnchors().length).toBe(configuredHrefCount())
+  })
+
   // The five built-HTML assertions that used to sit here — form URL,
   // WhatsApp number, no "Contact Us" primary CTA, no "perfect match",
   // exactly one <h1> — were all scoped to dist/index.html, i.e. they
