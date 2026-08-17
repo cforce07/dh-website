@@ -53,6 +53,70 @@ describe('company data', () => {
     expect(company.requirementFormUrl).toMatch(/^https?:\/\//)
   })
 
+  /*
+   * ---------------------------------------------------------------------
+   * NO HOST ASSERTION, AND THE DECISION IS RECORDED RATHER THAN LEFT OUT.
+   * ---------------------------------------------------------------------
+   *
+   * A reviewer noted that nothing here asserts the requirement-form URL's
+   * host is one the site can actually reach, and on 2026-08-17 the real
+   * value arrived — so the question became answerable rather than
+   * hypothetical. The form is at `/app/requirements` on the SAME host as
+   * this site, served through the same CloudFront distribution from a
+   * different S3 origin.
+   *
+   * A host-equality assertion (`host === new URL(company.siteUrl).host`)
+   * would pass today, and it is still the wrong guard, for two reasons.
+   *
+   * IT DOES NOT CATCH THE FAILURE THAT ACTUALLY HAPPENED. The dead value
+   * was `https://www.directhired.com/employer-requirement` — the RIGHT
+   * host and a path that 404s. A host assertion would have been green
+   * across the entire period in which all 46 calls to action led nowhere.
+   * The one thing it cannot see is the one thing that went wrong.
+   *
+   * IT WOULD OBSTRUCT A LEGITIMATE MOVE. Same-origin is a fact about
+   * DirectHired's hosting today, not a property of a requirement form. A
+   * move to `forms.directhired.com`, or to a hosted form provider, is an
+   * ordinary decision that is theirs to make — and it would fail this
+   * suite, in a file whose failure message would say nothing about why.
+   * A guard that turns somebody else's valid choice into a red build is
+   * how a test gets deleted rather than reasoned about.
+   *
+   * WHAT IS ASSERTED INSTEAD is below, and split across two files by what
+   * each can see: the properties that hold for ANY correct value here,
+   * and — in tests/links.test.ts, which reads dist/ — that the URL is not
+   * a route this build itself produces, which is the same-origin hazard
+   * that host equality was reaching for and only became possible when the
+   * form moved onto this domain.
+   */
+  it('states the requirement form as an absolute https URL with a path', () => {
+    const url = new URL(company.requirementFormUrl)
+
+    // https, not http. This address collects an employer's household
+    // details and their phone number. `^https?://` above admits `http://`;
+    // this is the half of that assertion which is not negotiable.
+    expect(url.protocol).toBe('https:')
+
+    // A real hostname, not `localhost` or a bare label left over from a
+    // staging config.
+    expect(url.hostname).toMatch(/^[a-z0-9-]+(\.[a-z0-9-]+)+$/)
+
+    // A PATH, not a bare origin. `https://www.directhired.com/` would send
+    // all 46 CTAs to the marketing homepage — every page would still
+    // "contain the configured URL", every existing assertion in this suite
+    // would pass, and the primary conversion path would silently loop back
+    // on itself. This is the shape check that catches that, and it costs a
+    // future move nothing: a form lives at a path wherever it is hosted.
+    expect(url.pathname.replace(/\/+$/, '')).not.toBe('')
+
+    // No query string or fragment. Not a rule about forms — a rule about
+    // this constant: `?utm_source=` or `#form` here would be tracking or
+    // scroll state welded onto the single definition of a destination, and
+    // 46 call sites would inherit it with no way to opt out.
+    expect(url.search).toBe('')
+    expect(url.hash).toBe('')
+  })
+
   it('links the official social profiles', () => {
     expect(company.socials.facebook).toBe('https://www.facebook.com/directhired')
     expect(company.socials.instagram).toBe('https://www.instagram.com/directhired_sg')

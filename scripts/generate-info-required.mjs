@@ -100,16 +100,23 @@ const QUOTED_PATTERN = /data-tbd="([^"]*)"/g
 const BARE_PATTERN = /data-tbd(?![-="])/g
 
 /**
- * How many calls to action currently point at the requirement form, and on
- * how many pages.
+ * How many calls to action point at the requirement form, on how many pages,
+ * and the address they point at.
  *
- * DERIVED, NOT TYPED, because the whole point of the entry it feeds is that
- * this number is the measure of the damage — and a hand-typed count in a
- * client document is exactly the sort of figure that is right on the day it
- * is written and quietly wrong a page later. The URL is read out of
- * `src/data/company.ts` rather than repeated here for the same reason
- * tests/links.test.ts forbids any page from repeating it: there is one
- * definition of that address in this codebase and this is not it.
+ * DERIVED, NOT TYPED, because this number is what the entry it feeds is
+ * about — and a hand-typed count in a client document is exactly the sort of
+ * figure that is right on the day it is written and quietly wrong a page
+ * later. The URL is read out of `src/data/company.ts` rather than repeated
+ * here for the same reason tests/links.test.ts forbids any page from
+ * repeating it: there is one definition of that address in this codebase and
+ * this is not it.
+ *
+ * WHAT THE NUMBER MEANS CHANGED ON 2026-08-17 AND THE NUMBER DID NOT. Until
+ * that date it was a count of DEAD calls to action; DirectHired supplied the
+ * live form URL and it became a count of WORKING ones. That is the whole
+ * reason it stays derived through the change rather than being retyped into
+ * the past tense: the same measurement now reports a resolved item, and if a
+ * page is added tomorrow it still will.
  *
  * Counted from BUILT HTML, so it counts what a visitor can actually click,
  * including the instances a component contributes to every page.
@@ -144,7 +151,7 @@ function requirementFormUsage() {
     if (hits > 0) pages++
     ctas += hits
   }
-  return { ctas, pages }
+  return { ctas, pages, url }
 }
 
 /**
@@ -159,45 +166,79 @@ function requirementFormUsage() {
  */
 const FORM_USAGE = requirementFormUsage()
 
-const DECLARED_INPUTS = [
-  // ADDED 2026-08-16 BY TASK 12, AND IT SHOULD HAVE BEEN HERE FROM THE
-  // START. This is the single highest-value outstanding input on the
-  // project and it was absent from the document named "Information
-  // Required Before Production" — tracked only in docs/OPEN-DECISIONS.md,
-  // which is the decisions register, not the production checklist.
-  //
-  // It is undetectable for the usual Category C reason, and the reason is
-  // worth stating because it is the opposite of the others: the code is not
-  // silent here, it is CONFIDENT. Every CTA renders a real anchor with a
-  // real href. Nothing is missing from the markup, no collection is empty,
-  // no <Tbd> is marked, and the build is correct. The gap is that the URL
-  // the constant holds does not resolve — a fact about the internet, not
-  // about this repository, and no scanner over src/ or dist/ can see it.
-  //
-  // It is listed FIRST because it is the only item here that stops the site
-  // doing the thing it exists to do.
+/**
+ * Category C items DirectHired has since supplied.
+ *
+ * WHY THESE ARE PRINTED RATHER THAN DELETED. A checklist that silently drops
+ * an item leaves its reader unable to tell "resolved" from "forgotten", and
+ * the one entry here was the top blocker in both client documents for the
+ * whole of the project. DirectHired should be able to open this file and see
+ * that the thing which stopped the site converting is closed, what the answer
+ * was, and on what date — without having to read a git history they do not
+ * have.
+ *
+ * `answered` is the date, `value` is the supplied answer, and `verified` is
+ * what was actually checked about it before it was written into the codebase.
+ * That last field is the point: an item moves here on evidence, not on a
+ * message saying it is fixed.
+ */
+const RESOLVED_INPUTS = [
   {
     item: 'Production URL for the employer requirement form',
     source: 'Brief §79; core-pages spec §3; docs/OPEN-DECISIONS.md ("Costs you money every day")',
-    blocks:
-      '**every conversion on the site.** `src/data/company.ts` sets ' +
-      '`requirementFormUrl` to `https://www.directhired.com/employer-requirement`, ' +
-      `which does not resolve. That URL is behind **${FORM_USAGE.ctas} calls to action across ` +
-      `all ${FORM_USAGE.pages} built pages** — every "Submit Your Requirements" button in the header, ` +
-      'the mobile nav, every hero, every closing block and the fixed mobile bar, plus ' +
-      'the 404. Nothing on the site is broken to look at and every page passes every ' +
-      'check; the primary conversion path simply ends nowhere. DirectHired confirmed on ' +
-      '2026-08-16 that the form stays on their existing separate site, so what is needed ' +
-      'is **that site\'s live form URL** — not a form to be built.',
-    handledBy:
-      'A single constant. `company.requirementFormUrl` is the only definition of the ' +
-      'destination anywhere in the codebase — `tests/links.test.ts` asserts that no ' +
-      '`.astro` or `.ts` file under `src/` writes the URL as a literal, so repointing it ' +
-      `at launch is one edit to one line and all ${FORM_USAGE.ctas} call sites follow. That is the whole ` +
-      'of the work. Because the form is hosted elsewhere, this site cannot measure ' +
-      'whether anyone arrives at it or finishes it; that consequence is accepted and ' +
-      'written up under *Housekeeping* in `docs/OPEN-DECISIONS.md`.',
+    answered: '2026-08-17',
+    value: `\`${FORM_USAGE.url}\``,
+    was:
+      'The single highest-value open input on the project, and the only one that stopped ' +
+      'the site doing the thing it exists to do. `src/data/company.ts` set ' +
+      '`requirementFormUrl` to `https://www.directhired.com/employer-requirement`, which ' +
+      'returned 404. Every "Submit Your Requirements" button on the site led there, from the ' +
+      'day the site went live until the day this answer was applied — nothing looked broken, ' +
+      'every check passed, and the primary conversion path ended nowhere.',
+    now:
+      `**${FORM_USAGE.ctas} working calls to action across all ${FORM_USAGE.pages} built pages** — ` +
+      'every button in the header, the mobile nav, every hero, every closing block and the ' +
+      'fixed mobile bar, plus the 404 page. The count is read from the built HTML on every ' +
+      'run of this script, so it is a measurement of what a visitor can click rather than a ' +
+      'figure anybody typed; what changed on 2026-08-17 is not the number but what it counts.',
+    verified:
+      'The address returns **200**, with and without a trailing slash, and is served ' +
+      '`Server: AmazonS3` through the **same CloudFront distribution as this site**. It is a ' +
+      'separate application rather than a page of this build — `<div id="root">` plus ' +
+      '`/app/main_bundle.js`, titled `Direct Hired` — so the form renders client-side and no ' +
+      'check here asserts form markup at it, which would fail against a page that works.',
+    corrects:
+      '**Same domain, not a separate one.** Core-pages spec §2.6.5 recorded the form as ' +
+      'staying on "their existing separate site", and `docs/OPEN-DECISIONS.md` concluded ' +
+      'from that that the conversion path *leaves this domain* and could never be measured ' +
+      'from here. Separate **application**, same **host** and same distribution: both ' +
+      'documents are corrected, and measuring the path is now an ordinary option rather than ' +
+      'an impossibility.',
+    costs:
+      'One line. `company.requirementFormUrl` is the only definition of the destination ' +
+      `anywhere in the codebase — \`tests/links.test.ts\` derives its no-hardcoded-URL sweep ` +
+      'from that constant and fails if any file under `src/` or `public/` writes the address ' +
+      `as a literal — so the one edit moved all ${FORM_USAGE.ctas} call sites at once, and ` +
+      'the same suite asserts from `dist/` that every one of them followed.',
   },
+]
+
+const DECLARED_INPUTS = [
+  // THE FORM URL WAS THE FIRST ENTRY HERE, from 2026-08-16 (added by Task 12,
+  // and it should have been here from the start — it was the highest-value
+  // outstanding input on the project and the document named "Information
+  // Required Before Production" did not mention it). DirectHired supplied it
+  // on 2026-08-17 and it has moved to RESOLVED_INPUTS above rather than being
+  // deleted; see that list's docblock for why a resolved item stays printed.
+  //
+  // What it demonstrated about this category is worth keeping: it was
+  // undetectable for the OPPOSITE reason to everything below it. The code was
+  // not silent, it was CONFIDENT — every CTA rendered a real anchor with a
+  // real href, no collection was empty, no <Tbd> was marked, and the build
+  // was correct. The gap was that the URL did not resolve, which is a fact
+  // about the internet rather than about this repository, and no scanner over
+  // src/ or dist/ can see it. The next input of that shape belongs here too.
+  //
   // RESOLVED 2026-08-16 — "Detailed replacement terms and conditions"
   // (brief §18 / §79 Reminder 04; design spec §5 Category A). DirectHired
   // supplied them, and they are recorded verbatim in core-pages design
@@ -572,7 +613,7 @@ const PROVENANCE_LABEL = {
   'none-yet': 'nothing shipped — the slot renders no image',
 }
 
-function renderMarkdown(categoryA, categoryB, categoryC, categoryD) {
+function renderMarkdown(categoryA, categoryB, categoryC, categoryD, resolvedC) {
   const lines = []
 
   lines.push('# DirectHired — Information Required Before Production')
@@ -686,7 +727,9 @@ function renderMarkdown(categoryA, categoryB, categoryC, categoryD) {
   lines.push('')
   lines.push(
     'They are therefore **declared** in `DECLARED_INPUTS` in ' +
-      '`scripts/generate-info-required.mjs` — the only hand-maintained list in this document. ' +
+      '`scripts/generate-info-required.mjs` — which, with the `RESOLVED_INPUTS` list beside ' +
+      'it that feeds the *Resolved* subsection below, is the only hand-maintained data in ' +
+      'this document. ' +
       'The alternative would be sprinkling cosmetic `<Tbd>` markers onto pages purely so this ' +
       'script could find them, which would trade a correct page for a broken one. ' +
       '`npm run build` **succeeds** with these outstanding; nothing false is published.',
@@ -696,12 +739,14 @@ function renderMarkdown(categoryA, categoryB, categoryC, categoryD) {
     'Design spec §5 named three Category A items — the MOM licence number, detailed ' +
       'replacement terms, and the without-replacement inclusion list. **All three have since ' +
       'been supplied**: the licence number on 2026-08-15 (its `<Tbd>` removed), the other two ' +
-      'on 2026-08-16. What remains below are three items, and no two of them are the same ' +
-      'kind of thing. **The form URL is the one that matters**: nothing is missing from the ' +
-      'code at all, the destination simply does not resolve, and until it does the site ' +
-      'cannot convert. The second is not missing information either — those facts are in ' +
-      'hand, and what is outstanding is DirectHired’s sign-off on publishing them. The third ' +
-      'is a placeholder asset rather than a gap in the copy.',
+      'on 2026-08-16. **The form URL, which was the first entry here and the only item on ' +
+      'this document that stopped the site converting, was supplied on 2026-08-17** — it is ' +
+      'recorded as resolved at the end of this section rather than deleted. What remains ' +
+      'outstanding are two items, and neither is the same kind of thing as the other: the ' +
+      'first is not missing information at all — those facts are in hand, and what is ' +
+      'outstanding is DirectHired’s sign-off on publishing them — and the second is a ' +
+      'placeholder asset rather than a gap in the copy. **Nothing left in this category ' +
+      'blocks a visitor from doing anything.**',
   )
   lines.push('')
 
@@ -713,6 +758,32 @@ function renderMarkdown(categoryA, categoryB, categoryC, categoryD) {
       lines.push(`  - Source: ${source}`)
       lines.push(`  - Blocks: ${blocks}`)
       lines.push(`  - Handled meanwhile by: ${handledBy}`)
+    }
+  }
+  lines.push('')
+
+  lines.push('### Resolved — supplied by DirectHired')
+  lines.push('')
+  lines.push(
+    'Kept here with the date and the answer, rather than deleted. A checklist that quietly ' +
+      'drops an item leaves its reader unable to tell *resolved* from *forgotten*, and the ' +
+      'entry below was the top blocker on this document and on `docs/OPEN-DECISIONS.md` for ' +
+      'the whole of the project.',
+  )
+  lines.push('')
+
+  if (resolvedC.length === 0) {
+    lines.push('_Nothing resolved yet._')
+  } else {
+    for (const entry of resolvedC) {
+      lines.push(`- **${entry.item}** — **answered ${entry.answered}**`)
+      lines.push(`  - Source: ${entry.source}`)
+      lines.push(`  - Supplied value: ${entry.value}`)
+      lines.push(`  - What it was: ${entry.was}`)
+      lines.push(`  - What it is now: ${entry.now}`)
+      lines.push(`  - Verified before use: ${entry.verified}`)
+      lines.push(`  - Corrects the record: ${entry.corrects}`)
+      lines.push(`  - What it cost to apply: ${entry.costs}`)
     }
   }
   lines.push('')
@@ -884,7 +955,7 @@ const categoryA = findCategoryA()
 const categoryB = findCategoryB()
 const categoryC = DECLARED_INPUTS
 const categoryD = findCategoryD()
-const markdown = renderMarkdown(categoryA, categoryB, categoryC, categoryD)
+const markdown = renderMarkdown(categoryA, categoryB, categoryC, categoryD, RESOLVED_INPUTS)
 
 writeFileSync(OUTPUT_PATH, markdown)
 
@@ -892,6 +963,7 @@ console.log(`Wrote ${OUTPUT_PATH}`)
 console.log(`  Category A (inline gaps, block the build): ${categoryA.length}`)
 console.log(`  Category B (whole-block omissions, do not block the build): ${categoryB.length}`)
 console.log(`  Category C (declared, not derivable): ${categoryC.length}`)
+console.log(`  Category C, resolved and kept on the record: ${RESOLVED_INPUTS.length}`)
 console.log(`  Category D (images not yet DirectHired's own): ${categoryD.length}`)
 console.log(
   `  Known conditions: ${deferredRouteLinks().instances} internal links to routes that do not ` +

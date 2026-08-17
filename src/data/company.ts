@@ -153,9 +153,37 @@ export const company = {
   foundingStory:
     'DirectHired was created after seeing families struggle with agencies that focused on filling vacancies instead of finding the right fit.',
 
-  // The form is built but not yet wired to the production domain.
-  // This is the ONLY definition of the destination. Repoint here at launch.
-  requirementFormUrl: 'https://www.directhired.com/employer-requirement',
+  // THE REQUIREMENT FORM. This is the ONLY definition of the destination;
+  // tests/links.test.ts forbids every other file in the codebase from writing
+  // it as a literal, so all 46 calls to action follow this one line.
+  //
+  // SUPPLIED BY DIRECTHIRED 2026-08-17, replacing
+  // 'https://www.directhired.com/employer-requirement', which 404'd. Every
+  // CTA on the site pointed at that address from the day the site went live
+  // until this line changed — the site was published and could not convert.
+  //
+  // WHAT WAS VERIFIED ABOUT THIS VALUE, before it was written here:
+  //   - 200, with and without a trailing slash; `/app` is 200 too.
+  //   - served `Server: AmazonS3` through the SAME CloudFront distribution as
+  //     this marketing site.
+  //   - it is a SEPARATE APPLICATION, not a page of this build: the served
+  //     HTML is `<div id="root">` plus `<script defer src="/app/main_bundle
+  //     .js">`, titled `Direct Hired`. This build produces no route under
+  //     /app, which tests/links.test.ts asserts.
+  //   - NO <form>, <input> or <select> in the served HTML — the form renders
+  //     client-side from that bundle. Nothing here may assert form markup at
+  //     that URL; it would fail against a page that works.
+  //
+  // SAME ORIGIN, WHICH IS A CHANGE OF FACT. Core-pages spec §2.6.5 recorded
+  // DirectHired as saying the form "stays on their existing separate site",
+  // and docs/OPEN-DECISIONS.md concluded from that that the primary
+  // conversion path "leaves this domain" and could never be measured from
+  // here. It is a separate APPLICATION but not a separate SITE: same host,
+  // same distribution. Both documents are corrected.
+  //
+  // A LEGITIMATE FUTURE MOVE IS NOT OBSTRUCTED. tests/company.test.ts
+  // deliberately asserts no host for this value — see the reasoning there.
+  requirementFormUrl: 'https://www.directhired.com/app/requirements',
 
   whatsappMessage: "Hi DirectHired, I'm looking for a domestic helper and would like to know more.",
 
