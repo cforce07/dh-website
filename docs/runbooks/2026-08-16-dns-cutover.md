@@ -466,6 +466,23 @@ on 2026-08-17:
   **already returned 404**, so the cutover neither created nor worsened the
   problem. It is still the highest-value open item, but it is not a reason to
   keep the old page up.
+
+  > **Note added 2026-08-17, after the cutover.** The bullet above is left as
+  > written — it records what was true at the moment of the decision, and the
+  > decision was correct on those facts. What has since changed: DirectHired
+  > supplied the live address, `https://www.directhired.com/app/requirements`,
+  > and `company.requirementFormUrl` was repointed at it. The same 46 buttons
+  > now resolve. The probe recorded above was of `/employer-requirement` on the
+  > **Exabytes** host and is not evidence about the new path, which is served
+  > from S3 through this distribution and returns 200.
+  >
+  > **One inference in the surrounding reasoning was wrong, and it is corrected
+  > rather than deleted.** The form was recorded throughout as living on a
+  > separate *site* (core-pages spec §2.6.5, `docs/OPEN-DECISIONS.md`). It is a
+  > separate *application* on the **same host and the same CloudFront
+  > distribution** as this build. Nothing about the cutover turned on that —
+  > the DNS work is unaffected — but a reader of this runbook should not carry
+  > the old premise forward into a question about origins or measurement.
 - **What was being protected was worth nothing.** The old site was probed
   path-by-path: a single 793-byte W3Schools "coming soon" template at `/` and
   `/index.php`. Every other path 404'd. There was no content, no form, no

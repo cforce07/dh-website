@@ -88,17 +88,24 @@ describe('docs/INFORMATION-REQUIRED-BEFORE-PRODUCTION.md is regenerated, not sta
   })
 
   /**
-   * docs/OPEN-DECISIONS.md is HAND-WRITTEN, and it now tells DirectHired
-   * exactly how many dead buttons are on their site. That number is the
-   * measure of the damage and the reason the item is ranked first, so it
-   * has to be right — and a hand-typed count is precisely the figure that
-   * is correct on the day it is written and quietly wrong one page later.
+   * docs/OPEN-DECISIONS.md is HAND-WRITTEN, and it tells DirectHired exactly
+   * how many buttons on their site lead to the requirement form. A hand-typed
+   * count is precisely the figure that is correct on the day it is written and
+   * quietly wrong one page later.
+   *
+   * WHAT THE NUMBER MEANS CHANGED ON 2026-08-17 AND THE ASSERTION DID NOT.
+   * Until that date it counted DEAD calls to action and was the measure of the
+   * damage, which is why the item was ranked first in that document. The form
+   * URL was supplied, and the same count is now a count of WORKING ones,
+   * stated in the *Answered, for the record* register. The check is unchanged
+   * because it never depended on the reading: it holds a hand-written figure
+   * against the build either way.
    *
    * The generated checklist derives its copy of the number from dist/ and
    * cannot drift. This is the assertion that holds the hand-written
    * document to the same standard, rather than trusting it.
    */
-  it('docs/OPEN-DECISIONS.md states the real number of dead CTAs', () => {
+  it('docs/OPEN-DECISIONS.md states the real number of requirement-form CTAs', () => {
     const url = readFileSync('src/data/company.ts', 'utf8').match(
       /requirementFormUrl:\s*'([^']+)'/,
     )?.[1]
@@ -127,8 +134,8 @@ describe('docs/INFORMATION-REQUIRED-BEFORE-PRODUCTION.md is regenerated, not sta
     expect(
       decisions,
       `docs/OPEN-DECISIONS.md must state the real CTA count (${ctas}). Update the ` +
-        '"form URL" section under "Blocks launch" — both the "N buttons and links" ' +
-        'sentence and the "moves all N links at once" sentence.',
+        'form-URL row in "Answered, for the record" — both the "N buttons and ' +
+        'links" sentence and the "moved all N links at once" sentence.',
     ).toContain(`${ctas} buttons and links`)
     expect(decisions).toContain(`all ${ctas} links at once`)
   })
@@ -137,14 +144,51 @@ describe('docs/INFORMATION-REQUIRED-BEFORE-PRODUCTION.md is regenerated, not sta
     /*
      * Task 12 found the highest-value outstanding input on the project
      * missing from the document named "Information Required Before
-     * Production" — it was tracked only in docs/OPEN-DECISIONS.md. It is
-     * undetectable by construction (the code renders a real, confident href
-     * to a URL that does not resolve), so nothing but a declared entry can
-     * carry it, and nothing but this assertion stops it being tidied away
+     * Production" — it was tracked only in docs/OPEN-DECISIONS.md. It was
+     * undetectable by construction (the code rendered a real, confident href
+     * to a URL that did not resolve), so nothing but a declared entry could
+     * carry it, and nothing but this assertion stopped it being tidied away
      * again as "already covered elsewhere".
+     *
+     * IT IS ANSWERED NOW, AND THIS ASSERTION MATTERS MORE RATHER THAN LESS.
+     * A resolved item is exactly the kind that gets deleted as clutter on the
+     * next tidy-up, and deleting it would leave DirectHired unable to tell
+     * "resolved" from "forgotten" about the one item that stopped their site
+     * converting. It moved to the RESOLVED_INPUTS register in
+     * scripts/generate-info-required.mjs, and the additions below hold that
+     * register to the two things that make it worth printing: the date, and
+     * the answer.
      */
     const doc = readFileSync(COMMITTED, 'utf8')
     expect(doc).toMatch(/employer requirement form/i)
     expect(doc).toContain('requirementFormUrl')
+  })
+
+  it('the checklist records the form URL as resolved, with the date and the supplied value', () => {
+    /*
+     * The value is read from the single definition rather than typed here —
+     * the same rule tests/links.test.ts enforces on every file under src/.
+     * A guard for "the document states the answer" must not become a second
+     * place the answer is written down.
+     */
+    const url = readFileSync('src/data/company.ts', 'utf8').match(
+      /requirementFormUrl:\s*'([^']+)'/,
+    )?.[1]
+    expect(url, 'company.requirementFormUrl must be readable').toBeTruthy()
+
+    const HEADING = '### Resolved — supplied by DirectHired'
+    const doc = readFileSync(COMMITTED, 'utf8')
+    const at = doc.indexOf(HEADING)
+    expect(at, 'the checklist has no resolved register').toBeGreaterThan(-1)
+
+    // Scoped to the register itself — from its heading to the next `##` —
+    // rather than to the whole document. The URL appears elsewhere in the
+    // file, so a whole-document search would pass against a register that
+    // had been emptied.
+    const register = doc.slice(at).split('\n## ')[0]
+    expect(register, 'the resolved register does not state the supplied value').toContain(url!)
+    expect(register, 'the resolved register does not state when it was answered').toMatch(
+      /\*\*answered \d{4}-\d{2}-\d{2}\*\*/,
+    )
   })
 })
